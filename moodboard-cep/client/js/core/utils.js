@@ -9,7 +9,7 @@
   /* Version affichée dans la barre d'état, la boîte « À propos » et le
    * rapport de diagnostic — LA référence pour vérifier que le panneau
    * exécuté est bien la dernière installation. */
-  MB.VERSION = '1.1.1';
+  MB.VERSION = '1.1.2';
 
   /* ---------- Événements adaptatifs (pointer + souris) ----------
    *
@@ -46,7 +46,8 @@
   var lastPointerTs = { down: -1e9, move: -1e9, up: -1e9 };
   var EVT_DIAG = {
     pointerdown: 0, pointermove: 0, pointerup: 0, pointercancel: 0,
-    mousedown: 0, mousemove: 0, mouseup: 0, dragstartBlocked: 0, blur: 0
+    mousedown: 0, mousemove: 0, mouseup: 0, dragstartBlocked: 0, blur: 0,
+    keydown: 0, keyup: 0, focusInInput: 0
   };
   MB.EVT_DIAG = EVT_DIAG;
 

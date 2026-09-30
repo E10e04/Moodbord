@@ -305,32 +305,97 @@
 
   /* ------------------------------------------------------ clavier */
 
+  /* Déplacement clavier de la sélection (flèches) — même mécanique que le
+   * drag : un pas = 1 px écran converti en unités monde selon le zoom,
+   * ⇧ = ×10 (comme Illustrator). Les lignes déplacent leurs extrémités,
+   * l'opération entre dans l'historique (annulable). */
+  function nudgeSelection(e) {
+    var st = MB.store.s();
+    if (!st.selection.ids.length) return;
+    e.preventDefault();
+    var step = (e.shiftKey ? 10 : 1) / (st.camera.zoom || 1);
+    var dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
+    var dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0;
+    var origins = {};
+    var any = false;
+    MB.store.selectionClosure().forEach(function (id) {
+      var el = MB.store.el(id);
+      if (!el || el.locked) return;
+      var o = { x: el.x, y: el.y };
+      if (el.type === 'line' && el.data) {
+        o.x1 = el.data.x1;
+        o.y1 = el.data.y1;
+        o.x2 = el.data.x2;
+        o.y2 = el.data.y2;
+      }
+      origins[id] = o;
+      any = true;
+    });
+    if (!any) return;
+    MB.hist.begin('Déplacer (clavier)');
+    MB.store.applyDelta(origins, dx, dy);
+    MB.hist.commit();
+  }
+
   function bindKeyboard() {
     window.addEventListener('keydown', function (e) {
       var mod = e.metaKey || e.ctrlKey;
       var t = e.target;
-      var typing = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
+      var typing = !!(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable));
+
+      /* Trois contextes de saisie, trois politiques :
+       *  - ÉDITION SUR CANVAS (.is-editing) et DIALOGUES : le champ garde
+       *    tout (ses écouteurs stoppent d'ailleurs la propagation).
+       *  - CHAMP D'INTERFACE (ex. nom du projet en barre supérieure) :
+       *    les raccourcis APPLICATIFS à modificateur restent actifs —
+       *    Illustrator fait de même (⌘Z/⌘S/⌘D… marchent pendant qu'on
+       *    tape dans un champ de panneau). ⌘A/⌘C/⌘X/⌘V restent au champ
+       *    (sélection/copie du texte tapé, comportement natif attendu).
+       *  - HORS SAISIE : tout est actif. */
+      var inDialog = typing && t.closest && !!t.closest('.dialog');
+      var onCanvasEditor = typing && t.classList && t.classList.contains('is-editing');
+      var fieldOnly = inDialog || onCanvasEditor;
+      var uiField = typing && !fieldOnly;
 
       // Échap : comportement contextuel (§28)
       if (e.key === 'Escape') {
-        if (typing) return; // laissé au champ (annulation d'édition texte)
+        if (uiField) {
+          // Champ d'interface : rendre le clavier à l'application — sans
+          // cela, un clic dans le nom du projet tuait TOUS les raccourcis
+          // sans aucun indice visuel (piège silencieux).
+          e.preventDefault();
+          t.blur();
+          return;
+        }
+        if (typing) return; // édition canvas / dialogue : laissé au champ
         if (MB.interact.handleEscape()) e.preventDefault();
         return;
       }
 
-      if (typing) return;
+      if (fieldOnly) return;
 
       // Suppression (§29) — Delete ET Backspace
       if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (MB.store.selectedIds().length) {
+        if (!typing && MB.store.selectedIds().length) {
           e.preventDefault();
           MB.store.deleteSelection();
         }
         return;
       }
 
+      // Flèches : déplacer la sélection (1 px écran, ⇧ = ×10)
+      if (!typing && (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+        nudgeSelection(e);
+        return;
+      }
+
       if (mod) {
         var k = e.key.toLowerCase();
+
+        // Pendant une saisie d'interface : les raccourcis TEXTE restent
+        // au champ (sélectionner/copier le mot tapé, pas le tableau).
+        if (typing && (k === 'a' || k === 'c' || k === 'x' || k === 'v')) return;
+
         if (k === 'z') {
           e.preventDefault();
           if (e.shiftKey) MB.hist.redo();
@@ -342,17 +407,15 @@
           MB.hist.redo();
           return;
         }
-        if (k === 'c') {
-          MB.store.copySelection();
-          if (MB.store.selectedIds().length) MB.ui.toast('Copié', 'success');
+        if (k === 's') {
+          e.preventDefault();
+          if (e.shiftKey) MB.storage.saveAs();
+          else MB.storage.save();
           return;
         }
-        if (k === 'x') {
-          MB.store.cutSelection();
-          return;
-        }
-        if (k === 'v') {
-          MB.store.pasteClipboard();
+        if (k === 'o') {
+          e.preventDefault();
+          MB.storage.open();
           return;
         }
         if (k === 'd') {
@@ -365,20 +428,39 @@
           MB.store.selectAll();
           return;
         }
+        if (k === 'c') {
+          e.preventDefault();
+          MB.store.copySelection();
+          if (MB.store.selectedIds().length) MB.ui.toast('Copié', 'success');
+          return;
+        }
+        if (k === 'x') {
+          e.preventDefault();
+          MB.store.cutSelection();
+          return;
+        }
+        if (k === 'v') {
+          e.preventDefault();
+          MB.store.pasteClipboard();
+          return;
+        }
         if (k === 'g') {
           e.preventDefault();
           if (e.shiftKey) MB.store.ungroupSelection();
           else MB.store.groupSelection();
           return;
         }
-        if (k === 's') {
+        // Zoom au modificateur — LE raccourci standard macOS (⌘+ / ⌘−).
+        // « + » exige ⇧ sur AZERTY : le test porte sur la touche, pas la
+        // combinaison exacte (⇧⌘= doit zoomer aussi).
+        if (k === '+' || k === '=') {
           e.preventDefault();
-          MB.storage.save();
+          MB.camera.setZoom(MB.store.s().camera.zoom * 1.25);
           return;
         }
-        if (k === 'o') {
+        if (k === '-' || k === '_') {
           e.preventDefault();
-          MB.storage.open();
+          MB.camera.setZoom(MB.store.s().camera.zoom / 1.25);
           return;
         }
         if (k === '0') {
@@ -388,6 +470,8 @@
         }
         return;
       }
+
+      if (typing) return;
 
       if (e.key === '?' || (e.shiftKey && e.key === '/')) {
         e.preventDefault();

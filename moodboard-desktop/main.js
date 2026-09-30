@@ -378,7 +378,7 @@ async function runE2e() {
 
     // 1. Version et mode
     const ver = await exec('(window.MB && MB.VERSION) || ""');
-    ok('version 1.1.0', ver === '1.1.0', 'MB.VERSION=' + ver);
+    ok('version ' + (require('./package.json').version), ver === require('./package.json').version, 'MB.VERSION=' + ver);
     const mode = await exec('(MB.storage && MB.storage.mode) ? MB.storage.mode() : "?"');
     ok('mode desktop actif', mode === 'desktop', 'mode=' + mode);
     const dir = await exec('(MB.storage.dataDir && MB.storage.dataDir()) || ""');

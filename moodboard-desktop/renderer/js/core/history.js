@@ -3,6 +3,11 @@
  * Chaque geste utilisateur (drag complet, création, suppression…) donne
  * UNE entrée d'historique. Les instantanés sont des clones profonds du
  * tableau d'éléments (léger : les images sont des références, pas des blobs).
+ *
+ * La sélection au moment du geste est capturée avec l'instantané : annuler
+ * un « Supprimer » resélectionne ce qui revient (comme Illustrator),
+ * rétablir resélectionne le résultat — l'utilisateur peut enchaîner
+ * ⌘D/⌘G/flèches après un ⌘Z au lieu de tomber sur une sélection vide.
  * ========================================================================= */
 (function () {
   'use strict';
@@ -19,12 +24,27 @@
     if (MB.storage) MB.storage.markDirty();
   }
 
+  /* Restaure une sélection capturée, réduite aux éléments existants —
+   * jamais un échec ici ne doit empêcher l'annulation elle-même. */
+  function restoreSel(ids) {
+    try {
+      if (!ids || !ids.length) return;
+      var live = ids.filter(function (id) {
+        return !!MB.store.el(id);
+      });
+      if (live.length) MB.store.setSelection(live);
+    } catch (e) {
+      /* noop */
+    }
+  }
+
   var Hist = {
     begin: function (label) {
       var st = MB.store.s();
       pending = {
         label: label || 'Modifier',
-        before: U.deepClone(st.elements)
+        before: U.deepClone(st.elements),
+        selection: st.selection.ids.slice()
       };
     },
 
@@ -35,7 +55,9 @@
       stack.push({
         label: pending.label,
         before: pending.before,
-        after: U.deepClone(st.elements)
+        beforeSel: pending.selection.slice(),
+        after: U.deepClone(st.elements),
+        afterSel: st.selection.ids.slice()
       });
       if (stack.length > LIMIT) stack.shift();
       index = stack.length - 1;
@@ -61,6 +83,7 @@
       if (index < 0) return false;
       var entry = stack[index];
       MB.store.replaceElements(U.deepClone(entry.before));
+      restoreSel(entry.beforeSel);
       index -= 1;
       markDirty();
       MB.store.emit('history');
@@ -71,6 +94,7 @@
       if (index >= stack.length - 1) return false;
       var entry = stack[index + 1];
       MB.store.replaceElements(U.deepClone(entry.after));
+      restoreSel(entry.afterSel);
       index += 1;
       markDirty();
       MB.store.emit('history');

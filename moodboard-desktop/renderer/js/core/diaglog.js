@@ -171,6 +171,44 @@
     }
   }
 
+  /* -------------------------------------------------- clavier (sonde) */
+
+  /* Diagnostic clavier : les compteurs pointer/souris ne disaient rien des
+   * touches — impossible de savoir si un keydown atteignait la page. On
+   * compte maintenant chaque touche reçue (famille mesurée AVANT toute
+   * logique applicative, phase capture) et on journalise les premières
+   * avec leur cible : « touche: "z" ⌘ (dans un champ — proj-name) »
+   * répondra définitivement à « pourquoi mes raccourcis ne marchent pas »
+   * (focus piégé dans un champ d'interface, touches jamais livrées…). */
+  window.addEventListener('keydown', function (e) {
+    try {
+      var d = MB.EVT_DIAG;
+      if (!d) return;
+      d.keydown = (d.keydown || 0) + 1;
+      var t = e.target;
+      var inField = !!(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable));
+      d.focusInInput = inField ? 1 : 0;
+      if (d.keydown <= 24) {
+        var combo = JSON.stringify(e.key) +
+          (e.metaKey ? ' ⌘' : '') + (e.ctrlKey ? ' Ctrl' : '') +
+          (e.shiftKey ? ' ⇧' : '') + (e.altKey ? ' ⌥' : '');
+        var where = inField
+          ? ' (dans un champ — ' + String(t.id || t.className || t.tagName).slice(0, 40) + ')'
+          : '';
+        log('touche', combo + where);
+      }
+    } catch (err) {
+      /* le diagnostic ne doit jamais casser l'application */
+    }
+  }, true);
+  window.addEventListener('keyup', function () {
+    try {
+      if (MB.EVT_DIAG) MB.EVT_DIAG.keyup = (MB.EVT_DIAG.keyup || 0) + 1;
+    } catch (err) {
+      /* noop */
+    }
+  }, true);
+
   /* ------------------------------------------------------ rapport */
 
   function report() {
