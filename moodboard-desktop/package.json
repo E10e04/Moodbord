@@ -1,0 +1,60 @@
+{
+  "name": "moodboard",
+  "productName": "Moodboard",
+  "version": "1.1.0",
+  "private": true,
+  "description": "Moodboard — table de travail spatiale pour designers (application autonome Windows / macOS).",
+  "author": "Moodboard",
+  "main": "main.js",
+  "scripts": {
+    "sync": "node scripts/sync-client.mjs",
+    "start": "node scripts/sync-client.mjs && electron .",
+    "dist": "node scripts/sync-client.mjs && electron-builder",
+    "dist:win": "node scripts/sync-client.mjs && electron-builder --win nsis",
+    "dist:mac": "node scripts/sync-client.mjs && electron-builder --mac dmg",
+    "dist:all": "node scripts/sync-client.mjs && electron-builder --mac dmg --win nsis"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "electron": "^31.7.7",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "app.moodboard.desktop",
+    "productName": "Moodboard",
+    "copyright": "Copyright © Moodboard",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer/**/*"
+    ],
+    "asar": true,
+    "icon": "build/icon.png",
+    "mac": {
+      "category": "public.app-category.graphics-design",
+      "target": [
+        { "target": "dmg", "arch": ["x64", "arm64"] }
+      ],
+      "minimumSystemVersion": "11.0",
+      "artifactName": "Moodboard-${version}-${arch}.${ext}"
+    },
+    "win": {
+      "signAndEditExecutable": false,
+      "target": [
+        { "target": "nsis", "arch": ["x64"] }
+      ]
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false,
+      "artifactName": "Moodboard-Setup-${version}.${ext}"
+    }
+  }
+}

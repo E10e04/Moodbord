@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; base-uri &#39;none&#39;; form-action &#39;none&#39;">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Moodboard — Adobe Illustrator (CEP)</title>
+<link rel="stylesheet" href="css/panel.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- ===== Barre supérieure ===== -->
+  <header id="topbar">
+    <div class="tb-left">
+      <div class="brand" data-tip="Moodboard — Café des idées">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span class="brand-name">Moodboard</span>
+      </div>
+      <nav class="menubar" id="menubar" aria-label="Menus"></nav>
+    </div>
+    <div class="tb-center">
+      <input id="proj-name" class="proj-name" type="text" value="Sans titre"
+             spellcheck="false" aria-label="Nom du projet" data-tip="Nom du projet">
+    </div>
+    <div class="tb-right">
+      <div class="save-status" id="save-status" data-tip="État de l'enregistrement">
+        <span class="save-dot" id="save-dot"></span><span id="save-label">Enregistré</span>
+      </div>
+      <div class="tb-sep" aria-hidden="true"></div>
+      <button class="icon-btn" id="btn-snap" data-tip="Aimantage (S)" aria-label="Aimantage"></button>
+      <button class="icon-btn" id="btn-grid" data-tip="Grille (G)" aria-label="Grille"></button>
+      <div class="tb-sep" aria-hidden="true"></div>
+      <button class="icon-btn" id="btn-library" data-tip="Bibliothèque" aria-label="Bibliothèque"></button>
+      <button class="icon-btn" id="btn-inspector" data-tip="Inspecteur" aria-label="Inspecteur"></button>
+      <div class="tb-sep" aria-hidden="true"></div>
+      <div class="zoom-ctrl">
+        <button class="icon-btn" id="btn-zoom-out" data-tip="Zoom arrière (-)" aria-label="Zoom arrière"></button>
+        <button class="zoom-val" id="zoom-val" data-tip="Niveau de zoom" aria-label="Niveau de zoom">100 %</button>
+        <button class="icon-btn" id="btn-zoom-in" data-tip="Zoom avant (+)" aria-label="Zoom avant"></button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== Zone principale ===== -->
+  <div id="main">
+
+    <nav id="toolrail" aria-label="Outils de création"></nav>
+
+    <aside id="library" class="side-panel" aria-label="Bibliothèque">
+      <div class="panel-head">
+        <span class="panel-title">Bibliothèque</span>
+        <button class="icon-btn icon-btn--sm" id="btn-library-close" data-tip="Réduire" aria-label="Réduire la bibliothèque"></button>
+      </div>
+      <div class="panel-body">
+        <div class="lib-tabs" id="lib-tabs" role="tablist"></div>
+        <div class="lib-content" id="lib-content"></div>
+      </div>
+    </aside>
+
+    <div id="board-wrap">
+      <div id="board">
+        <div id="grid-bg" aria-hidden="true"></div>
+        <div id="world" aria-hidden="true"></div>
+      </div>
+      <svg id="guides" aria-hidden="true"></svg>
+      <div id="overlay" aria-hidden="true"></div>
+      <div id="marquee" hidden></div>
+      <div id="contextbar" hidden></div>
+      <div id="empty-hint" hidden>
+        <div class="empty-icon" aria-hidden="true"></div>
+        <p><strong>Cette table est vide.</strong></p>
+        <p>Glissez des images depuis le Finder, choisissez un outil à gauche,<br>ou faites un clic droit pour créer un élément.</p>
+        <p class="empty-kbd">Espace + glisser pour se déplacer · Molette pour zoomer</p>
+      </div>
+      <button id="btn-library-open" class="edge-tab edge-tab--left" data-tip="Ouvrir la bibliothèque" aria-label="Ouvrir la bibliothèque" hidden></button>
+      <button id="btn-inspector-open" class="edge-tab edge-tab--right" data-tip="Ouvrir l'inspecteur" aria-label="Ouvrir l'inspecteur" hidden></button>
+    </div>
+
+    <aside id="inspector" class="side-panel" aria-label="Inspecteur">
+      <div class="panel-head">
+        <span class="panel-title" id="insp-title">Inspecteur</span>
+        <button class="icon-btn icon-btn--sm" id="btn-inspector-close" data-tip="Réduire" aria-label="Réduire l'inspecteur"></button>
+      </div>
+      <div class="panel-body" id="insp-body"></div>
+    </aside>
+
+  </div>
+
+  <!-- ===== Barre d'état ===== -->
+  <footer id="statusbar">
+    <div class="sb-left" id="sb-hint">Sélection — cliquez un objet, glissez pour le déplacer</div>
+    <div class="sb-right"><span class="sb-version" id="sb-version" data-tip="Version installée — doit correspondre au zip déployé"></span><span id="sb-count"></span></div>
+  </footer>
+</div>
+
+<!-- ===== Couches flottantes ===== -->
+<div id="layer-menus"></div>
+<div id="layer-popovers"></div>
+<div id="layer-dialogs"></div>
+<div id="layer-toasts" aria-live="polite"></div>
+<div id="drag-ghost" hidden></div>
+<input type="file" id="file-import" multiple accept="image/*" hidden>
+
+<!-- ===== Bootstrap CEP ===== -->
+<script src="js/lib/CSInterface.js"></script>
+
+<!-- ===== Diagnostic (chargé en premier : capture les erreurs de tous les scripts suivants) ===== -->
+<script src="js/core/diaglog.js"></script>
+
+<!-- ===== Core ===== -->
+<script src="js/core/utils.js"></script>
+<script src="js/core/desktop.js"></script>
+<script src="js/core/icons.js"></script>
+<script src="js/core/store.js"></script>
+<script src="js/core/history.js"></script>
+<script src="js/core/camera.js"></script>
+<script src="js/core/factory.js"></script>
+<script src="js/core/storage.js"></script>
+<script src="js/core/demo.js"></script>
+
+<!-- ===== Canvas engine ===== -->
+<script src="js/board/board.js"></script>
+<script src="js/board/content.js"></script>
+<script src="js/board/elementView.js"></script>
+<script src="js/board/interactions.js"></script>
+<script src="js/board/export.js"></script>
+
+<!-- ===== UI ===== -->
+<script src="js/ui/overlays.js"></script>
+<script src="js/ui/toolbar.js"></script>
+<script src="js/ui/topbar.js"></script>
+<script src="js/ui/library.js"></script>
+<script src="js/ui/controls.js"></script>
+<script src="js/ui/inspector.js"></script>
+<script src="js/ui/contextbar.js"></script>
+<script src="js/ui/contextmenu.js"></script>
+
+<!-- ===== Adobe bridge ===== -->
+<script src="js/adobe/cep.js"></script>
+
+<!-- ===== Application ===== -->
+<script src="js/main.js"></script>
+</body>
+</html>

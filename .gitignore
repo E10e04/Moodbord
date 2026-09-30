@@ -1,0 +1,18 @@
+# ── Dépendances ────────────────────────────────────────────────
+node_modules/
+
+# ── Sorties de build (binaires) ────────────────────────────────
+# Les installateurs (.exe/.dmg) dépassent la limite GitHub de 100 Mo
+# par fichier : ils sont construits par GitHub Actions et publiés en
+# Releases — jamais versionnés.
+moodboard-desktop/dist/
+# Copie racine générée localement (identique à renderer/index.html)
+moodboard-desktop/index.html
+
+# ── Système / éditeur ──────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+*.log
+.idea/
+.vscode/

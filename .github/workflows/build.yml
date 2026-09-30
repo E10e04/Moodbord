@@ -1,0 +1,152 @@
+# ============================================================
+# Moodboard — Build & Release
+#
+# Construit tous les livrables sur les machines GitHub :
+#   • Extension CEP (zip)
+#   • Application Windows : Setup.exe (NSIS) + zip portable
+#   • Application macOS : .dmg Intel x64 + Apple Silicon arm64
+#
+# Déclencheurs :
+#   • à la demande  : onglet Actions ▸ Build & Release ▸ Run workflow
+#   • Release public : pousser un tag « v* » → Release créé automatiquement
+#     avec tous les installateurs en pièces jointes
+#
+# Aucun Mac ni Windows requis sur votre machine.
+# ============================================================
+name: Build & Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  # ── Extension CEP ────────────────────────────────────────────
+  cep:
+    name: Extension CEP (zip)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Valider puis packager l'extension
+        working-directory: moodboard-cep
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq zip
+          node scripts/validate.mjs
+          node scripts/package.mjs
+
+      - name: Publier l'artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: moodboard-cep-zip
+          path: moodboard-cep/dist/moodboard-cep-*.zip
+          if-no-files-found: error
+
+  # ── Application Windows (Setup.exe + portable) ────────────────
+  desktop-windows:
+    name: Application Windows (Setup.exe + portable)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: moodboard-desktop/package-lock.json
+
+      - name: Installer les dépendances
+        working-directory: moodboard-desktop
+        run: npm ci
+
+      - name: Préparer l'icône .exe (rcedit natif Windows)
+        working-directory: moodboard-desktop
+        shell: bash
+        run: |
+          cp build/icon-multi.ico build/icon.ico
+          node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('package.json','utf8'));p.build.win.signAndEditExecutable=true;fs.writeFileSync('package.json',JSON.stringify(p,null,2)+'\n')"
+
+      - name: Construire (installateur NSIS + zip portable)
+        working-directory: moodboard-desktop
+        run: npx electron-builder --win nsis zip --publish never
+
+      - name: Renommer le zip portable
+        working-directory: moodboard-desktop
+        shell: bash
+        run: |
+          v=$(node -p "require('./package.json').version")
+          f=$(ls dist/*.zip | head -1)
+          mv "$f" "dist/Moodboard-${v}-Windows-x64-portable.zip"
+
+      - name: Publier les artefacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: moodboard-windows
+          path: |
+            moodboard-desktop/dist/*.exe
+            moodboard-desktop/dist/*.zip
+          if-no-files-found: error
+
+  # ── Application macOS (dmg Intel + Apple Silicon) ─────────────
+  desktop-macos:
+    name: Application macOS (dmg x64 + arm64)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: moodboard-desktop/package-lock.json
+
+      - name: Installer les dépendances
+        working-directory: moodboard-desktop
+        run: npm ci
+
+      - name: Synchroniser le renderer (client + CSP)
+        working-directory: moodboard-desktop
+        run: node scripts/sync-client.mjs
+
+      - name: Construire les .dmg (x64 + arm64)
+        working-directory: moodboard-desktop
+        env:
+          # Pas de certificat de signature : désactive la découverte
+          # automatique d'identité pour éviter l'échec du build.
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: npx electron-builder --mac dmg --publish never
+
+      - name: Publier les artefacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: moodboard-macos
+          path: moodboard-desktop/dist/*.dmg
+          if-no-files-found: error
+
+  # ── Release publique (uniquement sur tag v*) ─────────────────
+  release:
+    name: Publication du Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [cep, desktop-windows, desktop-macos]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Télécharger tous les artefacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Créer le Release GitHub
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
