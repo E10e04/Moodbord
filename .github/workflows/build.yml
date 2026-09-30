@@ -121,7 +121,11 @@ jobs:
           # Pas de certificat de signature : désactive la découverte
           # automatique d'identité pour éviter l'échec du build.
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-        run: npx electron-builder --mac dmg --publish never
+        # NB : les cibles passées en CLI écrasent la liste d'architectures
+        # du package.json — les drapeaux --x64 --arm64 sont OBLIGATOIRES
+        # pour obtenir les deux .dmg (Intel + Apple Silicon), sinon seul
+        # l'arch du runner est construit (arm64 sur macos-latest).
+        run: npx electron-builder --mac dmg --x64 --arm64 --publish never
 
       - name: Publier les artefacts
         uses: actions/upload-artifact@v4
@@ -148,5 +152,6 @@ jobs:
         with:
           files: artifacts/**
           generate_release_notes: true
+          overwrite_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

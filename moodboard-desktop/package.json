@@ -11,8 +11,8 @@
     "start": "node scripts/sync-client.mjs && electron .",
     "dist": "node scripts/sync-client.mjs && electron-builder",
     "dist:win": "node scripts/sync-client.mjs && electron-builder --win nsis",
-    "dist:mac": "node scripts/sync-client.mjs && electron-builder --mac dmg",
-    "dist:all": "node scripts/sync-client.mjs && electron-builder --mac dmg --win nsis"
+    "dist:mac": "node scripts/sync-client.mjs && electron-builder --mac dmg --x64 --arm64",
+    "dist:all": "node scripts/sync-client.mjs && electron-builder --mac dmg --x64 --arm64 --win nsis"
   },
   "engines": {
     "node": ">=18"
