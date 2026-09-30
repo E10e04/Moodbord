@@ -23,6 +23,14 @@ on:
 permissions:
   contents: write
 
+# Un seul run à la fois par référence (tag/branche) : deux runs
+# concurrents qui publient sur le même Release se suppriment mutuellement
+# des assets (race condition sur overwrite_files) — le plus récent
+# annule le précédent.
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # ── Extension CEP ────────────────────────────────────────────
   cep:
@@ -147,6 +155,16 @@ jobs:
           path: artifacts
           merge-multiple: true
 
+      - name: Vérifier la présence des 5 installateurs attendus
+        run: |
+          ls -la artifacts/
+          test -f artifacts/moodboard-cep-*.zip
+          test -f artifacts/Moodboard-Setup-*.exe
+          test -f artifacts/Moodboard-*-Windows-x64-portable.zip
+          test -f artifacts/Moodboard-*-x64.dmg   # macOS Intel
+          test -f artifacts/Moodboard-*-arm64.dmg # macOS Apple Silicon
+          echo "OK : les 5 installateurs sont présents avant publication."
+
       - name: Créer le Release GitHub
         uses: softprops/action-gh-release@v2
         with:
@@ -155,3 +173,19 @@ jobs:
           overwrite_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Vérifier le contenu publié du Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          sleep 8
+          gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${GITHUB_REF_NAME}" --jq '.assets[].name' | sort > published.txt
+          (cd artifacts && ls | sort) > expected.txt
+          echo '--- attendu ---'; cat expected.txt
+          echo '--- publié ---'; cat published.txt
+          MISSING=$(comm -23 expected.txt published.txt)
+          if [ -n "${MISSING}" ]; then
+            echo "ERREUR : fichiers manquants dans le Release : ${MISSING}"
+            exit 1
+          fi
+          echo "OK : les $(wc -l < expected.txt) fichiers sont publiés."
