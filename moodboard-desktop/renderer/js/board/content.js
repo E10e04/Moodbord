@@ -427,16 +427,45 @@
       comment: true
     };
     if (autoTypes[el.type]) {
+      /* BUG CORRIGÉ (v1.1.3) : à la CRÉATION, afterMount est appelé
+       * depuis elementView.create() AVANT que board.reconcile()
+       * n'attache le nœud au DOM — la mesure donnait 0 et écrasait
+       * el.h → texte/commentaire/checklist créés INVISIBLES (h=0)
+       * jusqu'à la prochaine re-mesure. On ne mesure que sur un nœud
+       * attaché ; sinon on reporte à la frame suivante (le reconcile
+       * de la même tâche a alors inséré le nœud). */
       var body = view.node.firstElementChild;
       if (body) {
-        var needed = Math.ceil(body.getBoundingClientRect().height / (MB.store.s().camera.zoom || 1));
-        // getBoundingClientRect inclut le zoom : repasse en unités canvas
-        if (Math.abs(needed - el.h) > 2) {
-          el.h = needed;
-          view.node.style.height = el.h + 'px';
-          MB.board.refreshOverlay();
+        if (body.isConnected) {
+          applyAutoHeight(view, el);
+        } else {
+          var elId = el.id;
+          requestAnimationFrame(function () {
+            var live = MB.store.el(elId);
+            if (live) applyAutoHeight(view, live);
+          });
         }
       }
+    }
+  }
+
+  /* Mesure la hauteur réelle du corps (unités canvas) et cale el.h.
+   * Appelée uniquement le nœud étant attaché au DOM. */
+  function applyAutoHeight(view, el) {
+    var autoTypes = {
+      text: el.data.autoH !== false,
+      checklist: true,
+      comment: true
+    };
+    if (!autoTypes[el.type]) return;
+    var body = view.node.firstElementChild;
+    if (!body || !body.isConnected) return;
+    var needed = Math.ceil(body.getBoundingClientRect().height / (MB.store.s().camera.zoom || 1));
+    // getBoundingClientRect inclut le zoom : repasse en unités canvas
+    if (Math.abs(needed - el.h) > 2) {
+      el.h = needed;
+      view.node.style.height = el.h + 'px';
+      MB.board.refreshOverlay();
     }
   }
 

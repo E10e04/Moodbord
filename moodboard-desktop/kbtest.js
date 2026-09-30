@@ -1,10 +1,14 @@
 /* =========================================================================
- * kbtest.js — Harnais de test CLAVIER RÉEL pour Moodboard Desktop v1.1.2.
+ * kbtest.js — Harnais de test CLAVIER + SOURIS RÉELS, Moodboard Desktop.
  *
  * Reproduit main.js (menu natif, preload, file://, IPC fs) puis injecte de
- * VRAIS événements clavier OS (sendInputEvent — noms DomCode : « Right »,
- * pas « ArrowRight ») et vérifie la chaîne complète :
- *   livraison keydown → handler → état de l'app.
+ * VRAIS événements OS (sendInputEvent — noms DomCode : « Right »,
+ * pas « ArrowRight » ; souris : mouseDown/mouseMove/mouseUp) et vérifie
+ * la chaîne complète : livraison événement → handler → état de l'app.
+ *
+ * v1.1.3 : section 11 — drags « panneau → canvas » (toolrail,
+ * bibliothèque) avec la vraie souris OS — le geste que l'utilisateur
+ * signalait ne pas pouvoir faire.
  *
  * Usage : Xvfb :99 puis DISPLAY=:99 npx electron kbtest.js
  * ========================================================================= */
@@ -124,7 +128,7 @@ async function run() {
 
     /* 0. Santé de base */
     const ver = await exec('(window.MB && MB.VERSION) || ""');
-    ok('boot — version 1.1.2', ver === '1.1.2', 'MB.VERSION=' + ver);
+    ok('boot — version 1.1.3', ver === '1.1.3', 'MB.VERSION=' + ver);
     const mode = await exec('(MB.storage && MB.storage.mode) ? MB.storage.mode() : "?"');
     ok('boot — mode desktop + dossier disque', mode === 'desktop', 'mode=' + mode);
     const focus = await exec('document.activeElement ? document.activeElement.tagName : "?"');
@@ -327,14 +331,107 @@ async function run() {
     const diagReport = await exec('MB.diaglog.report()');
     ok('rapport de diagnostic contient les compteurs clavier', /keydown=\d+/.test(diagReport) && /keyup=\d+/.test(diagReport), '');
 
-    /* 11. Erreurs console */
+    /* 11. DRAGS « PANNEAU → CANVAS » avec la VRAIE souris OS (v1.1.3)
+     * Le geste signalé par l'utilisateur : glisser un outil / un item
+     * de bibliothèque sur le canvas et voir l'élément se créer. */
+    async function rectOf(selector) {
+      const r = await exec(
+        '(function(){var n=document.querySelector(' + JSON.stringify(selector) + '); if(!n) return null; var r=n.getBoundingClientRect(); return {x:r.left+r.width/2, y:r.top+r.height/2};})()'
+      );
+      return r;
+    }
+    function mouse(type, x, y) {
+      win.webContents.sendInputEvent({ type, x: Math.round(x), y: Math.round(y), button: 'left', clickCount: type === 'mouseDown' ? 1 : 0 });
+    }
+    async function realDrag(fromSel, dropFx, dropFy) {
+      const from = await rectOf(fromSel);
+      const board = await rectOf('#board-wrap');
+      /* rectOf retourne le CENTRE du board ; le point de drop visé */
+      const br = await exec('(function(){var r=document.getElementById("board-wrap").getBoundingClientRect(); return {l:r.left,t:r.top,w:r.width,h:r.height};})()');
+      const drop = { x: br.l + br.w * dropFx, y: br.t + br.h * dropFy };
+      if (!from || !drop) return null;
+      mouse('mouseMove', from.x, from.y);
+      await sleep(60);
+      mouse('mouseDown', from.x, from.y);
+      await sleep(60);
+      const steps = 6;
+      for (let i = 1; i <= steps; i++) {
+        mouse('mouseMove', from.x + ((drop.x - from.x) * i) / steps, from.y + ((drop.y - from.y) * i) / steps);
+        await sleep(40);
+      }
+      mouse('mouseUp', drop.x, drop.y);
+      await sleep(180);
+      return { drop };
+    }
+
+    /* 11a — drag bouton Note du rail → canvas */
+    await resetDemo();
+    let nBefore = await exec('MB.store.s().elements.length');
+    let drag = await realDrag('.tool-btn[data-tool="note"]', 0.55, 0.5);
+    let last = await exec('(function(){var s=MB.store.s(); var e=s.elements[s.elements.length-1]; return e ? {type:e.type, x:e.x, y:e.y, w:e.w, h:e.h} : null;})()');
+    let world = await exec('MB.camera.toCanvas(' + Math.round(drag.drop.x) + ', ' + Math.round(drag.drop.y) + ')');
+    ok(
+      'drag souris bouton Note → note créée au point de drop',
+      last && last.type === 'note' && Math.abs(last.x + last.w / 2 - world.x) < 2 && Math.abs(last.y + last.h / 2 - world.y) < 2,
+      last ? last.type + ' centre=(' + (last.x + last.w / 2).toFixed(1) + ',' + (last.y + last.h / 2).toFixed(1) + ') drop=(' + world.x.toFixed(1) + ',' + world.y.toFixed(1) + ')' : 'rien'
+    );
+    await exec('MB.hist.undo()');
+    await sleep(150);
+
+    /* 11b — drag bouton Texte → création avec hauteur vivante (bug h=0) */
+    drag = await realDrag('.tool-btn[data-tool="text"]', 0.6, 0.55);
+    last = await exec('(function(){var s=MB.store.s(); var e=s.elements[s.elements.length-1]; return e ? {type:e.type, h:e.h} : null;})()');
+    ok(
+      'drag souris bouton Texte → texte créé VISIBLE (h > 10)',
+      last && last.type === 'text' && last.h > 10,
+      last ? last.type + ' h=' + last.h : 'rien'
+    );
+    await exec('MB.hist.undo()');
+    await sleep(150);
+
+    /* 11c — drag couleur de la bibliothèque → pastille */
+    await exec('(function(){var t=document.querySelector(\'.lib-tab[data-tab="colors"]\'); if(t) t.click(); return true;})()');
+    await sleep(200);
+    drag = await realDrag('.lib-color', 0.5, 0.45);
+    last = await exec('(function(){var s=MB.store.s(); var e=s.elements[s.elements.length-1]; return e ? {type:e.type, hex:e.data && e.data.hex} : null;})()');
+    ok(
+      'drag souris lib Couleurs → pastille créée',
+      last && last.type === 'color' && /^#/.test(last.hex || ''),
+      last ? last.type + ' ' + last.hex : 'rien'
+    );
+    await exec('MB.hist.undo()');
+    await sleep(150);
+
+    /* 11d — bibliothèque Médias pré-peuplée (seed v1.1.3) */
+    await exec('(function(){var t=document.querySelector(\'.lib-tab[data-tab="media"]\'); if(t) t.click(); return true;})()');
+    await sleep(400);
+    let nThumbs = -1;
+    for (let i = 0; i < 20; i++) {
+      nThumbs = await exec('document.querySelectorAll(".lib-thumb").length');
+      if (nThumbs >= 5) break;
+      await sleep(200);
+    }
+    ok('bibliothèque Médias : 5 assets démo seedés', nThumbs === 5, nThumbs + ' items');
+
+    /* 11e — compteurs ghost diagnostiques */
+    const gs = await exec('(MB.EVT_DIAG && MB.EVT_DIAG.ghostStart) || 0');
+    const gd = await exec('(MB.EVT_DIAG && MB.EVT_DIAG.ghostDrop) || 0');
+    ok('sonde diagnostique : ghostStart/ghostDrop comptés', gs >= 3 && gd >= 3, 'ghostStart=' + gs + ' ghostDrop=' + gd);
+    const diagRep2 = await exec('MB.diaglog.report()');
+    ok(
+      'rapport : traces « drag panneau » présentes',
+      diagRep2.indexOf('drag panneau démarré') >= 0 && diagRep2.indexOf('drop panneau') >= 0,
+      ''
+    );
+
+    /* 12. Erreurs console */
     ok('zéro erreur console', consoleErrors.length === 0, consoleErrors.slice(0, 3).join(' | ') || 'aucune');
   } catch (err) {
     ok('exécution du harnais', false, String((err && err.message) || err));
   }
 
   const passed = results.filter((r) => r.pass).length;
-  console.log('\n===== KBTEST MOODBOARD DESKTOP v1.1.2 (vrais événements OS) =====');
+  console.log('\n===== KBTEST MOODBOARD DESKTOP (vrais événements OS clavier + souris) =====');
   results.forEach((r) => {
     console.log((r.pass ? 'PASS' : 'FAIL') + ' — ' + r.name + (r.detail ? '  [' + r.detail + ']' : ''));
   });

@@ -84,13 +84,19 @@
   }
 
   function bindTool(btn, t) {
-    btn.addEventListener('pointerdown', function (e) {
+    /* Couche adaptative pointer + souris (cf. utils.js) : le drag-out
+     * doit démarrer même dans les moteurs CEP qui ne livrent PAS
+     * pointerdown (flux hybride documenté par le diagnostic v1.1.0 :
+     * pointermove sans pointerdown). Un listener « pointerdown » seul
+     * rendait le glisser-déposer des outils impossible dans Illustrator. */
+    U.bindPointerWithMouse(btn, 'down', function (e) {
       if (e.button !== 0) return;
       // drag-out : ghost + drop sur le canvas
       MB.ui.ghost.start(
         {
           sx: e.clientX,
           sy: e.clientY,
+          label: 'outil:' + t.id,
           html: '<div class="ghost-card">' + MB.icons.get(t.icon, 18) + '<span>' + U.escapeHtml(t.label) + '</span></div>'
         },
         function (point) {

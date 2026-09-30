@@ -118,9 +118,34 @@
     { id: 'triangle', label: 'Triangle' }
   ];
 
+  /* Médias de démonstration embarqués (assets/demo) : peuplent
+   * l’onglet Médias au démarrage pour que la bibliothèque offre du
+   * contenu glissable dès l’ouverture — sinon l’onglet par défaut est
+   * vide et « rien ne se dépose » depuis ce panneau. */
+  var DEMO_MEDIA = [
+    { src: 'assets/demo/demo-photo.png', name: 'Photo — démo' },
+    { src: 'assets/demo/demo-texture.png', name: 'Texture — démo' },
+    { src: 'assets/demo/demo-logo.png', name: 'Logo — démo' },
+    { src: 'assets/demo/demo-editorial.png', name: 'Éditorial — démo' },
+    { src: 'assets/demo/demo-packaging.png', name: 'Packaging — démo' }
+  ];
+
   var mediaItems = []; // {src, w, h, name}
 
-  function bindDragItem(node, makeExtra, type) {
+  function seedDemoMedia() {
+    DEMO_MEDIA.forEach(function (m) {
+      var img = new Image();
+      img.onload = function () {
+        addMedia(m.src, img.naturalWidth || 1024, img.naturalHeight || 1024, m.name);
+      };
+      img.onerror = function () {
+        /* asset absent (installation partielle) : silencieux */
+      };
+      img.src = m.src;
+    });
+  }
+
+  function bindDragItem(node, makeExtra, type, label) {
     // Couche adaptative pointer + souris (cf. utils.js) : le drag depuis
     // la bibliothèque fonctionne même dans les moteurs CEP qui ne
     // livrent pas les Pointer Events.
@@ -130,6 +155,7 @@
         {
           sx: e.clientX,
           sy: e.clientY,
+          label: label || ('lib:' + type),
           html: '<div class="ghost-card">' + node.dataset.ghostHtml + '</div>'
         },
         function (point) {
@@ -152,7 +178,7 @@
       item.dataset.ghostHtml = '<span class="ghost-swatch" style="background:' + hex + '"></span>';
       bindDragItem(item, function () {
         return { hex: hex, name: colorName(hex) };
-      }, 'color');
+      }, 'color', 'lib:couleur ' + hex);
       item.addEventListener('click', function () {
         var center = MB.interact.canvasPoint({
           clientX: window.innerWidth / 2,
@@ -197,7 +223,7 @@
         }).join('') + '</span>';
       bindDragItem(item, function () {
         return { colors: U.deepClone(p.colors), name: p.name };
-      }, 'palette');
+      }, 'palette', 'lib:palette ' + p.name);
       list.appendChild(item);
     });
     host.appendChild(list);
@@ -215,7 +241,7 @@
       item.dataset.ghostHtml = '<span class="ghost-font">Aa</span>';
       bindDragItem(item, function () {
         return { fontFamily: f };
-      }, 'typography');
+      }, 'typography', 'lib:typo ' + f);
       list.appendChild(item);
     });
     host.appendChild(list);
@@ -232,7 +258,7 @@
       item.dataset.ghostHtml = MB.icons.get(s.id === 'rect' ? 'square' : s.id, 18);
       bindDragItem(item, function () {
         return { shape: s.id };
-      }, 'shape');
+      }, 'shape', 'lib:forme ' + s.id);
       grid.appendChild(item);
     });
     host.appendChild(grid);
@@ -268,7 +294,7 @@
       item.dataset.ghostHtml = '<span class="ghost-img" style="background-image:url(\'' + m.src + '\')"></span>';
       bindDragItem(item, function () {
         return { src: m.src, naturalW: m.w, naturalH: m.h };
-      }, 'image');
+      }, 'image', 'lib:média ' + (m.name || ''));
       grid.appendChild(item);
     });
     host.appendChild(grid);
@@ -342,6 +368,10 @@
       });
       origImport(files, atPoint);
     };
+
+    // Bibliothèque Médias : les assets de démonstration sont chargés
+    // en arrière-plan (addMedia re-rend l’onglet s’il est actif).
+    seedDemoMedia();
 
     render();
   }

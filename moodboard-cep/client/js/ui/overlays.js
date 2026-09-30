@@ -266,7 +266,7 @@
     if (ghostOrphan) clearTimeout(ghostOrphan);
     ghostOrphan = setTimeout(function () {
       ghostOrphan = null;
-      if (ghostState) ghostCancel();
+      if (ghostState) ghostCancel(reason || 'orphelin');
     }, 600);
   }
 
@@ -277,16 +277,29 @@
     }
   }
 
+  function ghostCount(key) {
+    try {
+      if (MB.EVT_DIAG) MB.EVT_DIAG[key] = (MB.EVT_DIAG[key] || 0) + 1;
+    } catch (e) {
+      /* le diagnostic ne doit jamais casser l'application */
+    }
+  }
+
   function ghostStart(opts, onDrop) {
     var node = document.getElementById('drag-ghost');
     node.innerHTML = opts.html || '';
-    node.hidden = false;
+    /* Le ghost n'apparaît qu'après le seuil de 5 px (ghostMove) : pas
+     * de flash sous le curseur lors d'un simple clic sur un outil. */
+    node.hidden = true;
     ghostState = {
       onDrop: onDrop,
+      label: opts.label || '?',
       started: false,
       sx: opts.sx,
       sy: opts.sy
     };
+    ghostCount('ghostStart');
+    MB.diaglog && MB.diaglog.trace('drag panneau démarré (' + ghostState.label + ')');
     move(opts.sx, opts.sy);
   }
 
@@ -302,6 +315,7 @@
     if (!ghostState.started) {
       if (Math.hypot(e.clientX - ghostState.sx, e.clientY - ghostState.sy) < 5) return;
       ghostState.started = true;
+      document.getElementById('drag-ghost').hidden = false;
       document.body.classList.add('is-ghosting');
     }
     move(e.clientX, e.clientY);
@@ -324,17 +338,29 @@
       e.clientY >= r.top && e.clientY <= r.bottom
     ) {
       var point = MB.camera.toCanvas(e.clientX, e.clientY);
+      ghostCount('ghostDrop');
+      MB.diaglog && MB.diaglog.trace(
+        'drop panneau → ' + st.label + ' @ (' + Math.round(point.x) + ', ' + Math.round(point.y) + ')'
+      );
       st.onDrop(point);
       return true;
     }
+    MB.diaglog && MB.diaglog.trace('drag panneau relâché hors canvas (' + st.label + ')');
     return false;
   }
 
-  function ghostCancel() {
+  function ghostCancel(reason) {
     ghostDisarmOrphan();
+    if (ghostState) {
+      ghostCount('ghostCancel');
+      MB.diaglog && MB.diaglog.trace(
+        'drag panneau annulé (' + ghostState.label + (reason ? ' — ' + reason : '') + ')'
+      );
+    }
     ghostState = null;
     var node = document.getElementById('drag-ghost');
     node.hidden = true;
+    node.innerHTML = '';
     document.body.classList.remove('is-ghosting');
   }
 
@@ -353,7 +379,7 @@
     ghostEnd(e);
   });
   window.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && ghostState) ghostCancel();
+    if (e.key === 'Escape' && ghostState) ghostCancel('Échap');
   });
 
   MB.ui = MB.ui || {};
