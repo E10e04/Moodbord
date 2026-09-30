@@ -9,7 +9,7 @@
   /* Version affichée dans la barre d'état, la boîte « À propos » et le
    * rapport de diagnostic — LA référence pour vérifier que le panneau
    * exécuté est bien la dernière installation. */
-  MB.VERSION = '1.1.0';
+  MB.VERSION = '1.1.1';
 
   /* ---------- Événements adaptatifs (pointer + souris) ----------
    *
@@ -18,38 +18,51 @@
    * famille souris (molette, clic, mousemove) fonctionne. Le symptom
    * typique : le zoom molette marche mais aucun drag ne répond.
    *
-   * On branche donc LES DEUX familles sur les mêmes handlers :
-   *  - un événement souris est IGNORÉ si un événement pointer l'a déjà
-   *    couvert dans les 50 dernières ms (Chromium émet la paire
-   *    pointer puis souris-de-compatibilité dans la même impulsion) ;
-   *  - si le flux pointer meurt en cours d'interaction, la couche
-   *    souris prend automatiquement le relais après ce délai.
+   * Preuve terrain (diagnostic v1.1.0, Illustrator macOS) : le moteur
+   * peut livrer un flux HYBRIDE — pointermove et mousemove OUI, mais
+   * pointerdown/pointerup JAMAIS. Un dédoublonnage global (n'importe
+   * quel événement pointer couvre n'importe quel événement souris)
+   * laissait alors le flux continu de pointermove avaler CHAQUE
+   * mousedown/mouseup : plus aucun geste ne démarrait.
+   *
+   * On branche donc LES DEUX familles sur les mêmes handlers, avec un
+   * dédoublonnage APPARIÉ PAR TYPE : un événement souris de type K
+   * (down/move/up) est ignoré uniquement si un événement POINTER DU
+   * MÊME TYPE K l'a couvert dans les 50 dernières ms (Chromium sain
+   * émet la paire pointer puis souris-de-compatibilité de la même
+   * impulsion). Ainsi :
+   *  - navigateur sain : chaque événement physique est traité une
+   *    seule fois (via la famille pointer) ;
+   *  - CEP hybride (pointermove sans pointerdown) : le geste démarre
+   *    sur mousedown, vit sur pointermove, se termine sur mouseup ;
+   *  - CEP souris seule : tout passe par la famille souris ;
+   *  - mort du flux pointer en cours de geste : la famille souris
+   *    prend le relais après le délai.
    *
    * MB.EVT_DIAG compte les événements bruts reçus de chaque famille —
    * diagnostic direct dans la console DevTools : MB.interact.diag(). */
 
-  var lastPointerTs = -1e9;
   var POINTER_COVER_MS = 50;
+  var lastPointerTs = { down: -1e9, move: -1e9, up: -1e9 };
   var EVT_DIAG = {
     pointerdown: 0, pointermove: 0, pointerup: 0, pointercancel: 0,
     mousedown: 0, mousemove: 0, mouseup: 0, dragstartBlocked: 0, blur: 0
   };
   MB.EVT_DIAG = EVT_DIAG;
 
-  function pointerIsCovering() {
-    return Date.now() - lastPointerTs < POINTER_COVER_MS;
-  }
-
   function bindPointerWithMouse(target, kind, handler, useCapture) {
     var cap = !!useCapture;
+    var paired = Object.prototype.hasOwnProperty.call(lastPointerTs, kind);
     target.addEventListener('pointer' + kind, function (e) {
       EVT_DIAG['pointer' + kind]++;
-      lastPointerTs = Date.now();
+      if (paired) lastPointerTs[kind] = Date.now();
       handler(e);
     }, cap);
     target.addEventListener('mouse' + kind, function (e) {
       EVT_DIAG['mouse' + kind]++;
-      if (pointerIsCovering()) return; // déjà couvert par l'événement pointer
+      // Ignoré uniquement si l'événement pointer DU MÊME TYPE l'a déjà
+      // couvert (appariement par type — voir l'en-tête ci-dessus).
+      if (paired && Date.now() - lastPointerTs[kind] < POINTER_COVER_MS) return;
       handler(e);
     }, cap);
   }

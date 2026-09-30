@@ -1,7 +1,7 @@
 {
   "name": "moodboard",
   "productName": "Moodboard",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "private": true,
   "description": "Moodboard — table de travail spatiale pour designers (application autonome Windows / macOS).",
   "author": "Moodboard",
@@ -39,7 +39,13 @@
     "mac": {
       "category": "public.app-category.graphics-design",
       "target": [
-        { "target": "dmg", "arch": ["x64", "arm64"] }
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
       ],
       "minimumSystemVersion": "11.0",
       "artifactName": "Moodboard-${version}-${arch}.${ext}"
@@ -47,7 +53,12 @@
     "win": {
       "signAndEditExecutable": false,
       "target": [
-        { "target": "nsis", "arch": ["x64"] }
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
       ]
     },
     "nsis": {
