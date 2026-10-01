@@ -169,7 +169,7 @@ moodboard-cep/
 
 ```bash
 npm run package
-# → dist/moodboard-cep-1.2.0.zip
+# → dist/moodboard-cep-1.3.0.zip
 ```
 
 (L'archive contient `CSXS/`, `.debug`, `client/`, `README.md`, `package.json`.)
@@ -191,7 +191,7 @@ Dézipper l'archive **à la racine** du dossier extensions, de sorte que `CSXS/`
 > 5. relancer Illustrator.
 >
 > **Vérifiez la version installée** : le badge en bas à droite de la barre d'état
-> du panneau doit afficher **v1.2.0**. S'il affiche autre chose, l'ancienne
+> du panneau doit afficher **v1.3.0**. S'il affiche autre chose, l'ancienne
 > installation est encore active.
 
 ### 3. Activer le PlayerDebugMode
@@ -267,6 +267,28 @@ Si un jour les **drags ne répondent plus alors que le zoom molette fonctionne**
 `MB.interact.diag()` retourne le nombre d'événements **réellement livrés** par le moteur de chaque famille (`pointerdown`, `mousedown`, `pointermove`, `mousemove`, `blur`, `pointercancel`…) ainsi que l'état de la machine à gestes (`gesture`, `spaceDown`, `tool`). Depuis la v1.0.1, la couche d'interaction est **adaptive** : elle branche à la fois les Pointer Events et les événements souris, et bascule automatiquement sur la souris si le moteur CEP hôte ne livre pas les Pointer Events (cas observé selon les versions d'Illustrator).
 
 Depuis la **v1.0.2**, les gestes **survivent** aux événements `blur` / `pointercancel` parasites que certains hôtes CEP émettent au milieu d'un drag (symptôme typique : « le zoom marche mais rien ne se déplace ») : le geste continue s'il reçoit encore des événements, et n'est annulé proprement (avec rollback) que si plus rien n'arrive pendant 600 ms.
+
+#### Nouveautés v1.3.0 — enregistrement, écran d'accueil, liens
+
+1. **Enregistrer / Enregistrer sous… / ⌘-Ctrl+S** : le dialogue natif du
+   système (Finder, Explorateur) s'ouvre à CHAQUE enregistrement pour choisir
+   l'emplacement du fichier. Le dossier du dernier enregistrement est
+   mémorisé (`prefs.json` dans le dossier de données — partagé entre
+   l'application et l'extension) : le dialogue s'ouvre directement au bon
+   endroit la fois suivante. Le nom proposé est celui du fichier courant.
+2. **Écran d'accueil (application de bureau)** : au lancement, la fenêtre
+   ouvre sur un écran d'accueil au lieu du canvas — bouton **Nouveau
+   moodboard**, **Ouvrir…**, **Charger la démonstration**, carte **Reprendre
+   la session** (travail non enregistré) et les **20 fichiers récents**
+   (clic = réouverture ; `recent.json`). Un bouton Accueil (icône maison)
+   dans la barre supérieure y revient à tout moment. Panneau CEP et aperçu
+   web : comportement inchangé (restauration de l'autosave).
+3. **Liens du canvas** : un clic sur la carte d'un lien la sélectionne/déplace
+   comme n'importe quel élément ; le navigateur ne s'ouvre QUE par la
+   **flèche dédiée** (coin supérieur droit de la carte).
+4. `Nouveau moodboard` efface aussi l'autosave sur disque (fichier), pas
+   seulement le stockage local — l'ancien travail ne ressuscite plus au
+   prochain lancement.
 
 #### Corrections v1.2.0 — drag & drop + raccourcis clavier
 

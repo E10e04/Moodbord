@@ -317,8 +317,20 @@ ipcMain.handle('dialog:save', async (ev, opts) => {
     ]
   };
   if (o.defaultName) {
+    // v1.3 — le dialogue s'ouvre dans le dernier dossier utilisé (mémorisé
+    // par la page, cf. prefs.json) ; repli : dossier Documents.
+    let base = null;
+    if (typeof o.defaultDir === 'string' && path.isAbsolute(o.defaultDir)) {
+      try {
+        if (fs.existsSync(o.defaultDir)) base = o.defaultDir;
+      } catch (err) {
+        base = null;
+      }
+    }
     try {
-      cfg.defaultPath = path.join(app.getPath('documents'), o.defaultName);
+      cfg.defaultPath = base
+        ? path.join(base, o.defaultName)
+        : path.join(app.getPath('documents'), o.defaultName);
     } catch (err) {
       cfg.defaultPath = o.defaultName;
     }
@@ -386,9 +398,40 @@ async function runE2e() {
     const bodyCls = await exec('document.body.className');
     ok('classes body desktop', /mb-desktop/.test(bodyCls), bodyCls);
 
-    // 2. Démo chargée
+    // 2. v1.3 — écran d'accueil au démarrage (application de bureau)
+    const homeShown = await exec('var h = document.getElementById("home-screen"); !!h && !h.hidden');
+    ok('écran d‘accueil au démarrage', !!homeShown, homeShown ? 'affiché' : 'absent / masqué');
+    const hasNewBtn = await exec('!!document.getElementById("home-new")');
+    ok('bouton « Nouveau moodboard » présent', !!hasNewBtn);
+    const emptyMsg = await exec('!document.getElementById("home-empty").hidden');
+    ok('premier lancement : message « aucun récent »', !!emptyMsg);
+    const noSession = await exec('!document.querySelector(".home-card--session")');
+    ok('aucune session à reprendre (premier lancement)', !!noSession);
+
+    // « Nouveau moodboard » → tableau vierge, écran d'accueil fermé
+    await exec('document.getElementById("home-new").click()');
+    await new Promise((r) => setTimeout(r, 250));
+    const homeClosed = await exec('var h = document.getElementById("home-screen"); !!h && h.hidden');
+    ok('« Nouveau » ferme l‘accueil', !!homeClosed);
+    const nEmpty = await exec('MB.store.s().elements.length');
+    ok('tableau vierge créé', nEmpty === 0, nEmpty + ' élément(s)');
+
+    // Bouton Accueil de la barre supérieure (bureau uniquement)
+    const homeBtnVisible = await exec('var b = document.getElementById("btn-home"); !!b && !b.hidden');
+    ok('bouton Accueil visible (barre supérieure)', !!homeBtnVisible);
+    await exec('document.getElementById("btn-home").click()');
+    await new Promise((r) => setTimeout(r, 200));
+    const homeBack = await exec('var h = document.getElementById("home-screen"); !!h && !h.hidden');
+    ok('bouton Accueil → retour à l‘écran d‘accueil', !!homeBack);
+
+    // Charger la démonstration depuis l'accueil (premier lancement E2E :
+    // la démo ne se charge plus automatiquement, elle se choisit)
+    await exec('document.getElementById("home-demo").click()');
+    await new Promise((r) => setTimeout(r, 350));
+    const homeAfterDemo = await exec('var h = document.getElementById("home-screen"); !!h && h.hidden');
+    ok('démo → accueil fermé', !!homeAfterDemo);
     const n = await exec('MB.store.s().elements.length');
-    ok('démo chargée (premier lancement)', n >= 15, n + ' éléments');
+    ok('démo chargée depuis l‘accueil', n >= 15, n + ' éléments');
 
     // 3. Déplacement réel d'un élément (pointerdown sur la vue,
     //    pointermove/up sur window — même chaîne que la vraie souris).

@@ -276,11 +276,11 @@
    * puis la forme positionnelle UNIQUEMENT si la première a échoué
    * techniquement (exception ou réponse anormale) — une annulation de
    * l'utilisateur n'ouvre jamais un second dialogue. */
-  function saveDialog(prompt, filename, ext) {
+  function saveDialog(prompt, filename, ext, dir) {
     if (!window.cep || !window.cep.fs || !window.cep.fs.showSaveDialogEx) return null;
     var r = null;
     try {
-      r = window.cep.fs.showSaveDialogEx({
+      var params = {
         prompt: prompt,
         displayFileName: filename,
         fileTypes: [
@@ -289,7 +289,10 @@
             templates: [ext]
           }
         ]
-      });
+      };
+      /* v1.3 — ouvrir le dialogue au dernier dossier utilisé. */
+      if (isAbsPath(dir)) params.initialLocation = dir;
+      r = window.cep.fs.showSaveDialogEx(params);
     } catch (e) {
       r = null;
     }
@@ -297,7 +300,7 @@
       return r.err === 0 && r.data ? r.data : null; // réponse normale (annulation incluse)
     }
     try {
-      var r2 = window.cep.fs.showSaveDialogEx(prompt, dataDir || null, filename, [ext]);
+      var r2 = window.cep.fs.showSaveDialogEx(prompt, isAbsPath(dir) ? dir : dataDir || null, filename, [ext]);
       if (r2 && r2.err === 0 && r2.data) return r2.data;
     } catch (e) {
       /* signature positionnelle non supportée */
@@ -329,16 +332,19 @@
   }
 
   /* Dialogue natif d'enregistrement pour les modes fichier (desktop/CEP) —
-   * retourne Promise<chemin|null> (annulation incluse). */
-  function pickSavePath(prompt, filename, ext) {
+   * retourne Promise<chemin|null> (annulation incluse). v1.3 : sans
+   * dossier explicite, le dernier dossier utilisé est proposé. */
+  function pickSavePath(prompt, filename, ext, dir) {
+    var d = dir === undefined ? readPrefs().lastDir : dir;
     if (MODE === 'desktop') {
       return MB.desktop.saveDialog({
         prompt: prompt,
         defaultName: filename,
+        defaultDir: d,
         ext: ext
       });
     }
-    return Promise.resolve(saveDialog(prompt, filename, ext));
+    return Promise.resolve(saveDialog(prompt, filename, ext, d));
   }
 
   /* ------------------------------------------------------- autosave */
@@ -433,46 +439,135 @@
 
   /* ------------------------------------------------------- opérations */
 
-  function save() {
-    var st = MB.store.s();
-    if ((isCep() || isDesktop()) && st.project.path) {
-      var res = writeText(st.project.path, JSON.stringify(serialize()));
-      if (res.error) {
-        MB.ui.toast('Échec de l‘enregistrement : ' + res.error, 'error');
-        return;
+  /* v1.3 — Le dossier du dernier enregistrement est mémorisé (fichier
+   * prefs.json dans le dossier de données, partagé par l'application et
+   * l'extension ; repli localStorage en mode web) : le dialogue natif
+   * s'ouvre directement au bon endroit au save suivant. */
+  var PREFS_FILE = 'prefs.json';
+
+  function basename(p) {
+    var s = String(p || '');
+    var i = Math.max(s.lastIndexOf('/'), s.lastIndexOf('\\'));
+    return i < 0 ? s : s.slice(i + 1);
+  }
+
+  function dirname(p) {
+    var s = String(p || '');
+    var i = Math.max(s.lastIndexOf('/'), s.lastIndexOf('\\'));
+    if (i < 1) return '';
+    return s.slice(0, i) || '/';
+  }
+
+  function readPrefs() {
+    if (isFs()) {
+      var r = readText(dataDir + '/' + PREFS_FILE);
+      if (!r.error && r.text) {
+        try {
+          var p = JSON.parse(r.text);
+          if (p && typeof p === 'object') {
+            return { lastDir: isAbsPath(p.lastDir || '') ? p.lastDir : '' };
+          }
+        } catch (e) {
+          /* prefs illisibles : valeurs par défaut */
+        }
       }
-      markSaved();
-      MB.ui.toast('Projet enregistré', 'success');
-      return;
+      return { lastDir: '' };
     }
+    try {
+      return { lastDir: localStorage.getItem('mb.lastDir') || '' };
+    } catch (e) {
+      return { lastDir: '' };
+    }
+  }
+
+  function writePrefs(p) {
+    try {
+      if (isFs()) writeText(dataDir + '/' + PREFS_FILE, JSON.stringify(p));
+      else localStorage.setItem('mb.lastDir', p.lastDir || '');
+    } catch (e) {
+      /* non bloquant */
+    }
+  }
+
+  /* ------------------------------------------------------- récents (v1.3)
+   * Liste des 20 derniers projets enregistrés/ouverts (fichier
+   * recent.json du dossier de données) — alimente l'écran d'accueil
+   * de l'application de bureau. */
+  var RECENTS_FILE = 'recent.json';
+  var RECENTS_MAX = 20;
+
+  function samePath(a, b) {
+    return String(a || '').toLowerCase() === String(b || '').toLowerCase();
+  }
+
+  function readRecents() {
+    if (!isFs()) return [];
+    var r = readText(dataDir + '/' + RECENTS_FILE);
+    if (r.error || !r.text) return [];
+    try {
+      var arr = JSON.parse(r.text);
+      if (!Array.isArray(arr)) return [];
+      return arr
+        .filter(function (x) {
+          return x && isAbsPath(x.path) && typeof x.name === 'string';
+        })
+        .slice(0, RECENTS_MAX);
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function writeRecents(list) {
+    if (!isFs()) return;
+    writeText(dataDir + '/' + RECENTS_FILE, JSON.stringify(list.slice(0, RECENTS_MAX)));
+  }
+
+  /* Enregistre un projet en tête de la liste (dédupliqué par chemin). */
+  function rememberRecent(path) {
+    if (!isFs() || !isAbsPath(path)) return;
+    var list = readRecents().filter(function (x) {
+      return !samePath(x.path, path);
+    });
+    list.unshift({
+      path: path,
+      name: basename(path).replace(/\.moodboard$/i, '') || 'Sans titre',
+      savedAt: new Date().toISOString(),
+      count: (MB.store.s().elements || []).length
+    });
+    writeRecents(list);
+  }
+
+  /* Liste exploitables par l'écran d'accueil : les fichiers disparus
+   * du disque sont retirés silencieusement (et purgés du fichier). */
+  function recentList() {
+    var list = readRecents();
+    var alive = [];
+    for (var i = 0; i < list.length; i++) {
+      if (!readText(list[i].path).error) alive.push(list[i]);
+    }
+    if (alive.length !== list.length) writeRecents(alive);
+    return alive;
+  }
+
+  /* v1.3 — Enregistrer, Enregistrer sous… et ⌘/Ctrl+S ouvrent TOUJOURS
+   * l'explorateur / le Finder pour choisir l'emplacement du fichier,
+   * pré-rempli du dernier dossier utilisé puis du nom courant. */
+  function save() {
     saveAs();
   }
 
   function saveAs() {
     var payload = JSON.stringify(serialize());
-    if (isDesktop()) {
-      MB.desktop
-        .saveDialog({
-          prompt: 'Enregistrer le moodboard',
-          defaultName: safeName() + '.moodboard',
-          ext: 'moodboard'
-        })
-        .then(function (target) {
-          if (!target) return; // annulé
-          var w = writeText(target, payload);
-          if (w.error) {
-            MB.ui.toast('Échec de l‘enregistrement : ' + w.error, 'error');
-            return;
-          }
-          MB.store.setProject({ path: target });
-          markSaved();
-          MB.ui.toast('Projet enregistré', 'success');
-        });
-      return;
-    }
-    if (isCep()) {
-      var target = saveDialog('Enregistrer le moodboard', safeName() + '.moodboard', 'moodboard');
-      if (!target) return; // annulé (ou dialogue indisponible)
+    var st = MB.store.s();
+    var prefs = readPrefs();
+    /* Nom proposé : celui du fichier courant, sinon celui du projet. */
+    var fname = st.project.path ? basename(st.project.path) : safeName() + '.moodboard';
+    /* Dossier proposé : dernier enregistrement, sinon dossier du fichier
+     * courant, sinon dossier par défaut de l'OS. */
+    var dir = prefs.lastDir || (st.project.path ? dirname(st.project.path) : '');
+
+    function landed(target) {
+      if (!target) return; // annulé
       var w = writeText(target, payload);
       if (w.error) {
         MB.ui.toast('Échec de l‘enregistrement : ' + w.error, 'error');
@@ -480,7 +575,26 @@
       }
       MB.store.setProject({ path: target });
       markSaved();
+      /* Mémoire de l'emplacement pour le prochain enregistrement. */
+      writePrefs({ lastDir: dirname(target) });
+      rememberRecent(target);
       MB.ui.toast('Projet enregistré', 'success');
+    }
+
+    if (isDesktop()) {
+      MB.desktop
+        .saveDialog({
+          prompt: 'Enregistrer le moodboard',
+          defaultName: fname,
+          defaultDir: dir,
+          ext: 'moodboard'
+        })
+        .then(landed);
+      return;
+    }
+    if (isCep()) {
+      var target = saveDialog('Enregistrer le moodboard', fname, 'moodboard', dir);
+      landed(target);
     } else {
       downloadFile(safeName() + '.moodboard', payload);
       markSaved();
@@ -497,31 +611,61 @@
       settings: doc.settings
     });
     markSaved();
+    if (path) rememberRecent(path);
     if (MB.camera) MB.camera.apply();
     if (MB.board) MB.board.refreshOverlay();
+    /* L'écran d'accueil (application) se ferme à l'ouverture d'un projet. */
+    if (MB.ui && MB.ui.home && MB.ui.home.visible()) MB.ui.home.hide();
     MB.ui.toast('Projet ouvert : ' + (doc.name || 'Sans titre'), 'success');
+  }
+
+  /* Ouvre un fichier .moodboard par son chemin (écran d'accueil,
+   * récents…) — retourne true si le projet est chargé. */
+  function openPath(p) {
+    if (!isAbsPath(p)) return false;
+    var r = readText(p);
+    if (r.error) {
+      MB.ui.toast(r.error, 'error');
+      return false;
+    }
+    var parsed = parseDoc(r.text);
+    if (parsed.error) {
+      MB.ui.toast(parsed.error, 'error');
+      return false;
+    }
+    openFile(parsed.doc, p);
+    return true;
+  }
+
+  /* Supprime l'autosave (fichier + stockage local) — utilisé par
+   * « Nouveau moodboard » pour ne pas ressusciter l'ancien travail. */
+  function clearAutosave() {
+    if (isFs()) {
+      try {
+        if (MODE === 'desktop') MB.desktop.unlink(slotPath());
+        else if (window.cep && window.cep.fs && window.cep.fs.deleteFile)
+          window.cep.fs.deleteFile(slotPath());
+      } catch (e) {
+        /* non bloquant */
+      }
+    }
+    try {
+      localStorage.removeItem(WEB_KEY);
+    } catch (e) {
+      /* non bloquant */
+    }
   }
 
   function open() {
     if (isDesktop()) {
       MB.desktop.openDialog().then(function (p) {
-        if (!p) return; // annulé
-        var r = readText(p);
-        if (r.error) return MB.ui.toast(r.error, 'error');
-        var parsed = parseDoc(r.text);
-        if (parsed.error) return MB.ui.toast(parsed.error, 'error');
-        openFile(parsed.doc, p);
+        if (p) openPath(p); // toast d'erreur inclus
       });
       return;
     }
     if (isCep()) {
       var p = openDialog();
-      if (!p) return; // annulé
-      var r = readText(p);
-      if (r.error) return MB.ui.toast(r.error, 'error');
-      var parsed = parseDoc(r.text);
-      if (parsed.error) return MB.ui.toast(parsed.error, 'error');
-      openFile(parsed.doc, p);
+      if (p) openPath(p);
     } else {
       var input = document.createElement('input');
       input.type = 'file';
@@ -634,6 +778,12 @@
     saveDialog: saveDialog,
     open: open,
     openFile: openFile,
+    openPath: openPath,
+    clearAutosave: clearAutosave,
+    recentList: recentList,
+    lastDir: function () {
+      return readPrefs().lastDir;
+    },
     hasAutosave: hasAutosave,
     loadAutosave: loadAutosave,
     firstRunFlag: firstRunFlag,

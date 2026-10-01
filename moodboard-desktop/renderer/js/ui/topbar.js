@@ -269,6 +269,17 @@
       bar.appendChild(wrap);
     });
 
+    // v1.3 — retour à l'écran d'accueil (application de bureau uniquement) :
+    // visible seulement quand le pont Electron est actif.
+    var btnHome = document.getElementById('btn-home');
+    if (btnHome && MB.storage.isDesktop()) {
+      btnHome.innerHTML = MB.icons.get('home', 16);
+      btnHome.hidden = false;
+      btnHome.addEventListener('click', function () {
+        if (MB.ui.home) MB.ui.home.show();
+      });
+    }
+
     // nom du projet
     var nameInput = document.getElementById('proj-name');
     nameInput.addEventListener('change', function () {

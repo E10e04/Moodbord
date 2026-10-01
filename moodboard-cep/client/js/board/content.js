@@ -176,13 +176,20 @@
   function renderLink(el) {
     var d = el.data;
     var letter = (d.title || d.domain || '?').trim().charAt(0).toUpperCase();
+    /* v1.3 — la carte ne porte plus data-act="open" : un clic simple
+     * sélectionne/déplace le lien comme n'importe quel élément ; SEULE
+     * la flèche dédiée (bouton .mb-link-open) ouvre le navigateur. */
     return (
-      '<div class="mb-link-card" data-act="open" data-url="' + esc(d.url) + '">' +
+      '<div class="mb-link-card">' +
       '<div class="mb-link-tile">' + esc(letter) + '</div>' +
       '<div class="mb-link-meta">' +
       '<div class="mb-link-title mb-editable" data-field="title">' + esc(d.title) + '</div>' +
-      '<div class="mb-link-domain">' + esc(d.domain) + ' ' + MB.icons.get('external', 11) + '</div>' +
+      '<div class="mb-link-domain">' + esc(d.domain) + '</div>' +
       '</div>' +
+      '<button class="mb-link-open" type="button" data-act="open" data-url="' + esc(d.url) +
+      '" title="Ouvrir le lien dans le navigateur" aria-label="Ouvrir le lien dans le navigateur">' +
+      MB.icons.get('external', 13) +
+      '</button>' +
       '</div>'
     );
   }

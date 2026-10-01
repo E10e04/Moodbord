@@ -21,6 +21,7 @@
     MB.ui.inspector.init();
     MB.ui.contextbar.init();
     MB.ui.contextmenu.init();
+    if (MB.ui.home) MB.ui.home.init(); // v1.3 — écran d'accueil (bureau uniquement, inerte ailleurs)
     bindKeyboard();
     bindKeyboardFocus();
     bindPanels();
@@ -32,6 +33,11 @@
   /* ------------------------------------------------ premier lancement */
 
   function firstRun() {
+    /* v1.3 — Application de bureau : écran d'accueil au démarrage
+     * (récents, reprise de session, nouveau moodboard). Le canvas ne
+     * charge NI autosave NI démo tant que l'utilisateur n'a pas choisi. */
+    if (MB.ui.home && MB.ui.home.showAtBoot()) return;
+
     var loaded = false;
     if (MB.storage.hasAutosave()) {
       var res = MB.storage.loadAutosave();
@@ -71,6 +77,13 @@
   }
 
   function newBoard() {
+    /* Depuis l'écran d'accueil : garde spécifique (l'autosave d'un
+     * travail non enregistré est le seul risque, le tableau affiché
+     * derrière l'accueil est vide). */
+    if (MB.ui.home && MB.ui.home.visible()) {
+      MB.ui.home.newBoard();
+      return;
+    }
     MB.ui.confirmDialog({
       title: 'Nouveau moodboard',
       message: 'Effacer le tableau courant ? Les modifications non enregistrées seront perdues.',
@@ -81,11 +94,7 @@
       MB.store.loadDocument({ name: 'Sans titre', elements: [] });
       MB.camera.fit(null);
       MB.storage.markSaved();
-      try {
-        localStorage.removeItem('mb.autosave.v1');
-      } catch (e) {
-        /* CEP : l'autosave est réécrit à la prochaine modification */
-      }
+      MB.storage.clearAutosave();
       MB.ui.toast('Nouveau tableau', 'success');
     });
   }
@@ -416,6 +425,10 @@
     // Capture : on voit les touches AVANT tout stopPropagation d'un
     // enfant (les gardes « typing » ci-dessous protègent l'édition).
     window.addEventListener('keydown', function (e) {
+      /* v1.3 — écran d'accueil visible : les raccourcis du canvas
+       * n'ont rien à faire (rien de sélectionnable derrière). */
+      if (MB.ui.home && MB.ui.home.visible() && e.key !== 'Escape') return;
+
       var mod = e.metaKey || e.ctrlKey;
       var t = e.target;
       var typing = !!(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable));

@@ -88,14 +88,14 @@ par [GitHub Actions](.github/workflows/build.yml) sur des machines GitHub —
 1. Onglet **[Actions](https://github.com/E10e04/Moodbord/actions)** du dépôt.
 2. Flèche ▾ à droite de « Build & Release » → **Run workflow** → bouton vert.
 3. ~10 minutes plus tard : résumé du run → section **Artifacts** —
-   `Moodboard-Setup-1.2.0.exe`, zip portable Windows, `.dmg` x64 + arm64,
+   `Moodboard-Setup-1.3.0.exe`, zip portable Windows, `.dmg` x64 + arm64,
    zip de l'extension CEP.
 
 ### Release publique (tag)
 
 ```bash
-git tag v1.2.0
-git push origin v1.2.0
+git tag v1.3.0
+git push origin v1.3.0
 ```
 → un **Release** public est créé automatiquement avec tous les installateurs
 en pièces jointes (c'est la façon d'obtenir une page Releases téléchargeable
@@ -115,7 +115,7 @@ Moodbord/
 │   │                             #       inspector…), board/ (interactions,
 │   │                             #       export…), adobe/ (CSInterface, jsx)
 │   ├── scripts/                  #   validate.mjs, package.mjs
-│   └── dist/                     #   moodboard-cep-1.2.0.zip (prêt à installer)
+│   └── dist/                     #   moodboard-cep-1.3.0.zip (prêt à installer)
 ├── moodboard-desktop/            # Application autonome (Electron)
 │   ├── main.js                   #   Processus principal (fenêtre, IPC fs,
 │   │                             #     dialogues natifs, garde de fermeture)
@@ -142,14 +142,14 @@ Prérequis : [Node.js](https://nodejs.org) ≥ 18.
 # Extension CEP (vérification syntaxique + zip)
 cd moodboard-cep
 node scripts/validate.mjs
-node scripts/package.mjs        # → dist/moodboard-cep-1.2.0.zip
+node scripts/package.mjs        # → dist/moodboard-cep-1.3.0.zip
 
 # Application bureau
 cd ../moodboard-desktop
 npm install
 npm start                      # lance l'app en développement
-npm run dist:win               # → dist/Moodboard-Setup-1.2.0.exe (sur Windows)
-npm run dist:mac               # → dist/Moodboard-1.2.0-x64.dmg + arm64.dmg (sur Mac)
+npm run dist:win               # → dist/Moodboard-Setup-1.3.0.exe (sur Windows)
+npm run dist:mac               # → dist/Moodboard-1.3.0-x64.dmg + arm64.dmg (sur Mac)
 ```
 
 > Astuce Windows : retirez `"signAndEditExecutable": false` du
@@ -194,7 +194,7 @@ npm run dist:mac               # → dist/Moodboard-1.2.0-x64.dmg + arm64.dmg (s
 
 ## 🧪 Vérifications effectuées
 
-- **Web/CEP — 87/87 tests E2E** (3 suites navigateur : v1.2.0, events, v1.0.2) : drags au 1/100 de pixel,
+- **Web/CEP — 133/133 tests E2E navigateur** (4 suites : v1.3.0, v1.2.0, events, v1.0.2) + **44/44 assertions de stockage** (simulation fidèle du moteur CEP) : drags au 1/100 de pixel,
   simulation CEP sans Pointer Events, survie blur/pointercancel, undo exact.
 - **Bureau — 10/10 tests E2E** sous Electron headless (Xvfb) : déplacement
   d'élément delta monde exact, autosave persisté sur disque via IPC, CSP
@@ -218,6 +218,32 @@ npm run dist:mac               # → dist/Moodboard-1.2.0-x64.dmg + arm64.dmg (s
 
 ## 📜 Changelog
 
+### v1.3.0 — enregistrement, écran d'accueil, liens
+
+1. **Enregistrer / Enregistrer sous… / ⌘-Ctrl+S** : le dialogue natif du
+   système (Finder, Explorateur de fichiers) s'ouvre à chaque
+   enregistrement pour choisir où sauvegarder le projet. Le dossier du
+   dernier enregistrement est **mémorisé** (`prefs.json` du dossier de
+   données, partagé application ↔ extension) : le dialogue s'ouvre
+   directement au bon endroit la fois suivante. Le nom proposé est celui
+   du fichier courant. Les exports PNG/SVG en profitent aussi.
+2. **Écran d'accueil (application de bureau)** : au lancement, la fenêtre
+   ouvre sur un écran d'accueil au lieu du canvas — bouton **Nouveau
+   moodboard**, **Ouvrir…**, **Charger la démonstration**, carte
+   **Reprendre la session** (travail non enregistré) et les **20 fichiers
+   récents** (clic = réouverture, `recent.json`). Un bouton Accueil
+   (icône maison) dans la barre supérieure y revient à tout moment ;
+   les raccourcis canvas sont inertes tant que l'accueil est affiché.
+   Panneau CEP et aperçu web : comportement inchangé (l'autosave y est
+   restauré comme toujours).
+3. **Liens du canvas** : un clic sur la carte d'un lien la
+   sélectionne/déplace comme n'importe quel élément ; le navigateur ne
+   s'ouvre **que par la flèche dédiée** (coin supérieur droit de la
+   carte, toujours visible).
+4. `Nouveau moodboard` efface désormais aussi l'autosave **sur disque**
+   (et pas uniquement le stockage local) — l'ancien travail ne
+   ressuscite plus au prochain lancement.
+
 ### v1.2.0 — correctifs racine drag & drop + raccourcis clavier
 
 Deux pannes racine corrigées, diagnostiquées sur les rapports v1.1.x
@@ -240,7 +266,7 @@ Deux pannes racine corrigées, diagnostiquées sur les rapports v1.1.x
    ligne *Focus clavier*, ligne *Hôte* corrigée (le moteur CEP renvoie une
    chaîne JSON enfin analysée) et comptage des événements **une seule fois**.
 
-Vérifié sur le client fusionné : **87/87 tests E2E** (3 suites), vraie souris
+Vérifié sur le client fusionné : **177/177 tests** (133 E2E navigateur en 4 suites + 44 assertions de stockage), vraie souris
 et vrai clavier pilotés via CDP — 0 erreur console. Le détail complet est
 dans [`moodboard-cep/README.md`](moodboard-cep/README.md).
 
