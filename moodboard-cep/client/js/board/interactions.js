@@ -1211,9 +1211,6 @@
   var ORPHAN_MS = 600;
 
   function armOrphan(reason) {
-    if (MB.EVT_DIAG && reason === 'pointercancel') {
-      MB.EVT_DIAG.pointercancel++;
-    }
     if (MB.diaglog) {
       MB.diaglog.trace('« ' + reason + ' » pendant un geste — survie 600 ms');
     }
@@ -1283,7 +1280,6 @@
      rien (minuteur orphelin), car certains hôtes CEP émettent des
      blur parasites au milieu d'un drag parfaitement vivant. */
   function onWindowBlur() {
-    if (MB.EVT_DIAG) MB.EVT_DIAG.blur++;
     spaceDown = false;
     wrapEl().classList.remove('is-space');
     if (gesture) armOrphan('blur');
@@ -1562,8 +1558,10 @@
     window.addEventListener('blur', onWindowBlur);
     wrap.addEventListener('dragstart', onDragStartBlock);
 
-    window.addEventListener('keydown', onKeyDown);
-    window.addEventListener('keyup', onKeyUp);
+    // Capture : on voit l'Espace même si un enfant interrompt la
+    // propagation (les gardes « typing » protègent l'édition texte).
+    window.addEventListener('keydown', onKeyDown, true);
+    window.addEventListener('keyup', onKeyUp, true);
     wrap.addEventListener('wheel', onWheel, { passive: false });
     wrap.addEventListener('dblclick', onDblClick);
     wrap.addEventListener('click', onClick);

@@ -41,7 +41,10 @@ CSInterface.prototype.evalScript = function (script, callback) {
   }
 };
 
-/** Informations sur l'hôte (application, version, thème…). */
+/** Informations sur l'hôte (application, version, thème…).
+ *  Le moteur CEP renvoie une CHAÎNE JSON : sans parsing, tous les
+ *  champs du rapport de diagnostic sortaient « ? » (v1.1.3 :
+ *  « Hôte : ? ? · appId=? · API CEP=? »). */
 CSInterface.prototype.getHostEnvironment = function () {
   if (!window.__adobe_cep__) {
     return JSON.stringify({
@@ -51,7 +54,13 @@ CSInterface.prototype.getHostEnvironment = function () {
       appBarInfo: { baseThemeColor: '#1E1E1E' }
     });
   }
-  return window.__adobe_cep__.getHostEnvironment();
+  var raw = window.__adobe_cep__.getHostEnvironment();
+  if (typeof raw !== 'string') return raw || null;
+  try {
+    return JSON.parse(raw);
+  } catch (e) {
+    return null;
+  }
 };
 
 /** Résoudre un chemin système spécial. */

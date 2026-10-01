@@ -256,7 +256,9 @@
   /* -------------------------------------------------------- ghost drag */
 
   var ghostState = null;
-  var ghostOrphan = null;
+  var ghostOrphan = null; // blur / pointercancel → survie 600 ms
+  var ghostSilence = null; // silence total prolongé → nettoyage (v1.2.0)
+  var GHOST_SILENCE_MS = 8000;
 
   /* Même politique que les gestes du canvas (cf. interactions.js) :
    * les blur/pointercancel parasites d'un hôte CEP ne doivent plus
@@ -277,6 +279,30 @@
     }
   }
 
+  /* Chien de garde anti-fuite (v1.2.0) : un ghost « vivant » qui ne
+   * reçoit PLUS AUCUN événement pendant 8 s est un ghost orphelin
+   * (mouseup avalé par le moteur, relâchement hors panneau…). Sans
+   * lui, le ghost fantôme déposerait son objet au prochain clic
+   * innocent sur le canvas — mesuré v1.1.3 : ghostStart=9,
+   * ghostDrop=4, ghostCancel=0 → 5 fuites silencieuses. */
+  function ghostArmSilence() {
+    if (ghostSilence) clearTimeout(ghostSilence);
+    ghostSilence = setTimeout(function () {
+      ghostSilence = null;
+      if (ghostState) {
+        if (MB.diaglog) MB.diaglog.trace('ghost silencieux depuis 8 s — annulation (anti-fuite)');
+        ghostCancel('silence-8s');
+      }
+    }, GHOST_SILENCE_MS);
+  }
+
+  function ghostDisarmSilence() {
+    if (ghostSilence) {
+      clearTimeout(ghostSilence);
+      ghostSilence = null;
+    }
+  }
+
   function ghostCount(key) {
     try {
       if (MB.EVT_DIAG) MB.EVT_DIAG[key] = (MB.EVT_DIAG[key] || 0) + 1;
@@ -286,6 +312,8 @@
   }
 
   function ghostStart(opts, onDrop) {
+    ghostDisarmOrphan();
+    ghostDisarmSilence();
     var node = document.getElementById('drag-ghost');
     node.innerHTML = opts.html || '';
     /* Le ghost n'apparaît qu'après le seuil de 5 px (ghostMove) : pas
@@ -296,11 +324,13 @@
       label: opts.label || '?',
       started: false,
       sx: opts.sx,
-      sy: opts.sy
+      sy: opts.sy,
+      bornAt: Date.now()
     };
     ghostCount('ghostStart');
     MB.diaglog && MB.diaglog.trace('drag panneau démarré (' + ghostState.label + ')');
     move(opts.sx, opts.sy);
+    ghostArmSilence();
   }
 
   function move(x, y) {
@@ -312,6 +342,17 @@
   function ghostMove(e) {
     ghostDisarmOrphan();
     if (!ghostState) return;
+    /* Le bouton n'est plus enfoncé et le mouseup n'a jamais été livré
+     * (relâchement hors panneau, événement volé par l'hôte) : ce
+     * mouvement sans bouton est le premier signe de vie APRÈS la
+     * perte — on annule proprement au lieu de laisser un ghost
+     * fantôme qui « déposerait » son objet au prochain clic. */
+    if (typeof e.buttons === 'number' && e.buttons === 0) {
+      var started = ghostState.started;
+      ghostCancel('bouton relâché hors panneau', !started);
+      return;
+    }
+    ghostDisarmSilence();
     if (!ghostState.started) {
       if (Math.hypot(e.clientX - ghostState.sx, e.clientY - ghostState.sy) < 5) return;
       ghostState.started = true;
@@ -319,10 +360,12 @@
       document.body.classList.add('is-ghosting');
     }
     move(e.clientX, e.clientY);
+    ghostArmSilence();
   }
 
   function ghostEnd(e) {
     ghostDisarmOrphan();
+    ghostDisarmSilence();
     if (!ghostState) return;
     var st = ghostState;
     ghostState = null;
@@ -349,9 +392,12 @@
     return false;
   }
 
-  function ghostCancel(reason) {
+  /* silent=true : nettoyage interne sans compteur (ex. simple appui
+     * sans déplacement sur la source, bouton relâché avant le seuil). */
+  function ghostCancel(reason, silent) {
     ghostDisarmOrphan();
-    if (ghostState) {
+    ghostDisarmSilence();
+    if (ghostState && !silent) {
       ghostCount('ghostCancel');
       MB.diaglog && MB.diaglog.trace(
         'drag panneau annulé (' + ghostState.label + (reason ? ' — ' + reason : '') + ')'
@@ -373,11 +419,24 @@
     if (ghostState) ghostArmOrphan('blur');
   });
   // Couche adaptative pointer + souris (cf. utils.js) : dans les moteurs
-  // CEP qui ne livrent pas les Pointer Events, le ghost suit la souris.
+  // CEP qui ne livrent pas les événements pointer de bouton, le ghost
+  // suit la souris et se pose au mouseup.
   U.bindPointerWithMouse(window, 'move', ghostMove);
   U.bindPointerWithMouse(window, 'up', function (e) {
     ghostEnd(e);
   });
+  /* Un NOUVEAU appui alors qu'un ghost traîne (mouseup précédent avalé
+   * par le moteur) : le ghost obsolète est annulé AVANT que la source
+   * ne démarre le nouveau — sinon il déposerait son objet au prochain
+   * relâchement. Garde d'âge : dans un navigateur sain, pointerdown
+   * puis son mousedown de compatibilité arrivent en paire sur le MÊME
+   * appui — seuls les appuis réellement NOUVEAUX (>400 ms après la
+   * naissance du ghost) annulent. */
+  function onGhostGuardDown() {
+    if (ghostState && Date.now() - (ghostState.bornAt || 0) > 400) ghostCancel('nouvel appui');
+  }
+  document.addEventListener('pointerdown', onGhostGuardDown, true);
+  document.addEventListener('mousedown', onGhostGuardDown, true);
   window.addEventListener('keydown', function (e) {
     if (e.key === 'Escape' && ghostState) ghostCancel('Échap');
   });

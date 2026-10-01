@@ -22,6 +22,7 @@
     MB.ui.contextbar.init();
     MB.ui.contextmenu.init();
     bindKeyboard();
+    bindKeyboardFocus();
     bindPanels();
     bindStatusbar();
     firstRun();
@@ -305,6 +306,80 @@
 
   /* ------------------------------------------------------ clavier */
 
+  /* Focus clavier — le correctif « raccourcis morts » des panneaux CEP.
+   *
+   * Mesure v1.1.3 (rapport utilisateur) : keydown=0, keyup=0 sur toute
+   * une session de travail — le panneau ne reçoit JAMAIS le clavier.
+   * Dans les panneaux CEP d'Illustrator, cliquer un élément non
+   * focusable (canvas, item de bibliothèque, barre d'outils) ne donne
+   * PAS le focus clavier au panneau : seuls les champs de saisie le
+   * captent. Tant que le document ne porte pas le focus, la fenêtre
+   * n'émet aucun keydown — tous les raccourcis restent morts.
+   *
+   * Remède (astuce standard CEP) :
+   *  - <body tabindex="0"> : le document PEUT porter le focus ;
+   *  - à CHAQUE pression dans le panneau (capture), si la cible n'est
+   *    pas un champ de saisie, le focus est rendu au document — un
+   *    clic sur un bouton garde le focus du bouton (l'action par
+   *    défaut du mousedown s'exécute après la capture), un clic sur
+   *    le canvas/bibliothèque arme le clavier du panneau ;
+   *  - la pastille de la barre d'état (⌨) affiche l'état réel et se
+   *    réarme d'un clic : cliquer dans Illustrator désactive les
+   *    raccourcis (comportement attendu), cliquer dans le panneau les
+   *    réactive. */
+  var kbdChip = null;
+
+  function setKbd(on) {
+    if (!kbdChip) return;
+    var state = !!on;
+    kbdChip.classList.toggle('is-on', state);
+    kbdChip.classList.toggle('is-off', !state);
+    kbdChip.textContent = state ? '⌨ raccourcis actifs' : '⌨ raccourcis inactifs — cliquez ici';
+    kbdChip.setAttribute(
+      'aria-label',
+      state
+        ? 'Raccourcis clavier actifs'
+        : 'Raccourcis clavier inactifs — cliquez dans le panneau pour les activer'
+    );
+  }
+
+  function claimKeyboardFocus(e) {
+    try {
+      var t = e && e.target;
+      if (!U.isTextField(t)) {
+        if (document.body && document.activeElement !== document.body) document.body.focus();
+        window.focus();
+      }
+    } catch (err) {
+      /* jamais bloquant */
+    }
+    setKbd(true);
+  }
+
+  function bindKeyboardFocus() {
+    if (document.body) document.body.setAttribute('tabindex', '0');
+    // Capture : avant tout autre traitement, avant le focus par défaut
+    // de la cible — le relais souris couvre les moteurs CEP sans
+    // Pointer Events.
+    document.addEventListener('pointerdown', claimKeyboardFocus, true);
+    document.addEventListener('mousedown', claimKeyboardFocus, true);
+
+    kbdChip = document.getElementById('sb-kbd');
+    if (kbdChip) {
+      kbdChip.addEventListener('click', function () {
+        claimKeyboardFocus();
+      });
+    }
+
+    window.addEventListener('focus', function () {
+      setKbd(true);
+    });
+    window.addEventListener('blur', function () {
+      setKbd(false);
+    });
+    setKbd(typeof document.hasFocus === 'function' ? document.hasFocus() : true);
+  }
+
   /* Déplacement clavier de la sélection (flèches) — même mécanique que le
    * drag : un pas = 1 px écran converti en unités monde selon le zoom,
    * ⇧ = ×10 (comme Illustrator). Les lignes déplacent leurs extrémités,
@@ -338,6 +413,8 @@
   }
 
   function bindKeyboard() {
+    // Capture : on voit les touches AVANT tout stopPropagation d'un
+    // enfant (les gardes « typing » ci-dessous protègent l'édition).
     window.addEventListener('keydown', function (e) {
       var mod = e.metaKey || e.ctrlKey;
       var t = e.target;
@@ -501,7 +578,7 @@
         MB.camera.setZoom(1);
         return;
       }
-    });
+    }, true);
 
     window.addEventListener('beforeunload', function (e) {
       // Application autonome : la confirmation de fermeture est gérée par le

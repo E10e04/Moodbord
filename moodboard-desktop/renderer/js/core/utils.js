@@ -9,68 +9,110 @@
   /* Version affichée dans la barre d'état, la boîte « À propos » et le
    * rapport de diagnostic — LA référence pour vérifier que le panneau
    * exécuté est bien la dernière installation. */
-  MB.VERSION = '1.1.3';
+  MB.VERSION = '1.2.0';
 
   /* ---------- Événements adaptatifs (pointer + souris) ----------
    *
    * Contexte : certains moteurs CEP (Illustrator selon version/hôte)
-   * livrent mal — voire pas du tout — les Pointer Events, alors que la
-   * famille souris (molette, clic, mousemove) fonctionne. Le symptom
-   * typique : le zoom molette marche mais aucun drag ne répond.
+   * livrent mal — voire pas du tout — les événements pointer de BOUTON
+   * (pointerdown=0, pointerup=0) alors que pointermove circule et que
+   * la famille souris fonctionne. Le symptôme typique : le zoom molette
+   * marche, les clics sur boutons marchent, mais tout drag rate.
    *
-   * Preuve terrain (diagnostic v1.1.0, Illustrator macOS) : le moteur
-   * peut livrer un flux HYBRIDE — pointermove et mousemove OUI, mais
-   * pointerdown/pointerup JAMAIS. Un dédoublonnage global (n'importe
-   * quel événement pointer couvre n'importe quel événement souris)
-   * laissait alors le flux continu de pointermove avaler CHAQUE
-   * mousedown/mouseup : plus aucun geste ne démarrait.
+   * On branche donc LES DEUX familles sur les mêmes handlers :
+   *  - un événement souris de nature N est ignoré si un événement
+   *    pointer DE MÊME NATURE N vient d'arriver (Chromium émet la
+   *    paire pointer puis souris-de-compatibilité dans la même
+   *    impulsion) ;
+   *  - si le flux pointer de cette nature meurt, la couche souris
+   *    prend automatiquement le relais.
    *
-   * On branche donc LES DEUX familles sur les mêmes handlers, avec un
-   * dédoublonnage APPARIÉ PAR TYPE : un événement souris de type K
-   * (down/move/up) est ignoré uniquement si un événement POINTER DU
-   * MÊME TYPE K l'a couvert dans les 50 dernières ms (Chromium sain
-   * émet la paire pointer puis souris-de-compatibilité de la même
-   * impulsion). Ainsi :
-   *  - navigateur sain : chaque événement physique est traité une
-   *    seule fois (via la famille pointer) ;
-   *  - CEP hybride (pointermove sans pointerdown) : le geste démarre
-   *    sur mousedown, vit sur pointermove, se termine sur mouseup ;
-   *  - CEP souris seule : tout passe par la famille souris ;
-   *  - mort du flux pointer en cours de geste : la famille souris
-   *    prend le relais après le délai.
+   *  IMPORTANT (v1.2.0) : la couverture est PAR NATURE d'événement.
+   *   L'ancienne couverture globale (n'importe quel événement pointer
+   *   récent masquait n'importe quel événement souris) laissait un
+   *   pointermove masquer un mouseup : dans un moteur CEP qui livre
+   *   pointermove mais PAS pointerup, TOUT mouseup en fin de drag —
+   *   c'est-à-dire précisément quand la souris bouge encore — était
+   *   avalé : drags bibliothèque/outils qui ne se posent jamais,
+   *   gestes canvas qui fuient (mesuré v1.1.3 : ghostStart=9,
+   *   ghostDrop=4, ghostCancel=0).
    *
    * MB.EVT_DIAG compte les événements bruts reçus de chaque famille —
-   * diagnostic direct dans la console DevTools : MB.interact.diag(). */
+   * UNE SEULE FOIS par événement (comptage centralisé en capture,
+   * indépendant du nombre de modules qui écoutent) — diagnostic
+   * direct dans la console DevTools : MB.interact.diag(). */
 
-  var POINTER_COVER_MS = 50;
+  function isTextField(node) {
+    return !!(
+      node &&
+      (node.tagName === 'INPUT' || node.tagName === 'TEXTAREA' || node.isContentEditable)
+    );
+  }
+
   var lastPointerTs = { down: -1e9, move: -1e9, up: -1e9 };
+  var POINTER_COVER_MS = 50;
   var EVT_DIAG = {
     pointerdown: 0, pointermove: 0, pointerup: 0, pointercancel: 0,
     mousedown: 0, mousemove: 0, mouseup: 0, dragstartBlocked: 0, blur: 0,
     keydown: 0, keyup: 0, focusInInput: 0,
-    /* Drags « panneau → canvas » (ghost) : le diagnostic ne voyait rien
-     * de ces gestes — s’ils échouent chez un utilisateur, le rapport
-     * doit montrer s’ils ont démarré, où ils ont été relâchés. */
-    ghostStart: 0, ghostDrop: 0, ghostCancel: 0
+    ghostStart: 0, ghostDrop: 0, ghostCancel: 0,
+    focus: 0, wheel: 0
   };
   MB.EVT_DIAG = EVT_DIAG;
 
+  function pointerCovers(kind) {
+    var ts = lastPointerTs[kind];
+    return typeof ts === 'number' && Date.now() - ts < POINTER_COVER_MS;
+  }
+
   function bindPointerWithMouse(target, kind, handler, useCapture) {
     var cap = !!useCapture;
-    var paired = Object.prototype.hasOwnProperty.call(lastPointerTs, kind);
     target.addEventListener('pointer' + kind, function (e) {
-      EVT_DIAG['pointer' + kind]++;
-      if (paired) lastPointerTs[kind] = Date.now();
+      lastPointerTs[kind] = Date.now();
       handler(e);
     }, cap);
     target.addEventListener('mouse' + kind, function (e) {
-      EVT_DIAG['mouse' + kind]++;
-      // Ignoré uniquement si l'événement pointer DU MÊME TYPE l'a déjà
-      // couvert (appariement par type — voir l'en-tête ci-dessus).
-      if (paired && Date.now() - lastPointerTs[kind] < POINTER_COVER_MS) return;
+      // Un mouseup n'est masqué que par un pointerup récent — jamais
+      // par un pointermove (cf. en-tête de section).
+      if (pointerCovers(kind)) return; // déjà couvert par l'événement pointer
       handler(e);
     }, cap);
   }
+
+  /* Comptage brut centralisé : un événement = +1, quel que soit le
+     nombre de modules qui l'écoutent. Capture sur window : on voit
+     tout, y compris ce que des enfants interrompraient. Les anciens
+     rapports comptaient double/triple (mouseup≈2×mousedown) car chaque
+     bindPointerWithMouse incrémentait de son côté. */
+  (function tapEvents() {
+    ['down', 'move', 'up'].forEach(function (k) {
+      window.addEventListener('pointer' + k, function () {
+        EVT_DIAG['pointer' + k]++;
+      }, true);
+      window.addEventListener('mouse' + k, function () {
+        EVT_DIAG['mouse' + k]++;
+      }, true);
+    });
+    window.addEventListener('pointercancel', function () {
+      EVT_DIAG.pointercancel++;
+    }, true);
+    window.addEventListener('blur', function () {
+      EVT_DIAG.blur++;
+    }, true);
+    window.addEventListener('focus', function () {
+      EVT_DIAG.focus++;
+    }, true);
+    window.addEventListener('wheel', function () {
+      EVT_DIAG.wheel++;
+    }, { capture: true, passive: true });
+    window.addEventListener('keydown', function (e) {
+      EVT_DIAG.keydown++;
+      if (isTextField(e.target)) EVT_DIAG.focusInInput++;
+    }, true);
+    window.addEventListener('keyup', function () {
+      EVT_DIAG.keyup++;
+    }, true);
+  })();
 
   var Util = {
     uid: (function () {
@@ -200,8 +242,12 @@
 
     /* Branche pointer<kind> ET mouse<kind> sur le même handler, avec
        repli automatique souris si le moteur ne livre pas les Pointer
-       Events (voir en-tête de fichier). useCapture optionnel. */
+       Events (voir en-tête de fichier). useCapture optionnel.
+       La couverture pointer→souris est PAR NATURE d'événement. */
     bindPointerWithMouse: bindPointerWithMouse,
+
+    /* La cible est-elle un champ de saisie (raccourcis désactivés) ? */
+    isTextField: isTextField,
 
     /* ---------- DOM ---------- */
 

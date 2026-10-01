@@ -88,14 +88,14 @@ par [GitHub Actions](.github/workflows/build.yml) sur des machines GitHub —
 1. Onglet **[Actions](https://github.com/E10e04/Moodbord/actions)** du dépôt.
 2. Flèche ▾ à droite de « Build & Release » → **Run workflow** → bouton vert.
 3. ~10 minutes plus tard : résumé du run → section **Artifacts** —
-   `Moodboard-Setup-1.1.0.exe`, zip portable Windows, `.dmg` x64 + arm64,
+   `Moodboard-Setup-1.2.0.exe`, zip portable Windows, `.dmg` x64 + arm64,
    zip de l'extension CEP.
 
 ### Release publique (tag)
 
 ```bash
-git tag v1.1.0
-git push origin v1.1.0
+git tag v1.2.0
+git push origin v1.2.0
 ```
 → un **Release** public est créé automatiquement avec tous les installateurs
 en pièces jointes (c'est la façon d'obtenir une page Releases téléchargeable
@@ -115,7 +115,7 @@ Moodbord/
 │   │                             #       inspector…), board/ (interactions,
 │   │                             #       export…), adobe/ (CSInterface, jsx)
 │   ├── scripts/                  #   validate.mjs, package.mjs
-│   └── dist/                     #   moodboard-cep-1.1.0.zip (prêt à installer)
+│   └── dist/                     #   moodboard-cep-1.2.0.zip (prêt à installer)
 ├── moodboard-desktop/            # Application autonome (Electron)
 │   ├── main.js                   #   Processus principal (fenêtre, IPC fs,
 │   │                             #     dialogues natifs, garde de fermeture)
@@ -142,14 +142,14 @@ Prérequis : [Node.js](https://nodejs.org) ≥ 18.
 # Extension CEP (vérification syntaxique + zip)
 cd moodboard-cep
 node scripts/validate.mjs
-node scripts/package.mjs        # → dist/moodboard-cep-1.1.0.zip
+node scripts/package.mjs        # → dist/moodboard-cep-1.2.0.zip
 
 # Application bureau
 cd ../moodboard-desktop
 npm install
 npm start                      # lance l'app en développement
-npm run dist:win               # → dist/Moodboard-Setup-1.1.0.exe (sur Windows)
-npm run dist:mac               # → dist/Moodboard-1.1.0-x64.dmg + arm64.dmg (sur Mac)
+npm run dist:win               # → dist/Moodboard-Setup-1.2.0.exe (sur Windows)
+npm run dist:mac               # → dist/Moodboard-1.2.0-x64.dmg + arm64.dmg (sur Mac)
 ```
 
 > Astuce Windows : retirez `"signAndEditExecutable": false` du
@@ -194,7 +194,7 @@ npm run dist:mac               # → dist/Moodboard-1.1.0-x64.dmg + arm64.dmg (s
 
 ## 🧪 Vérifications effectuées
 
-- **Web/CEP — 54/54 tests E2E** (suites navigateur) : drags au 1/100 de pixel,
+- **Web/CEP — 87/87 tests E2E** (3 suites navigateur : v1.2.0, events, v1.0.2) : drags au 1/100 de pixel,
   simulation CEP sans Pointer Events, survie blur/pointercancel, undo exact.
 - **Bureau — 10/10 tests E2E** sous Electron headless (Xvfb) : déplacement
   d'élément delta monde exact, autosave persisté sur disque via IPC, CSP
@@ -215,6 +215,36 @@ npm run dist:mac               # → dist/Moodboard-1.1.0-x64.dmg + arm64.dmg (s
    autonome exporte SVG/PNG à la place.
 4. Les images de démonstration (`assets/demo/`) sont des visuels de
    placeholder générés par IA.
+
+## 📜 Changelog
+
+### v1.2.0 — correctifs racine drag & drop + raccourcis clavier
+
+Deux pannes racine corrigées, diagnostiquées sur les rapports v1.1.x
+(`ghostStart=9, ghostDrop=4, ghostCancel=0` et `keydown=0, keyup=0`) :
+
+1. **Drag & drop bibliothèque/outils → canvas** : la couche adaptative
+   avalait le `mouseup` de fin de drag sur les moteurs CEP qui livrent
+   `pointermove` mais jamais `pointerup` — le ghost ne se posait jamais et
+   fuyait en silence. La couverture pointer→souris est désormais **par nature
+   d'événement** (un `mouseup` n'est masqué que par un `pointerup` récent),
+   avec annulation propre sur `buttons=0`, chien de garde anti-fuite (8 s) et
+   invalidation des ghosts obsolètes au nouvel appui.
+2. **Raccourcis clavier morts dans Illustrator** : un panneau CEP ne reçoit
+   aucun `keydown` tant que le document ne porte pas le focus. Le document
+   porte désormais `tabindex` (`<body tabindex="0">`), chaque appui dans le
+   panneau rend le focus au document, et la **pastille ⌨ de la barre d'état**
+   affiche l'état réel (cliquer dedans réarme).
+3. **Rapport de diagnostic enrichi** : compteurs clavier/ghost
+   (`keydown`/`keyup`/`focusInInput`/`ghostStart`/`ghostDrop`/`ghostCancel`),
+   ligne *Focus clavier*, ligne *Hôte* corrigée (le moteur CEP renvoie une
+   chaîne JSON enfin analysée) et comptage des événements **une seule fois**.
+
+Vérifié sur le client fusionné : **87/87 tests E2E** (3 suites), vraie souris
+et vrai clavier pilotés via CDP — 0 erreur console. Le détail complet est
+dans [`moodboard-cep/README.md`](moodboard-cep/README.md).
+
+---
 
 ## 📄 Licence
 

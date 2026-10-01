@@ -899,6 +899,25 @@ body.is-ghosting #board-wrap::after {
   :root { --library-w: 220px; --inspector-w: 246px; }
 }
 
+/* Focus clavier : le document porte le focus (body tabindex=0, requis
+   par les panneaux CEP pour recevoir le clavier) — aucun anneau
+   parasite ne doit apparaître sur la coquille. */
+body:focus { outline: none; }
+
+/* Indicateur des raccourcis clavier : dans un panneau CEP, les
+   raccourcis ne vivent QUE si le panneau détient le focus clavier
+   (clic dans Illustrator = désactivation attendue). */
+.sb-kbd {
+  font-size: 10.5px; letter-spacing: 0.02em;
+  color: var(--text-faint);
+  padding: 1px 7px; border: 1px solid var(--border-soft); border-radius: 4px;
+  background: transparent; cursor: pointer;
+  user-select: none; white-space: nowrap;
+}
+.sb-kbd:hover { color: var(--text-dim); border-color: var(--border); }
+.sb-kbd.is-on { color: var(--ok); border-color: rgba(63, 185, 80, 0.35); }
+.sb-kbd.is-off { color: var(--warn); border-color: rgba(210, 153, 34, 0.4); }
+
 /* =========================================================================
  * Mode application autonome (Electron) — cf. core/desktop.js
  * macOS : fenêtre sans barre de titre classique (traffic lights intégrés)

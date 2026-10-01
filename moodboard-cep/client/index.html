@@ -6,7 +6,7 @@
 <title>Moodboard — Adobe Illustrator (CEP)</title>
 <link rel="stylesheet" href="css/panel.css">
 </head>
-<body>
+<body tabindex="0">
 <div id="app">
 
   <!-- ===== Barre supérieure ===== -->
@@ -89,7 +89,7 @@
   <!-- ===== Barre d'état ===== -->
   <footer id="statusbar">
     <div class="sb-left" id="sb-hint">Sélection — cliquez un objet, glissez pour le déplacer</div>
-    <div class="sb-right"><span class="sb-version" id="sb-version" data-tip="Version installée — doit correspondre au zip déployé"></span><span id="sb-count"></span></div>
+    <div class="sb-right"><button id="sb-kbd" class="sb-kbd" data-tip="Raccourcis clavier : actifs quand le panneau détient le focus (clic dans le panneau)" aria-label="État des raccourcis clavier"></button><span class="sb-version" id="sb-version" data-tip="Version installée — doit correspondre au zip déployé"></span><span id="sb-count"></span></div>
   </footer>
 </div>
 

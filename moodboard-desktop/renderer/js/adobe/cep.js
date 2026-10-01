@@ -227,21 +227,51 @@
   }
 
   /* Informations d'hôte pour le rapport de diagnostic (Aide ▸
-   * Diagnostics…) : application, version, version de l'API CEP. */
+   * Diagnostics…) : application, version, version de l'API CEP.
+   * Défensif : le moteur peut renvoyer une chaîne JSON, un objet,
+   * ou des champs absents — chaque manque devient « ? » sans jamais
+   * casser le rapport. */
+  function cepApiVersion() {
+    try {
+      if (window.__adobe_cep__ && typeof window.__adobe_cep__.getCEPVersion === 'function') {
+        return String(window.__adobe_cep__.getCEPVersion());
+      }
+      if (window.cep && typeof window.cep.getCEPVersion === 'function') {
+        return String(window.cep.getCEPVersion());
+      }
+    } catch (e) {
+      /* noop */
+    }
+    return '?';
+  }
+
   function hostInfo() {
     if (!isCep || !cs) return null;
+    var env = null;
     try {
-      var env = cs.getHostEnvironment ? cs.getHostEnvironment() : null;
-      if (!env) return null;
-      return {
-        appId: env.appId || '?',
-        appName: env.appName || '?',
-        appVersion: env.appVersion || '?',
-        apiVersion: env.apiVersion || '?'
-      };
+      var raw = cs.getHostEnvironment ? cs.getHostEnvironment() : null;
+      if (typeof raw === 'string') {
+        try {
+          env = JSON.parse(raw);
+        } catch (e) {
+          env = null;
+        }
+      } else if (raw && typeof raw === 'object') {
+        env = raw;
+      }
     } catch (e) {
-      return null;
+      env = null;
     }
+    var api = cepApiVersion();
+    if (!env) {
+      return { appId: '?', appName: '?', appVersion: '?', apiVersion: api };
+    }
+    return {
+      appId: env.appId || '?',
+      appName: env.appName || '?',
+      appVersion: env.appVersion || '?',
+      apiVersion: env.apiVersion || api
+    };
   }
 
   MB.cep = {

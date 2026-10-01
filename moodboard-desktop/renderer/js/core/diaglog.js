@@ -180,32 +180,25 @@
    * avec leur cible : « touche: "z" ⌘ (dans un champ — proj-name) »
    * répondra définitivement à « pourquoi mes raccourcis ne marchent pas »
    * (focus piégé dans un champ d'interface, touches jamais livrées…). */
+  /* NB (v1.2.0) : les compteurs keydown/keyup/focusInInput sont tenus
+   * par la couche centralisée de utils.js (tapEvents — un événement =
+   * +1, une seule fois). Cette sonde ne fait que JOURNALISER les
+   * premières touches reçues avec leur contexte. */
   window.addEventListener('keydown', function (e) {
     try {
       var d = MB.EVT_DIAG;
-      if (!d) return;
-      d.keydown = (d.keydown || 0) + 1;
+      if (!d || (d.keydown || 0) > 24) return;
       var t = e.target;
       var inField = !!(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable));
-      d.focusInInput = inField ? 1 : 0;
-      if (d.keydown <= 24) {
-        var combo = JSON.stringify(e.key) +
-          (e.metaKey ? ' ⌘' : '') + (e.ctrlKey ? ' Ctrl' : '') +
-          (e.shiftKey ? ' ⇧' : '') + (e.altKey ? ' ⌥' : '');
-        var where = inField
-          ? ' (dans un champ — ' + String(t.id || t.className || t.tagName).slice(0, 40) + ')'
-          : '';
-        log('touche', combo + where);
-      }
+      var combo = JSON.stringify(e.key) +
+        (e.metaKey ? ' ⌘' : '') + (e.ctrlKey ? ' Ctrl' : '') +
+        (e.shiftKey ? ' ⇧' : '') + (e.altKey ? ' ⌥' : '');
+      var where = inField
+        ? ' (dans un champ — ' + String(t.id || t.className || t.tagName).slice(0, 40) + ')'
+        : '';
+      log('touche', combo + where);
     } catch (err) {
       /* le diagnostic ne doit jamais casser l'application */
-    }
-  }, true);
-  window.addEventListener('keyup', function () {
-    try {
-      if (MB.EVT_DIAG) MB.EVT_DIAG.keyup = (MB.EVT_DIAG.keyup || 0) + 1;
-    } catch (err) {
-      /* noop */
     }
   }, true);
 
@@ -221,6 +214,19 @@
       out.push(
         'Environnement : ' +
           (desktop ? 'application autonome (Electron)' : cep ? 'Adobe CEP (Illustrator)' : 'navigateur/aperçu web')
+      );
+      /* Focus clavier : c'est LUI qui décide si les raccourcis vivent
+         dans un panneau CEP — le rapport doit le montrer. */
+      var ae = '';
+      try {
+        ae = (document.activeElement && document.activeElement.tagName) || '?';
+      } catch (e2) {
+        ae = '?';
+      }
+      out.push(
+        'Focus clavier : ' +
+          (typeof document.hasFocus === 'function' && document.hasFocus() ? 'panneau' : 'HORS panneau') +
+          ' · élément actif=' + ae
       );
       if (cep && MB.cep && MB.cep.hostInfo) {
         var hi = MB.cep.hostInfo();

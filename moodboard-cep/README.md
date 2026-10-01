@@ -7,6 +7,16 @@ on attrape une ressource, on la dépose sur le canvas, on organise l'espace, on 
 
 ---
 
+## 🖥️ Application autonome (v1.1.0+)
+
+Depuis la **v1.1.0**, le même moteur existe en **application de bureau
+installable** (Electron) pour Windows 10/11 et macOS 11+, sans Illustrator —
+voir `../moodboard-desktop/`. Le dossier de données est partagé
+(`<USER_DATA>/Moodboard`) : l'autosave et les projets passent de l'extension
+à l'application et réciproquement. Si le panneau CEP reste inutilisable sur
+votre machine, l'application autonome est la voie garantie (mêmes
+fonctions canvas ; l'intégration Illustrator reste réservée au panneau).
+
 ## ⚠️ Choix technologique : CEP (et non UXP)
 
 Ce projet utilise **CEP uniquement**, par décision explicite de l'utilisateur (une migration UXP est envisagée plus tard, à sa seule décision — voir *Roadmap*).
@@ -18,16 +28,6 @@ Point d'honnêteté : **Adobe recommande UXP pour tout nouveau développement d'
 - Aucune API UXP, aucune API legacy CEP 8/9 : uniquement la **CSInterface officielle** (`client/js/lib/CSInterface.js`).
 
 ---
-
-## 🖥️ Application autonome (v1.1.0)
-
-Depuis la **v1.1.0**, le même moteur existe en **application de bureau
-installable** (Electron) pour Windows 10/11 et macOS 11+, sans Illustrator —
-voir `../moodboard-desktop/`. Le dossier de données est partagé
-(`<USER_DATA>/Moodboard`) : l'autosave et les projets passent de l'extension
-à l'application et réciproquement. Si le panneau CEP reste inutilisable sur
-votre machine, l'application autonome est la voie garantie (mêmes
-fonctions canvas ; l'intégration Illustrator reste réservée au panneau).
 
 ## Fonctionnalités
 
@@ -169,7 +169,7 @@ moodboard-cep/
 
 ```bash
 npm run package
-# → dist/moodboard-cep-1.1.0.zip
+# → dist/moodboard-cep-1.2.0.zip
 ```
 
 (L'archive contient `CSXS/`, `.debug`, `client/`, `README.md`, `package.json`.)
@@ -191,7 +191,7 @@ Dézipper l'archive **à la racine** du dossier extensions, de sorte que `CSXS/`
 > 5. relancer Illustrator.
 >
 > **Vérifiez la version installée** : le badge en bas à droite de la barre d'état
-> du panneau doit afficher **v1.1.0**. S'il affiche autre chose, l'ancienne
+> du panneau doit afficher **v1.2.0**. S'il affiche autre chose, l'ancienne
 > installation est encore active.
 
 ### 3. Activer le PlayerDebugMode
@@ -267,6 +267,14 @@ Si un jour les **drags ne répondent plus alors que le zoom molette fonctionne**
 `MB.interact.diag()` retourne le nombre d'événements **réellement livrés** par le moteur de chaque famille (`pointerdown`, `mousedown`, `pointermove`, `mousemove`, `blur`, `pointercancel`…) ainsi que l'état de la machine à gestes (`gesture`, `spaceDown`, `tool`). Depuis la v1.0.1, la couche d'interaction est **adaptive** : elle branche à la fois les Pointer Events et les événements souris, et bascule automatiquement sur la souris si le moteur CEP hôte ne livre pas les Pointer Events (cas observé selon les versions d'Illustrator).
 
 Depuis la **v1.0.2**, les gestes **survivent** aux événements `blur` / `pointercancel` parasites que certains hôtes CEP émettent au milieu d'un drag (symptôme typique : « le zoom marche mais rien ne se déplace ») : le geste continue s'il reçoit encore des événements, et n'est annulé proprement (avec rollback) que si plus rien n'arrive pendant 600 ms.
+
+#### Corrections v1.2.0 — drag & drop + raccourcis clavier
+
+Deux pannes racine corrigées, diagnostiquées sur les rapports v1.1.x (`ghostStart=9, ghostDrop=4, ghostCancel=0` et `keydown=0, keyup=0`) :
+
+1. **Drag & drop bibliothèque/outils → canvas** : la couche adaptative masquait un `mouseup` dès qu'un `pointermove` était arrivé dans les 50 ms précédentes. Or certains moteurs CEP livrent `pointermove` mais **jamais** `pointerup` — tout relâchement en mouvement (le cas général d'un drag !) était avalé : le ghost ne se posait jamais, et 5 ghosts sur 9 fuyaient en silence (un ghost fantôme peut ensuite déposer son objet au prochain clic innocent). La couverture pointer→souris est désormais **par nature d'événement** (un `mouseup` n'est masqué que par un `pointerup` récent) ; un `buttons=0` reçu pendant le ghost l'annule proprement, un chien de garde anti-fuite le nettoie après 8 s de silence, et un nouvel appui annule tout ghost obsolète.
+2. **Raccourcis clavier morts dans Illustrator** : un panneau CEP ne reçoit **aucun** `keydown` tant que le document ne porte pas le focus — et cliquer un élément non focusable (canvas, bibliothèque) ne le lui donne pas. Le document porte désormais `tabindex` (`<body tabindex="0">`), chaque appui dans le panneau rend le focus au document, et la **pastille ⌨ de la barre d'état** affiche l'état réel (cliquer dedans réarme). Cliquer dans Illustrator désactive les raccourcis (comportement attendu), cliquer dans le panneau les réactive.
+3. **Rapport de diagnostic enrichi** : compteurs `keydown` / `keyup` / `focusInInput` / `ghostStart` / `ghostDrop` / `ghostCancel` (+ `focus`, `wheel`), ligne **Focus clavier**, ligne **Hôte** corrigée (le moteur CEP renvoie une chaîne JSON qui n'était pas analysée — d'où les « ? ? » dans les rapports v1.1.x), et comptage des événements **une seule fois** (les anciens rapports comptaient `mouseup` ≈ 2 × `mousedown` car chaque module incrémentait de son côté).
 
 ---
 
