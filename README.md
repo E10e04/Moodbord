@@ -88,14 +88,14 @@ par [GitHub Actions](.github/workflows/build.yml) sur des machines GitHub —
 1. Onglet **[Actions](https://github.com/E10e04/Moodbord/actions)** du dépôt.
 2. Flèche ▾ à droite de « Build & Release » → **Run workflow** → bouton vert.
 3. ~10 minutes plus tard : résumé du run → section **Artifacts** —
-   `Moodboard-Setup-1.6.0.exe`, zip portable Windows, `.dmg` x64 + arm64,
+   `Moodboard-Setup-1.6.1.exe`, zip portable Windows, `.dmg` x64 + arm64,
    zip de l'extension CEP.
 
 ### Release publique (tag)
 
 ```bash
-git tag v1.6.0
-git push origin v1.6.0
+git tag v1.6.1
+git push origin v1.6.1
 ```
 → un **Release** public est créé automatiquement avec tous les installateurs
 en pièces jointes (c'est la façon d'obtenir une page Releases téléchargeable
@@ -194,7 +194,7 @@ npm run dist:mac               # → dist/Moodboard-1.4.0-x64.dmg + arm64.dmg (s
 
 ## 🧪 Vérifications effectuées
 
-- **Web/CEP — 320/320 tests E2E navigateur** (7 suites : v1.6.0, v1.5.0 ×2 phases, v1.4.0 ×2 phases, v1.3.0, v1.2.0, events, v1.0.2) + **83/83 assertions de stockage** (simulation fidèle du moteur CEP) : drags au 1/100 de pixel,
+- **Web/CEP — 365/365 tests E2E navigateur** (8 suites : v1.6.1, v1.6.0, v1.5.0 ×2 phases, v1.4.0 ×2 phases, v1.3.0, v1.2.0, events, v1.0.2) + **83/83 assertions de stockage** (simulation fidèle du moteur CEP) : drags au 1/100 de pixel,
   simulation CEP sans Pointer Events, survie blur/pointercancel, undo exact.
 - **Bureau — 10/10 tests E2E** sous Electron headless (Xvfb) : déplacement
   d'élément delta monde exact, autosave persisté sur disque via IPC, CSP
@@ -217,6 +217,27 @@ npm run dist:mac               # → dist/Moodboard-1.4.0-x64.dmg + arm64.dmg (s
    placeholder générés par IA.
 
 ## 📜 Changelog
+
+### v1.6.1 — planches : création sans entrée, retour par le nom, carte compacte
+
+1. **Création sans ouverture automatique** : l'outil **Planche (E)** crée
+   la carte **dans le moodboard actif** (plus d'entrée immédiate). Le nom
+   est **éditable sur place** — le titre passe en édition dès la création,
+   tapez le nom puis Échap/Entrée. La planche ne s'ouvre **que par sa
+   flèche** (l'inspecteur et le menu contextuel restent des chemins
+   explicites ; le double-clic ne déclenche plus l'entrée).
+2. **Retour au moodboard principal par le nom** : dans la barre supérieure,
+   **cliquer le nom du moodboard parent** dans le fil d'Ariane ramène à son
+   niveau — plus besoin du seul Alt+←. Nouveau **bouton retour ‹** en tête
+   du fil d'Ariane, et correctif macOS : le fil d'Ariane est désormais une
+   zone cliquable de la barre (il était avalé par le déplacement de
+   fenêtre).
+3. **Carte planche compacte** : le grand rectangle d'aperçu et le badge
+   bleu disparaissent — le **nom est centré** dans sa barre, la flèche
+   d'ouverture vit dans la barre du bas **à la place de l'ancien libellé
+   bleu « → planche »** (SVG export aligné : flèche au lieu du texte bleu,
+   nom centré). Les cartes hautes héritées des fichiers v1.6.0
+   s'affichent centrées.
 
 ### v1.6.0 — planches liées, édition texte corrigée, polices du système, presse-papiers des liens
 

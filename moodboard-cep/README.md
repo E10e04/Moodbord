@@ -191,7 +191,7 @@ Dézipper l'archive **à la racine** du dossier extensions, de sorte que `CSXS/`
 > 5. relancer Illustrator.
 >
 > **Vérifiez la version installée** : le badge en bas à droite de la barre d'état
-> du panneau doit afficher **v1.6.0**. S'il affiche autre chose, l'ancienne
+> du panneau doit afficher **v1.6.1**. S'il affiche autre chose, l'ancienne
 > installation est encore active.
 
 ### 3. Activer le PlayerDebugMode
@@ -267,6 +267,19 @@ Si un jour les **drags ne répondent plus alors que le zoom molette fonctionne**
 `MB.interact.diag()` retourne le nombre d'événements **réellement livrés** par le moteur de chaque famille (`pointerdown`, `mousedown`, `pointermove`, `mousemove`, `blur`, `pointercancel`…) ainsi que l'état de la machine à gestes (`gesture`, `spaceDown`, `tool`). Depuis la v1.0.1, la couche d'interaction est **adaptive** : elle branche à la fois les Pointer Events et les événements souris, et bascule automatiquement sur la souris si le moteur CEP hôte ne livre pas les Pointer Events (cas observé selon les versions d'Illustrator).
 
 Depuis la **v1.0.2**, les gestes **survivent** aux événements `blur` / `pointercancel` parasites que certains hôtes CEP émettent au milieu d'un drag (symptôme typique : « le zoom marche mais rien ne se déplace ») : le geste continue s'il reçoit encore des événements, et n'est annulé proprement (avec rollback) que si plus rien n'arrive pendant 600 ms.
+
+#### Nouveautés v1.6.1 — planches : création sans entrée, retour par le nom, carte compacte
+
+1. **Création sans ouverture** : l'outil **Planche (E)** laisse la nouvelle
+   carte dans le moodboard actif — le titre passe en **édition immédiate**
+   (nommez-la sur place). Elle ne s'ouvre que par **sa flèche** ; le
+   double-clic ne déclenche plus l'entrée.
+2. **Retour par le nom** : cliquer le **nom du moodboard parent** dans le fil
+   d'Ariane (barre supérieure) ramène à son niveau — nouveau bouton retour ‹
+   en tête du fil ; Alt+← reste actif.
+3. **Carte compacte** : plus de grand rectangle d'aperçu ni de badge bleu —
+   nom **centré** dans sa barre, flèche d'ouverture dans la barre du bas
+   (à la place de l'ancien libellé bleu « → planche » ; SVG export aligné).
 
 #### Nouveautés v1.6.0 — planches liées, édition texte, polices du système
 

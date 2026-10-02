@@ -2,10 +2,11 @@
  * boards.js — Planches liées : moodboards imbriqués dans un moodboard (v1.6).
  *
  * Une « planche » est un élément de type `board` sur le canvas : sa carte
- * renferme un document complet (data.doc = { elements, camera }). Double-clic
- * (ou bouton dédié) → on ENTRE dans la planche : le canvas affiche son
- * contenu et un fil d'Ariane apparaît dans la barre supérieure. La
- * navigation est récursive (planche dans planche) — pile de cadres.
+ * renferme un document complet (data.doc = { elements, camera }). La
+ * flèche de la carte (ou l'inspecteur / le menu contextuel) → on ENTRE
+ * dans la planche : le canvas affiche son contenu et un fil d'Ariane
+ * apparaît dans la barre supérieure. La navigation est récursive
+ * (planche dans planche) — pile de cadres.
  *
  * Le contenu des planches vit DANS le fichier du moodboard racine :
  * une seule sauvegarde embarque tout l'arbre.
@@ -161,26 +162,9 @@
     });
     if (!fresh.length) MB.camera.fit(null);
 
-    MB.ui.toast('Planche « ' + ((el.data && el.data.title) || 'Planche') + ' » ouverte — Alt+← pour revenir', 'success');
+    MB.ui.toast('Planche « ' + ((el.data && el.data.title) || 'Planche') + ' » ouverte — Alt+← ou son nom en haut pour revenir', 'success');
     emitChange();
     return true;
-  }
-
-  /* Miniature au mieux (asynchrone, jamais bloquante) : la carte de la
-   * planche affiche un aperçu de son contenu. */
-  function thumbFor(boardEl) {
-    try {
-      if (!MB.exporter || typeof MB.exporter.thumbnail !== 'function') return;
-      if (!MB.store.s().elements.length) return; /* vide : motif par défaut */
-      MB.exporter.thumbnail(480, 320, function (dataUrl) {
-        if (!dataUrl || !boardEl || !boardEl.data) return;
-        boardEl.data.thumb = dataUrl;
-        var v = MB.board ? MB.board.viewOf(boardEl.id) : null;
-        if (v && v.node.isConnected) v.renderContent(boardEl);
-      });
-    } catch (e) {
-      /* best effort */
-    }
   }
 
   function exit() {
@@ -190,7 +174,8 @@
 
     syncUp();
     var f = frames[frames.length - 1];
-    thumbFor(f.boardEl);
+    /* v1.6.1 — plus de miniature : la carte compacte n'affiche plus
+     * d'aperçu (data.thumb reste toléré pour les anciens fichiers). */
     frames.pop();
 
     MB.store.loadDocument({

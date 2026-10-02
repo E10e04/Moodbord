@@ -66,11 +66,13 @@
     if (type === 'text' || type === 'note' || type === 'comment') {
       startEditing(el, 'text');
     }
-    /* v1.6 — planche liée : on entre immédiatement dans la nouvelle
-     * planche pour travailler dedans (Alt+← ou fil d'Ariane pour
-     * revenir au moodboard parent). */
-    if (type === 'board' && MB.boards) {
-      MB.boards.enter(el);
+    /* v1.6.1 — planche liée : la nouvelle carte RESTE dans le moodboard
+     * actif (pas d’entrée automatique) ; le titre passe immédiatement en
+     * édition pour nommer la planche sur place. L’ouverture se fait
+     * uniquement par la flèche de la carte (ou l’inspecteur / le menu
+     * contextuel). */
+    if (type === 'board') {
+      startEditing(el, 'title');
     }
     return el;
   }
@@ -1410,14 +1412,10 @@
       return;
     }
 
-    /* v1.6 — planche liée : double-clic (hors titre) = entrer dedans. */
-    var boardHost = e.target.closest('.mb-el--board');
-    if (boardHost) {
-      var bEl = Store.el(boardHost.dataset.id);
-      if (bEl && !bEl.locked && MB.boards) MB.boards.enter(bEl);
-      return;
-    }
-
+    /* v1.6.1 — la planche ne s’ouvre PLUS au double-clic : SEULE la
+     * flèche de la carte (bouton dédié), l’inspecteur ou le menu
+     * contextuel ouvrent la planche. Le double-clic sur le titre
+     * renomme (cas [data-field] ci-dessus). */
     var groupHost = e.target.closest('.mb-el');
     if (groupHost) {
       var gEl = Store.el(groupHost.dataset.id);

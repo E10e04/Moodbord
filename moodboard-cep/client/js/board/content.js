@@ -178,28 +178,21 @@
   function renderBoard(el) {
     var d = el.data;
     var count = d && d.doc && Array.isArray(d.doc.elements) ? d.doc.elements.length : d.elCount || 0;
-    var thumb = d && d.thumb;
-    var ph =
-      '<div class="mb-board-ph">' +
-      '<span class="mb-board-ph-mark" aria-hidden="true"></span>' +
-      '<span class="mb-board-ph-line"></span><span class="mb-board-ph-line"></span>' +
-      '<span class="mb-board-ph-line mb-board-ph-line--s"></span>' +
-      '</div>';
+    /* v1.6.1 — carte compacte : plus de grande zone d'aperçu, plus de
+     * badge « planche » bleu. Le nom est centré dans sa barre ; la
+     * flèche d'ouverture vit dans la barre du bas, à droite (à la place
+     * de l'ancien libellé bleu « → planche »). */
     return (
       '<div class="mb-board-card">' +
-      '<div class="mb-board-thumb">' +
-      (thumb
-        ? '<img src="' + U.escapeHtml(thumb) + '" alt="" draggable="false">'
-        : ph) +
-      '<span class="mb-board-badge" aria-hidden="true">' + (MB.icons ? MB.icons.get('board', 11) : '') + '</span>' +
-      '</div>' +
-      '<div class="mb-board-bar">' +
+      '<div class="mb-board-bar mb-board-bar--name">' +
       '<div class="mb-board-title mb-editable" data-field="title">' + esc(d.title || 'Planche') + '</div>' +
+      '</div>' +
+      '<div class="mb-board-bar mb-board-bar--info">' +
+      '<span class="mb-board-count">' + count + ' élément' + (count > 1 ? 's' : '') + '</span>' +
       '<button class="mb-board-open" type="button" data-act="board-open" title="Ouvrir la planche" aria-label="Ouvrir la planche">' +
-      (MB.icons ? MB.icons.get('external', 12) : '→') +
+      (MB.icons ? MB.icons.get('external', 14) : '→') +
       '</button>' +
       '</div>' +
-      '<div class="mb-board-count">' + count + ' élément' + (count > 1 ? 's' : '') + '</div>' +
       '</div>'
     );
   }

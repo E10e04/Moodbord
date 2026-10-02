@@ -476,7 +476,7 @@
       s.appendChild(rowB1);
       var rowB2 = U.el('div', 'insp-hint');
       rowB2.innerHTML =
-        'Double-cliquez la carte pour ouvrir la planche · Alt+← pour revenir au moodboard parent.' +
+        'Cliquez sur la flèche de la carte pour ouvrir la planche · Alt+← ou son nom en haut pour revenir.' +
         '<br>Le contenu de la planche est enregistré DANS le fichier du moodboard racine.';
       s.appendChild(rowB2);
     } else if (el.type === 'shape') {

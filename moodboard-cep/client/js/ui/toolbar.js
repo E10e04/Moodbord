@@ -28,7 +28,7 @@
     { id: 'section', icon: 'section', label: 'Section', key: 'S', hint: 'Glisser pour délimiter une section' },
     { id: 'column', icon: 'column', label: 'Colonne', hint: 'Glisser pour délimiter une colonne' },
     { id: 'table', icon: 'table', label: 'Tableau', hint: 'Cliquer pour créer un tableau' },
-    { id: 'board', icon: 'board', label: 'Planche', key: 'E', hint: 'Créer un moodboard lié dans ce moodboard — double-clic pour l’ouvrir' },
+    { id: 'board', icon: 'board', label: 'Planche', key: 'E', hint: 'Créer un moodboard lié dans ce moodboard — cliquez sur sa flèche pour l’ouvrir' },
     { sep: true },
     { id: 'color', icon: 'color', label: 'Couleur', key: 'K', hint: 'Cliquer pour créer une pastille couleur' },
     { id: 'palette', icon: 'palette', label: 'Palette', key: 'A', hint: 'Cliquer pour créer une palette' },

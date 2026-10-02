@@ -232,17 +232,19 @@
         t = '';
         break;
 
-      /* v1.6 — planche liée : carte résumée (titre + compteur) ; le
-       * contenu de la planche ne se déplie pas dans l'export SVG. */
+      /* v1.6 — planche liée : carte résumée ; le contenu de la planche ne
+       * se déplie pas dans l'export SVG.
+       * v1.6.1 — design compact aligné sur la carte du canvas : nom
+       * CENTRÉ, compteur en bas à gauche, flèche d'ouverture en bas à
+       * droite (elle remplace l'ancien libellé bleu « → planche »). */
       case 'board': {
         var bCount = d && d.doc && Array.isArray(d.doc.elements) ? d.doc.elements.length : 0;
         t =
           '<rect x="' + el.x + '" y="' + el.y + '" width="' + el.w + '" height="' + el.h +
           '" rx="12" fill="#232323" stroke="#3A3A3A" stroke-width="1.5"' + rotAttr() + '/>' +
-          '<rect x="' + (el.x + 10) + '" y="' + (el.y + 10) + '" width="' + (el.w - 20) + '" height="' + (el.h - 62) + '" rx="8" fill="#2A2A2A"/>' +
-          multiLineText(el.x + 14, el.y + 26, d.title || 'Planche', 'font-family="Georgia" font-size="15" font-weight="700" fill="#F5F5F5"', 19) +
-          multiLineText(el.x + 14, el.y + el.h - 20, bCount + ' élément' + (bCount > 1 ? 's' : ''), 'font-family="Georgia" font-size="11" fill="#B4B4B4"', 14) +
-          '<text x="' + (el.x + el.w - 34) + '" y="' + (el.y + el.h - 20) + '" font-family="Georgia" font-size="11" fill="#4C8DFF">→ planche</text>';
+          multiLineText(el.x + el.w / 2, el.y + el.h / 2 - 8, d.title || 'Planche', 'font-family="Georgia" font-size="15" font-weight="700" fill="#F5F5F5" text-anchor="middle"', 19) +
+          multiLineText(el.x + 14, el.y + el.h - 16, bCount + ' élément' + (bCount > 1 ? 's' : ''), 'font-family="Georgia" font-size="11" fill="#B4B4B4"', 14) +
+          '<text x="' + (el.x + el.w - 30) + '" y="' + (el.y + el.h - 13) + '" font-family="Georgia" font-size="18" font-weight="700" fill="#B4B4B4">\u2192</text>';
         break;
       }
     }

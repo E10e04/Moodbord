@@ -354,7 +354,11 @@
         return;
       }
       var titles = MB.boards.crumb();
-      var html = '';
+      var html =
+        '<button type="button" class="crumb-back" data-back="1"' +
+        ' title="Revenir au moodboard parent (Alt+←)" aria-label="Revenir au moodboard parent">' +
+        MB.icons.get('chevronLeft', 14) +
+        '</button>';
       for (var i = 0; i < titles.length; i++) {
         if (i > 0) {
           html += '<span class="crumb-sep" aria-hidden="true">' + MB.icons.get('chevronRight', 11) + '</span>';
@@ -369,6 +373,12 @@
       }
       crumb.innerHTML = html;
       crumb.hidden = false;
+      var back = crumb.querySelector('.crumb-back');
+      if (back) {
+        back.addEventListener('click', function () {
+          if (MB.boards) MB.boards.exit();
+        });
+      }
       crumb.querySelectorAll('.crumb-item:not(.is-current)').forEach(function (b) {
         b.addEventListener('click', function () {
           var level = parseInt(b.dataset.level, 10);
