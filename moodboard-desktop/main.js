@@ -20,7 +20,7 @@
  * ========================================================================= */
 'use strict';
 
-const { app, BrowserWindow, Menu, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
@@ -355,6 +355,18 @@ ipcMain.handle('desktop:info', () => ({
   versions: process.versions,
   userData: app.getPath('userData')
 }));
+
+/* v1.4 — Révéler un fichier dans le Finder / l'Explorateur (écran
+ * d'accueil, menu ⋯ d'une carte récente). Chemin absolu uniquement. */
+ipcMain.handle('shell:reveal', async (_e, p) => {
+  if (typeof p !== 'string' || !path.isAbsolute(p)) return { err: 1 };
+  try {
+    shell.showItemInFolder(p);
+    return { err: 0 };
+  } catch (err) {
+    return { err: 1 };
+  }
+});
 
 /* ------------------------------------------------------------- cycle app */
 

@@ -169,7 +169,7 @@ moodboard-cep/
 
 ```bash
 npm run package
-# → dist/moodboard-cep-1.3.0.zip
+# → dist/moodboard-cep-1.4.0.zip
 ```
 
 (L'archive contient `CSXS/`, `.debug`, `client/`, `README.md`, `package.json`.)
@@ -191,7 +191,7 @@ Dézipper l'archive **à la racine** du dossier extensions, de sorte que `CSXS/`
 > 5. relancer Illustrator.
 >
 > **Vérifiez la version installée** : le badge en bas à droite de la barre d'état
-> du panneau doit afficher **v1.3.0**. S'il affiche autre chose, l'ancienne
+> du panneau doit afficher **v1.4.0**. S'il affiche autre chose, l'ancienne
 > installation est encore active.
 
 ### 3. Activer le PlayerDebugMode
@@ -267,6 +267,31 @@ Si un jour les **drags ne répondent plus alors que le zoom molette fonctionne**
 `MB.interact.diag()` retourne le nombre d'événements **réellement livrés** par le moteur de chaque famille (`pointerdown`, `mousedown`, `pointermove`, `mousemove`, `blur`, `pointercancel`…) ainsi que l'état de la machine à gestes (`gesture`, `spaceDown`, `tool`). Depuis la v1.0.1, la couche d'interaction est **adaptive** : elle branche à la fois les Pointer Events et les événements souris, et bascule automatiquement sur la souris si le moteur CEP hôte ne livre pas les Pointer Events (cas observé selon les versions d'Illustrator).
 
 Depuis la **v1.0.2**, les gestes **survivent** aux événements `blur` / `pointercancel` parasites que certains hôtes CEP émettent au milieu d'un drag (symptôme typique : « le zoom marche mais rien ne se déplace ») : le geste continue s'il reçoit encore des événements, et n'est annulé proprement (avec rollback) que si plus rien n'arrive pendant 600 ms.
+
+#### Nouveautés v1.4.0 — écran d'accueil redessiné (barre latérale, bleu)
+
+1. **Écran d'accueil (application de bureau) — nouveau design** : barre
+   latérale (Accueil actif, Nouveau, Ouvrir, Importer — puis Récents,
+   Favoris, Corbeille — et Aide en pied), en-tête avec identité et
+   sous-titre, **recherche instantanée**, boutons d'action, grille de
+   cartes avec **miniature du tableau** (JPEG généré à chaque
+   enregistrement, stocké dans `recent.json`), date relative et nombre
+   d'éléments. Palette plus profonde que le canvas (#08080C / cartes
+   #12121A), accent bleu. La carte **Reprendre la session** et les
+   comportements v1.3 sont conservés.
+2. **Favoris & corbeille** : menu ⋯ d'une carte → Ajouter/Retirer des
+   favoris (badge étoile, vue dédiée), Retirer de la liste (→ corbeille,
+   restaurable, suppression définitive possible). Le fichier projet
+   n'est jamais modifié ni supprimé — seule la liste `recent.json` bouge
+   (20 actifs + 10 entrées de corbeille max).
+3. **Recherche** : filtrage instantané par nom ou chemin, compteur
+   dynamique, états vides dédiés (aucun résultat / favoris / corbeille).
+4. **Afficher dans le dossier** (menu ⋯) : révèle le fichier dans le
+   Finder / l'Explorateur (application de bureau).
+5. **Aperçu web** : ouvrir la préview avec `?home=1` affiche l'écran
+   d'accueil avec trois tableaux de démonstration pour visualiser le
+   design sans l'application (CEP et navigateur sans le paramètre :
+   comportement inchangé).
 
 #### Nouveautés v1.3.0 — enregistrement, écran d'accueil, liens
 

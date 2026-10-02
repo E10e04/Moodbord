@@ -952,103 +952,233 @@ body.mb-desktop-darwin #topbar .save-status {
 }
 
 /* =========================================================================
- * v1.3 — Écran d'accueil (application de bureau)
- * Première vue de l'app : nouveau moodboard, ouverture, reprise de
- * session et 20 fichiers récents. Sous les dialogues (z 400) pour que
- * les confirmations restent visibles, au-dessus de tout le reste.
+ * v1.4 — Écran d'accueil (application de bureau) — design à barre latérale.
+ * Palette locale plus profonde que le canvas (écran « launch ») :
+ * fond #08080C, sidebar #0D0D13, cartes #12121A, accent bleu (#4C8DFF,
+ * encre sombre dessus — comme le jaune du design d'origine, en bleu).
+ * Sous les dialogues (z 400) pour que les confirmations restent visibles,
+ * au-dessus de tout le reste.
  * ========================================================================= */
 #home-screen {
   position: fixed; inset: 0; z-index: 350;
-  background: var(--bg);
+  background: #08080C;
+  --h-card: #12121A;
+  --h-elev: #1A1A23;
+  --h-border: #24242E;
+  --h-text: #F4F4F6;
+  --h-dim: #9CA0AC;
+  --h-faint: #676B77;
+  --h-accent: #4C8DFF;
+  --h-accent-ink: #0A1224;
 }
 #home-screen[hidden] { display: none; }
-.home-scroll {
-  width: 100%; height: 100%;
-  overflow-y: auto; overflow-x: hidden;
-  display: flex;
+.home-shell { display: flex; width: 100%; height: 100%; }
+
+/* ---------------------------------------------------------- sidebar */
+.home-side {
+  width: 232px; flex: 0 0 232px;
+  background: #0D0D13;
+  border-right: 1px solid var(--h-border);
+  display: flex; flex-direction: column; gap: 3px;
+  padding: 20px 12px 14px;
 }
-.home-panel {
-  margin: auto;
-  width: min(880px, calc(100% - 48px));
-  padding: 42px 0 60px;
+.home-side-brand { display: flex; align-items: center; gap: 10px; padding: 4px 10px 15px; color: var(--h-text); }
+.home-logo { color: var(--h-accent); display: flex; }
+.home-logo-name { font-size: 15px; font-weight: 750; letter-spacing: 0.01em; }
+.home-side-group { display: flex; flex-direction: column; gap: 3px; }
+.home-side-sep { height: 1px; margin: 12px 10px; background: var(--h-border); }
+.home-side-foot { margin-top: auto; border-top: 1px solid var(--h-border); padding-top: 10px; }
+.home-side-item {
+  display: flex; align-items: center; gap: 11px;
+  width: 100%; padding: 8px 10px;
+  background: none; border: none; border-radius: 8px;
+  color: var(--h-dim); font-family: var(--font); font-size: 13px; font-weight: 550;
+  cursor: pointer; text-align: left;
+  transition: background .12s ease, color .12s ease;
 }
-.home-brand { display: flex; align-items: center; gap: 13px; }
+.home-side-item .hs-icn { display: flex; flex: 0 0 auto; }
+.home-side-item:hover { background: rgba(255, 255, 255, 0.05); color: var(--h-text); }
+.home-side-item.is-current { background: #17171F; color: var(--h-text); }
+.home-side-item.is-current .hs-icn { color: var(--h-accent); }
+.home-side-item--accent { background: var(--h-accent); color: var(--h-accent-ink); font-weight: 650; }
+.home-side-item--accent:hover { background: #5E9BFF; color: var(--h-accent-ink); }
+
+/* ------------------------------------------------------------- main */
+.home-main { flex: 1 1 auto; min-width: 0; overflow-y: auto; overflow-x: hidden; }
+.home-main-inner { padding: 26px 36px 56px; }
+.home-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 20px;
+}
+.home-head-id { display: flex; align-items: center; gap: 15px; min-width: 0; }
+.home-app-mark {
+  width: 46px; height: 46px; border-radius: 13px; flex: 0 0 auto;
+  background: conic-gradient(from 210deg, #7A522E, #B0673F, #E4D0B8, #7A522E);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14), 0 4px 14px rgba(0, 0, 0, 0.4);
+}
 .home-title {
-  font-size: 32px; font-weight: 800; letter-spacing: -0.6px; color: var(--text);
+  margin: 0; font-size: 25px; font-weight: 800;
+  letter-spacing: -0.4px; color: var(--h-text);
 }
-.home-tagline { color: var(--text-dim); margin: 10px 0 30px; font-size: 14px; }
-.home-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 34px; }
+.home-tagline { margin: 4px 0 0; font-size: 12.5px; color: var(--h-dim); }
+.home-head-tools { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
+.home-search {
+  display: flex; align-items: center; gap: 8px;
+  background: #12121A; border: 1px solid var(--h-border);
+  border-radius: 9px; padding: 0 11px; height: 34px;
+  color: var(--h-faint); transition: border-color .15s ease;
+}
+.home-search:focus-within { border-color: rgba(76, 141, 255, 0.6); }
+.home-search input {
+  background: none; border: none; outline: none;
+  color: var(--h-text); font-family: var(--font); font-size: 12.5px;
+  width: 215px;
+}
+.home-search input::placeholder { color: var(--h-faint); }
+
+/* ---------------------------------------------------- actions rapides */
+.home-actions { display: flex; gap: 10px; flex-wrap: wrap; margin: 24px 0 30px; }
 .home-btn {
   display: inline-flex; align-items: center; gap: 8px;
-  padding: 10px 18px; border-radius: var(--radius);
-  background: var(--panel2); color: var(--text);
-  box-shadow: inset 0 0 0 1px var(--border-soft);
-  font-family: var(--font); font-size: 14px; font-weight: 600;
+  padding: 9px 16px; border-radius: 9px;
+  background: #16161E; color: #E7E8EC;
+  border: 1px solid var(--h-border);
+  font-family: var(--font); font-size: 13px; font-weight: 600;
   cursor: pointer;
-  transition: background .12s ease, color .12s ease, box-shadow .12s ease;
+  transition: background .12s ease, border-color .12s ease, transform .08s ease;
 }
-.home-btn:hover { background: var(--elev); box-shadow: inset 0 0 0 1px var(--border); }
+.home-btn:hover { background: #1D1D27; border-color: #2E2E3A; }
 .home-btn:active { transform: translateY(1px); }
-.home-btn--primary { background: var(--accent); color: #fff; box-shadow: none; }
-.home-btn--primary:hover { background: #5D9AFF; box-shadow: none; }
-.home-btn--ghost { background: transparent; color: var(--text-dim); box-shadow: none; }
-.home-btn--ghost:hover { color: var(--text); background: var(--panel2); }
-.home-recents-head {
-  display: flex; align-items: baseline; gap: 10px; margin-bottom: 14px;
+.home-btn--primary {
+  background: var(--h-accent); color: var(--h-accent-ink); border-color: transparent;
+  box-shadow: 0 4px 16px rgba(76, 141, 255, 0.3);
 }
+.home-btn--primary:hover { background: #5E9BFF; }
+
+/* --------------------------------------------------- section récents */
+.home-recents-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
 .home-sub {
-  font-size: 12px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.9px; color: var(--text-dim);
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1px; color: var(--h-dim);
 }
-.home-count { font-size: 12px; color: var(--text-faint); }
+.home-count {
+  font-size: 11.5px; color: var(--h-faint);
+  background: var(--h-card); border: 1px solid var(--h-border);
+  padding: 2px 9px; border-radius: 999px;
+}
 .home-grid {
-  display: grid; gap: 10px;
-  grid-template-columns: repeat(auto-fill, minmax(252px, 1fr));
+  display: grid; gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(236px, 1fr));
 }
-.home-sep {
-  grid-column: 1 / -1; height: 1px; margin: 6px 0 2px;
-  background: var(--border-soft);
-}
+
+/* ---------------------------------------------------------- cartes */
 .home-card {
-  display: flex; align-items: center; gap: 12px;
-  padding: 13px 14px; border-radius: var(--radius);
-  background: var(--panel2);
-  box-shadow: inset 0 0 0 1px var(--border-soft);
-  text-align: left; cursor: pointer;
-  transition: background .12s ease, box-shadow .12s ease;
+  background: var(--h-card);
+  border: 1px solid var(--h-border);
+  border-radius: 14px; padding: 10px;
+  cursor: pointer; text-align: left;
+  transition: transform .15s ease, border-color .15s ease,
+    background .15s ease, box-shadow .15s ease;
 }
-.home-card:hover { background: var(--elev); box-shadow: inset 0 0 0 1px var(--accent); }
-.home-card:active { transform: translateY(1px); }
-.home-card--session {
-  background: var(--accent-soft);
-  box-shadow: inset 0 0 0 1px var(--accent);
+.home-card:hover {
+  border-color: rgba(76, 141, 255, 0.55); background: #14141D;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4);
 }
-.home-card--session:hover { background: rgba(76, 141, 255, 0.24); }
-.home-card-glyph {
-  flex: 0 0 40px; width: 40px; height: 40px; border-radius: 9px;
-  background: var(--elev); color: var(--text-dim);
+.home-card:focus-visible { outline: 2px solid var(--h-accent); outline-offset: 2px; }
+.home-card-thumb {
+  position: relative;
+  aspect-ratio: 16 / 10; border-radius: 9px; overflow: hidden;
+  background: repeating-linear-gradient(135deg, #15151E 0 14px, #191923 14px 28px);
   display: flex; align-items: center; justify-content: center;
 }
-.home-card--session .home-card-glyph { color: var(--accent); background: var(--elev); }
-.home-card-body { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.home-card-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.home-card-ph { color: #353542; }
+.home-card-fav {
+  position: absolute; top: 8px; right: 8px;
+  width: 24px; height: 24px; border-radius: 50%;
+  background: var(--h-accent); color: var(--h-accent-ink);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+.home-card--trashed { opacity: 0.9; }
+.home-card--trashed .home-card-img { filter: grayscale(0.65) brightness(0.72); }
+.home-card--session { border-color: rgba(76, 141, 255, 0.5); }
+.home-card-thumb--session {
+  background: linear-gradient(135deg, rgba(76, 141, 255, 0.16), rgba(76, 141, 255, 0.3));
+  color: var(--h-accent);
+}
+.home-card-info { display: flex; align-items: center; gap: 8px; padding: 11px 4px 3px; min-width: 0; }
+.home-card-icn { color: var(--h-faint); display: flex; flex: 0 0 auto; }
 .home-card-name {
-  font-size: 14px; font-weight: 650; color: var(--text);
+  flex: 1 1 auto; min-width: 0;
+  font-size: 13.5px; font-weight: 650; color: var(--h-text);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.home-card-dir {
-  font-size: 11px; color: var(--text-dim);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  direction: rtl; text-align: left; /* ellipsis côté début : on garde la fin du chemin */
+.home-card-menu {
+  flex: 0 0 auto; width: 26px; height: 26px; border-radius: 7px;
+  background: transparent; border: none; color: var(--h-faint);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
 }
-.home-card-meta { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
+.home-card-menu:hover { background: #22222C; color: var(--h-text); }
+.home-card-meta {
+  padding: 1px 4px 4px 26px;
+  font-size: 11.5px; color: var(--h-faint);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* ------------------------------------------------- état vide */
 .home-empty {
-  color: var(--text-dim); text-align: center; line-height: 1.7;
-  padding: 30px 20px; background: var(--panel);
-  border-radius: var(--radius);
-  box-shadow: inset 0 0 0 1px var(--border-soft);
+  border: 1px dashed #2A2A36; border-radius: 14px;
+  padding: 44px 24px; text-align: center;
 }
-@media (max-width: 640px) {
-  .home-panel { width: calc(100% - 32px); padding: 26px 0 40px; }
-  .home-title { font-size: 26px; }
+.home-empty-icn { color: #3A3A46; display: flex; justify-content: center; margin-bottom: 10px; }
+.home-empty-main { color: var(--h-dim); font-weight: 600; margin: 0 0 6px; }
+.home-empty-sub { color: var(--h-faint); margin: 0; font-size: 12.5px; }
+
+/* ------------------------------------------------- menus ⋯ */
+.home-menu {
+  position: fixed; z-index: 360; min-width: 215px;
+  background: #1A1A23; border: 1px solid #2A2A35; border-radius: 11px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5); padding: 5px;
+}
+.home-menu-item {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; padding: 8px 10px;
+  background: none; border: none; border-radius: 7px;
+  color: #DDDEE3; font-family: var(--font); font-size: 12.5px;
+  text-align: left; cursor: pointer;
+}
+.home-menu-item:hover { background: #24242F; color: #FFFFFF; }
+.home-menu-item--danger { color: #E5645C; }
+.home-menu-item--danger:hover { background: rgba(229, 100, 92, 0.12); color: #FF7B72; }
+.home-menu-icn { color: inherit; display: flex; opacity: 0.8; }
+.home-menu-sep { height: 1px; margin: 5px 8px; background: #2A2A35; }
+
+/* ------------------------------------- fenêtre native (macOS/Windows) */
+/* macOS (barre intégrée) : la sidebar descend sous les traffic lights,
+ * ses zones vides déplacent la fenêtre, le haut de l'en-tête aussi. */
+body.mb-desktop-darwin #home-screen .home-side { padding-top: 48px; -webkit-app-region: drag; }
+body.mb-desktop-darwin #home-screen .home-side .home-side-item { -webkit-app-region: no-drag; }
+body.mb-desktop-darwin #home-screen .home-head { -webkit-app-region: drag; }
+body.mb-desktop-darwin #home-screen .home-head-tools,
+body.mb-desktop-darwin #home-screen .home-head-tools * { -webkit-app-region: no-drag; }
+/* Windows (titleBarOverlay 34px) : marge de sécurité en haut. */
+body.mb-desktop-win32 #home-screen .home-side { padding-top: 46px; }
+body.mb-desktop-win32 #home-screen .home-main-inner { padding-top: 44px; }
+
+/* ------------------------------------------------- responsive */
+@media (max-width: 860px) {
+  .home-side { display: none; }
+  .home-head { flex-direction: column; align-items: stretch; }
+  .home-head-tools { width: 100%; }
+  .home-search { flex: 1 1 auto; }
+  .home-search input { width: 100%; }
+  .home-main-inner { padding: 22px 18px 40px; }
+  .home-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+  .home-card-meta { padding-left: 4px; }
+}
+@media (max-width: 560px) {
   .home-grid { grid-template-columns: 1fr; }
+  .home-title { font-size: 21px; }
 }

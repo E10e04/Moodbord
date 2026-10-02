@@ -28,6 +28,9 @@ contextBridge.exposeInMainWorld('mbDesktop', {
   saveDialog: (opts) => ipcRenderer.invoke('dialog:save', opts || {}),
   openDialog: () => ipcRenderer.invoke('dialog:open'),
 
+  /* ----- v1.4 : révéler dans le Finder / l'Explorateur ----- */
+  reveal: (p) => ipcRenderer.invoke('shell:reveal', p),
+
   /* ----- divers ----- */
   info: () => ipcRenderer.invoke('desktop:info'),
   onMenu: (cb) => ipcRenderer.on('menu-action', (_e, action) => cb(action))

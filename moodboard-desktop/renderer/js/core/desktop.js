@@ -108,6 +108,15 @@
     },
     info: function () {
       return api.info();
+    },
+    /* v1.4 — révéler un fichier dans le Finder / l'Explorateur
+     * (uniquement si le pont de l'application l'expose). */
+    canReveal: !!(active && typeof api.reveal === 'function'),
+    reveal: function (path) {
+      if (!active || typeof api.reveal !== 'function') {
+        return Promise.resolve({ err: 1 });
+      }
+      return Promise.resolve(api.reveal(path));
     }
   };
 })();

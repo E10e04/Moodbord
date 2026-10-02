@@ -88,14 +88,14 @@ par [GitHub Actions](.github/workflows/build.yml) sur des machines GitHub —
 1. Onglet **[Actions](https://github.com/E10e04/Moodbord/actions)** du dépôt.
 2. Flèche ▾ à droite de « Build & Release » → **Run workflow** → bouton vert.
 3. ~10 minutes plus tard : résumé du run → section **Artifacts** —
-   `Moodboard-Setup-1.3.0.exe`, zip portable Windows, `.dmg` x64 + arm64,
+   `Moodboard-Setup-1.4.0.exe`, zip portable Windows, `.dmg` x64 + arm64,
    zip de l'extension CEP.
 
 ### Release publique (tag)
 
 ```bash
-git tag v1.3.0
-git push origin v1.3.0
+git tag v1.4.0
+git push origin v1.4.0
 ```
 → un **Release** public est créé automatiquement avec tous les installateurs
 en pièces jointes (c'est la façon d'obtenir une page Releases téléchargeable
@@ -115,7 +115,7 @@ Moodbord/
 │   │                             #       inspector…), board/ (interactions,
 │   │                             #       export…), adobe/ (CSInterface, jsx)
 │   ├── scripts/                  #   validate.mjs, package.mjs
-│   └── dist/                     #   moodboard-cep-1.3.0.zip (prêt à installer)
+│   └── dist/                     #   moodboard-cep-1.4.0.zip (prêt à installer)
 ├── moodboard-desktop/            # Application autonome (Electron)
 │   ├── main.js                   #   Processus principal (fenêtre, IPC fs,
 │   │                             #     dialogues natifs, garde de fermeture)
@@ -142,14 +142,14 @@ Prérequis : [Node.js](https://nodejs.org) ≥ 18.
 # Extension CEP (vérification syntaxique + zip)
 cd moodboard-cep
 node scripts/validate.mjs
-node scripts/package.mjs        # → dist/moodboard-cep-1.3.0.zip
+node scripts/package.mjs        # → dist/moodboard-cep-1.4.0.zip
 
 # Application bureau
 cd ../moodboard-desktop
 npm install
 npm start                      # lance l'app en développement
-npm run dist:win               # → dist/Moodboard-Setup-1.3.0.exe (sur Windows)
-npm run dist:mac               # → dist/Moodboard-1.3.0-x64.dmg + arm64.dmg (sur Mac)
+npm run dist:win               # → dist/Moodboard-Setup-1.4.0.exe (sur Windows)
+npm run dist:mac               # → dist/Moodboard-1.4.0-x64.dmg + arm64.dmg (sur Mac)
 ```
 
 > Astuce Windows : retirez `"signAndEditExecutable": false` du
@@ -194,13 +194,13 @@ npm run dist:mac               # → dist/Moodboard-1.3.0-x64.dmg + arm64.dmg (s
 
 ## 🧪 Vérifications effectuées
 
-- **Web/CEP — 133/133 tests E2E navigateur** (4 suites : v1.3.0, v1.2.0, events, v1.0.2) + **44/44 assertions de stockage** (simulation fidèle du moteur CEP) : drags au 1/100 de pixel,
+- **Web/CEP — 197/197 tests E2E navigateur** (5 suites : v1.4.0 ×2 phases, v1.3.0, v1.2.0, events, v1.0.2) + **83/83 assertions de stockage** (simulation fidèle du moteur CEP) : drags au 1/100 de pixel,
   simulation CEP sans Pointer Events, survie blur/pointercancel, undo exact.
 - **Bureau — 10/10 tests E2E** sous Electron headless (Xvfb) : déplacement
   d'élément delta monde exact, autosave persisté sur disque via IPC, CSP
   acceptée, zéro erreur console.
-- **Stockage — 44/44 assertions** (simulation fidèle du moteur CEP : chemins,
-  permissions, replis).
+- **Stockage — 83/83 assertions** (simulation fidèle du moteur CEP : chemins,
+  permissions, replis, vues/favoris/corbeille/miniatures).
 - Syntaxe : `node --check` sur l'ensemble des fichiers JS.
 
 ## ⚠️ Limites connues
@@ -217,6 +217,30 @@ npm run dist:mac               # → dist/Moodboard-1.3.0-x64.dmg + arm64.dmg (s
    placeholder générés par IA.
 
 ## 📜 Changelog
+
+### v1.4.0 — écran d'accueil redessiné (design à barre latérale)
+
+1. **Nouvel écran d'accueil (application de bureau)** conforme au design
+   demandé, accent **bleu** : **barre latérale** (Accueil actif, Nouveau,
+   Ouvrir, Importer — puis Récents, Favoris, Corbeille — et Aide en bas),
+   **en-tête** (identité, sous-titre « Café des idées — votre table de
+   travail spatiale »), **recherche instantanée** et bouton **Nouveau
+   moodboard** ; palette plus profonde que le canvas (fond #08080C,
+   cartes #12121A).
+2. **Cartes de fichiers récents repensées** : miniature du tableau
+   (générée en JPEG à chaque enregistrement, `recent.json`), date
+   relative + nombre d'éléments, badge étoile des favoris, menu ⋯
+   (Ouvrir, Afficher dans le Finder/Explorateur, Ajouter/Retirer des
+   favoris, Retirer de la liste).
+3. **Favoris et corbeille** : les vues de la barre latérale filtrent les
+   récents épinglés et les entrées retirées (restaurables, suppression
+   définitive possible) — le fichier projet n'est jamais touché.
+4. **Recherche** : filtrage instantané par nom ou chemin, compteur
+   dynamique, états vides dédiés (aucun résultat, favoris, corbeille).
+5. **Aperçu web de l'écran d'accueil** : `?home=1` (préview Next.js)
+   affiche l'accueil avec trois tableaux de démonstration pour
+   visualiser le design sans l'application.
+6. Panneau CEP et navigateur sans `?home=1` : comportement inchangé.
 
 ### v1.3.0 — enregistrement, écran d'accueil, liens
 

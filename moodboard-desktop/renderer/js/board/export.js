@@ -362,11 +362,64 @@
     });
   }
 
+  /* Miniature du tableau courant (JPEG data URL) — alimente les cartes de
+   * l'écran d'accueil après chaque enregistrement. Best effort : tout échec
+   * appelle cb('') et la carte utilisera son motif par défaut. */
+  function thumbnail(maxW, maxH, cb) {
+    var done = false;
+    function finish(v) {
+      if (done) return;
+      done = true;
+      cb(v || '');
+    }
+    resolveAssets(visibleElements(null)).then(function () {
+      var out;
+      try {
+        out = buildSvg(null);
+      } catch (e) {
+        finish('');
+        return;
+      }
+      if (!out || !out.w || !out.h) {
+        finish('');
+        return;
+      }
+      var k = Math.min(maxW / out.w, maxH / out.h, 1);
+      var w = Math.max(2, Math.round(out.w * k));
+      var h = Math.max(2, Math.round(out.h * k));
+      var blob = new Blob([out.svg], { type: 'image/svg+xml;charset=utf-8' });
+      var url = URL.createObjectURL(blob);
+      var img = new Image();
+      img.onload = function () {
+        try {
+          var canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          var ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          URL.revokeObjectURL(url);
+          var dataUrl = canvas.toDataURL('image/jpeg', 0.72);
+          finish(dataUrl && dataUrl.length > 300 ? dataUrl : '');
+        } catch (e) {
+          finish('');
+        }
+      };
+      img.onerror = function () {
+        URL.revokeObjectURL(url);
+        finish('');
+      };
+      img.src = url;
+    }).catch(function () {
+      finish('');
+    });
+  }
+
   MB.exportState = { resolved: {} };
 
   MB.exporter = {
     exportSvg: exportSvg,
     exportPng: exportPng,
+    thumbnail: thumbnail,
     buildSvg: function (only) {
       return buildSvg(only);
     }

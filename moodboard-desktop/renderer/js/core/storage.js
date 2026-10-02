@@ -489,12 +489,18 @@
     }
   }
 
-  /* ------------------------------------------------------- récents (v1.3)
+  /* ------------------------------------------------------- récents (v1.3/v1.4)
    * Liste des 20 derniers projets enregistrés/ouverts (fichier
    * recent.json du dossier de données) — alimente l'écran d'accueil
-   * de l'application de bureau. */
+   * de l'application de bureau.
+   * v1.4 — schéma enrichi par entrée :
+   *   { path, name, savedAt, count,
+   *     fav?: true,            — épinglé dans « Favoris »
+   *     trashedAt?: iso,       — retiré de la liste → « Corbeille »
+   *     thumb?: dataURL JPEG } — miniature du tableau au dernier save */
   var RECENTS_FILE = 'recent.json';
   var RECENTS_MAX = 20;
+  var RECENTS_TRASH_MAX = 10;
 
   function samePath(a, b) {
     return String(a || '').toLowerCase() === String(b || '').toLowerCase();
@@ -507,11 +513,9 @@
     try {
       var arr = JSON.parse(r.text);
       if (!Array.isArray(arr)) return [];
-      return arr
-        .filter(function (x) {
-          return x && isAbsPath(x.path) && typeof x.name === 'string';
-        })
-        .slice(0, RECENTS_MAX);
+      return arr.filter(function (x) {
+        return x && isAbsPath(x.path) && typeof x.name === 'string';
+      });
     } catch (e) {
       return [];
     }
@@ -519,34 +523,135 @@
 
   function writeRecents(list) {
     if (!isFs()) return;
-    writeText(dataDir + '/' + RECENTS_FILE, JSON.stringify(list.slice(0, RECENTS_MAX)));
+    /* 20 actifs (les plus récents d'abord) + 10 entrées de corbeille. */
+    var act = [];
+    var trs = [];
+    for (var i = 0; i < list.length; i++) {
+      (list[i].trashedAt ? trs : act).push(list[i]);
+    }
+    trs.sort(function (a, b) {
+      return String(b.trashedAt || '').localeCompare(String(a.trashedAt || ''));
+    });
+    writeText(dataDir + '/' + RECENTS_FILE, JSON.stringify(act.slice(0, RECENTS_MAX).concat(trs.slice(0, RECENTS_TRASH_MAX))));
   }
 
-  /* Enregistre un projet en tête de la liste (dédupliqué par chemin). */
+  /* Enregistre un projet en tête de la liste (dédupliqué par chemin).
+   * Favori/miniature d'une entrée précédente conservés ; une entrée
+   * corbeillée qui re-sauvegarde revient dans la liste active. */
   function rememberRecent(path) {
     if (!isFs() || !isAbsPath(path)) return;
-    var list = readRecents().filter(function (x) {
-      return !samePath(x.path, path);
-    });
+    var all = readRecents();
+    var prev = null;
+    var list = [];
+    for (var i = 0; i < all.length; i++) {
+      if (!prev && samePath(all[i].path, path)) {
+        prev = all[i];
+        continue;
+      }
+      list.push(all[i]);
+    }
     list.unshift({
       path: path,
       name: basename(path).replace(/\.moodboard$/i, '') || 'Sans titre',
       savedAt: new Date().toISOString(),
-      count: (MB.store.s().elements || []).length
+      count: (MB.store.s().elements || []).length,
+      fav: prev ? !!prev.fav : false,
+      thumb: prev && typeof prev.thumb === 'string' ? prev.thumb : ''
     });
     writeRecents(list);
   }
 
-  /* Liste exploitables par l'écran d'accueil : les fichiers disparus
-   * du disque sont retirés silencieusement (et purgés du fichier). */
-  function recentList() {
-    var list = readRecents();
+  /* Listes exploitables par l'écran d'accueil :
+   *   'recents' — vue par défaut, fichiers disparus purgés silencieusement ;
+   *   'fav'     — favoris épinglés (existants) ;
+   *   'trash'   — entrées retirées de la liste (restaurables). */
+  function recentList(view) {
+    var all = readRecents();
+    if (view === 'trash') {
+      return all
+        .filter(function (x) {
+          return !!x.trashedAt;
+        })
+        .slice(0, RECENTS_TRASH_MAX);
+    }
+    var list = all.filter(function (x) {
+      if (view === 'fav') return !!x.fav && !x.trashedAt;
+      return !x.trashedAt;
+    });
     var alive = [];
     for (var i = 0; i < list.length; i++) {
       if (!readText(list[i].path).error) alive.push(list[i]);
     }
-    if (alive.length !== list.length) writeRecents(alive);
+    if (view !== 'fav' && alive.length !== list.length) {
+      /* purge des fichiers disparus (vue récents : source de vérité du
+       * fichier — les entrées corbeille sont conservées). */
+      var trashed = all.filter(function (x) {
+        return !!x.trashedAt;
+      });
+      writeRecents(alive.concat(trashed));
+    }
     return alive;
+  }
+
+  /* ------------------------------------------------ mutations (v1.4) */
+
+  function mutateRecents(path, fn) {
+    if (!isFs() || !isAbsPath(path)) return null;
+    var list = readRecents();
+    for (var i = 0; i < list.length; i++) {
+      if (samePath(list[i].path, path)) {
+        var r = fn(list[i]);
+        writeRecents(list);
+        return r;
+      }
+    }
+    return null;
+  }
+
+  /* Épingle/retire des favoris → renvoie le nouvel état (boolean). */
+  function toggleRecentFav(path) {
+    var r = mutateRecents(path, function (e) {
+      e.fav = !e.fav;
+      if (!e.fav) delete e.fav;
+      return !!e.fav;
+    });
+    return typeof r === 'boolean' ? r : null;
+  }
+
+  /* Retire l'entrée de la liste (→ corbeille) — le fichier reste intact. */
+  function trashRecent(path) {
+    return !!mutateRecents(path, function (e) {
+      e.trashedAt = new Date().toISOString();
+      return true;
+    });
+  }
+
+  /* Restaure une entrée corbeillée dans la liste des récents. */
+  function restoreRecent(path) {
+    return !!mutateRecents(path, function (e) {
+      delete e.trashedAt;
+      e.savedAt = e.savedAt || new Date().toISOString();
+      return true;
+    });
+  }
+
+  /* Supprime définitivement l'entrée (fichier intact, liste seulement). */
+  function deleteRecentForever(path) {
+    if (!isFs() || !isAbsPath(path)) return false;
+    var list = readRecents().filter(function (x) {
+      return !samePath(x.path, path);
+    });
+    writeRecents(list);
+    return true;
+  }
+
+  /* Miniature (JPEG dataURL) associée à une entrée récente. */
+  function setRecentThumb(path, dataUrl) {
+    if (!dataUrl || typeof dataUrl !== 'string') return;
+    mutateRecents(path, function (e) {
+      e.thumb = dataUrl;
+      return true;
+    });
   }
 
   /* v1.3 — Enregistrer, Enregistrer sous… et ⌘/Ctrl+S ouvrent TOUJOURS
@@ -578,6 +683,13 @@
       /* Mémoire de l'emplacement pour le prochain enregistrement. */
       writePrefs({ lastDir: dirname(target) });
       rememberRecent(target);
+      /* v1.4 — miniature de l'écran d'accueil (best effort, asynchrone :
+       * la carte garde son motif par défaut si la rastérisation échoue). */
+      if (MB.exporter && typeof MB.exporter.thumbnail === 'function') {
+        MB.exporter.thumbnail(480, 320, function (dataUrl) {
+          if (dataUrl) setRecentThumb(target, dataUrl);
+        });
+      }
       MB.ui.toast('Projet enregistré', 'success');
     }
 
@@ -781,6 +893,11 @@
     openPath: openPath,
     clearAutosave: clearAutosave,
     recentList: recentList,
+    toggleRecentFav: toggleRecentFav,
+    trashRecent: trashRecent,
+    restoreRecent: restoreRecent,
+    deleteRecentForever: deleteRecentForever,
+    setRecentThumb: setRecentThumb,
     lastDir: function () {
       return readPrefs().lastDir;
     },
