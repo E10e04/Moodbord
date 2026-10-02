@@ -88,14 +88,14 @@ par [GitHub Actions](.github/workflows/build.yml) sur des machines GitHub —
 1. Onglet **[Actions](https://github.com/E10e04/Moodbord/actions)** du dépôt.
 2. Flèche ▾ à droite de « Build & Release » → **Run workflow** → bouton vert.
 3. ~10 minutes plus tard : résumé du run → section **Artifacts** —
-   `Moodboard-Setup-1.4.0.exe`, zip portable Windows, `.dmg` x64 + arm64,
+   `Moodboard-Setup-1.5.0.exe`, zip portable Windows, `.dmg` x64 + arm64,
    zip de l'extension CEP.
 
 ### Release publique (tag)
 
 ```bash
-git tag v1.4.0
-git push origin v1.4.0
+git tag v1.5.0
+git push origin v1.5.0
 ```
 → un **Release** public est créé automatiquement avec tous les installateurs
 en pièces jointes (c'est la façon d'obtenir une page Releases téléchargeable
@@ -194,7 +194,7 @@ npm run dist:mac               # → dist/Moodboard-1.4.0-x64.dmg + arm64.dmg (s
 
 ## 🧪 Vérifications effectuées
 
-- **Web/CEP — 197/197 tests E2E navigateur** (5 suites : v1.4.0 ×2 phases, v1.3.0, v1.2.0, events, v1.0.2) + **83/83 assertions de stockage** (simulation fidèle du moteur CEP) : drags au 1/100 de pixel,
+- **Web/CEP — 197/197 tests E2E navigateur** (5 suites : v1.5.0 ×2 phases, v1.3.0, v1.2.0, events, v1.0.2) + **83/83 assertions de stockage** (simulation fidèle du moteur CEP) : drags au 1/100 de pixel,
   simulation CEP sans Pointer Events, survie blur/pointercancel, undo exact.
 - **Bureau — 10/10 tests E2E** sous Electron headless (Xvfb) : déplacement
   d'élément delta monde exact, autosave persisté sur disque via IPC, CSP
@@ -217,6 +217,25 @@ npm run dist:mac               # → dist/Moodboard-1.4.0-x64.dmg + arm64.dmg (s
    placeholder générés par IA.
 
 ## 📜 Changelog
+
+### v1.5.0 — identité officielle, accueil #232323, poignée de rotation à droite
+
+1. **Logo officiel** partout : le logo fourni (`assets/logo.png`) remplace
+   les anciennes marques — barre latérale et en-tête de l'écran d'accueil,
+   marque de la barre supérieure du panneau, dialogue « À propos », icônes
+   de l'application de bureau (icône 1024 px + `icon-multi.ico`) et
+   **icônes du panneau CEP dans le manifeste** (Std 23 px + HiDPI 46 px,
+   visibles dans le menu Fenêtre ▸ Extensions d'Illustrator).
+2. **Écran d'accueil : interface #232323** — la palette de l'accueil est
+   recentrée sur le gris neutre demandé (fond #232323, barre latérale
+   #1E1E1E, cartes #2A2A2A, bordures #3A3A3A), accent bleu conservé.
+3. **Accueil épuré** : le bouton « Nouveau moodboard » à côté de la barre
+   de recherche est retiré (redondant avec la barre latérale et les
+   actions rapides, qui restent intactes).
+4. **Poignée de rotation déplacée à droite** : sur chaque élément du
+   canvas, la poignée de pivot (et sa ligne de liaison, désormais
+   horizontale) se place sur le côté droit de la sélection au lieu du
+   dessus — même comportement (⇧ = pas de 15°, badge d'angle).
 
 ### v1.4.0 — écran d'accueil redessiné (design à barre latérale)
 

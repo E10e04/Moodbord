@@ -201,6 +201,7 @@
   function aboutDialog() {
     var desktop = MB.desktop && MB.desktop.active;
     dialog(
+      '<img class="about-logo" src="assets/logo.png" alt="" width="56" height="56" draggable="false">' +
       '<div class="dialog-title">Moodboard</div>' +
       '<div class="dialog-body">Table de travail spatiale pour designers.<br><br>' +
       'Version ' + MB.VERSION +

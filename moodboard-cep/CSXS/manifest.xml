@@ -3,9 +3,9 @@
                    Version="10.0"
                    ExtensionBundleId="com.moodboard.cep"
                    ExtensionBundleName="Moodboard"
-                   ExtensionBundleVersion="1.4.0">
+                   ExtensionBundleVersion="1.5.0">
   <ExtensionList>
-    <Extension Id="com.moodboard.cep.panel" Version="1.4.0"/>
+    <Extension Id="com.moodboard.cep.panel" Version="1.5.0"/>
   </ExtensionList>
   <ExecutionEnvironment>
     <HostList>
@@ -51,7 +51,10 @@
               <Height>4000</Height>
             </MaxSize>
           </Geometry>
-          <Icons/>
+          <Icons>
+            <Icon Type="Std">./client/assets/icon-23.png</Icon>
+            <Icon Type="HiDPI">./client/assets/icon-46.png</Icon>
+          </Icons>
         </UI>
       </DispatchInfo>
     </Extension>

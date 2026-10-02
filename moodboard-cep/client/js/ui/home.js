@@ -1,10 +1,12 @@
 /* =========================================================================
- * home.js — Écran d'accueil de l'application de bureau (v1.3, design v1.4).
+ * home.js — Écran d'accueil de l'application de bureau (v1.3, design v1.5).
  *
  * Première vue de l'app autonome (Electron) au lieu du canvas :
  *   - barre latérale : Accueil (actif), Nouveau, Ouvrir, Importer,
  *     puis les vues Récents / Favoris / Corbeille, et Aide ;
- *   - en-tête : identité, recherche instantanée, « Nouveau moodboard » ;
+ *   - en-tête : identité (logo officiel) + recherche instantanée
+ *     (v1.5 : plus de bouton « Nouveau » ici — redondant avec la barre
+ *     latérale et les actions rapides) ;
  *   - actions rapides : Nouveau moodboard / Ouvrir… / Démonstration ;
  *   - grille des fichiers récents (20 max) — miniature du tableau,
  *     date relative, nombre d'éléments, menu ⋯ (favori, corbeille,
@@ -598,8 +600,7 @@
       '<nav class="home-side" aria-label="Accueil Moodboard">' +
       '<div class="home-side-brand">' +
       '<span class="home-logo" aria-hidden="true">' +
-      '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
-      '<path d="M12 2.7 21.3 12 12 21.3 2.7 12Z"/><path d="M12 8.2 15.8 12 12 15.8 8.2 12Z"/></svg>' +
+      '<img src="assets/logo.png" alt="" width="24" height="24" draggable="false">' +
       '</span>' +
       '<span class="home-logo-name">Moodboard</span>' +
       '</div>' +
@@ -632,7 +633,7 @@
       '<div class="home-main-inner">' +
       '<header class="home-head">' +
       '<div class="home-head-id">' +
-      '<span class="home-app-mark" aria-hidden="true"></span>' +
+      '<img class="home-app-mark" src="assets/logo.png" alt="" width="46" height="46" draggable="false">' +
       '<div class="home-head-txt">' +
       '<h1 class="home-title">Moodboard</h1>' +
       '<p class="home-tagline">Café des idées — votre table de travail spatiale</p>' +
@@ -644,8 +645,6 @@
       '<input id="home-search" type="search" placeholder="Rechercher un moodboard…" ' +
       'aria-label="Rechercher un moodboard" autocomplete="off" spellcheck="false">' +
       '</label>' +
-      '<button class="home-btn home-btn--primary js-home-new" type="button">' +
-      MB.icons.get('plus', 15) + '<span>Nouveau moodboard</span></button>' +
       '</div>' +
       '</header>' +
       '<div class="home-actions">' +
@@ -681,7 +680,8 @@
       openDemoFromHome('Tableau de démonstration chargé');
     });
 
-    /* Déclencheurs multiples : barre latérale + en-tête. */
+    /* Déclencheurs multiples : barre latérale (v1.5 : l'en-tête n'a plus
+     * de bouton Nouveau — il restait redondant avec les trois autres). */
     root.querySelectorAll('.js-home-new').forEach(function (b) {
       b.addEventListener('click', newBoard);
     });

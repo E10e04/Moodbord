@@ -90,9 +90,8 @@ button:focus-visible, input:focus-visible, [contenteditable]:focus-visible {
 
 .brand { display: flex; align-items: center; gap: 8px; user-select: none; }
 .brand-mark {
-  width: 22px; height: 22px; border-radius: 6px;
-  background: conic-gradient(from 210deg, #7A522E, #B0673F, #E4D0B8, #7A522E);
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.14), var(--shadow-sm);
+  width: 22px; height: 22px; display: block;
+  filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.35));
 }
 .brand-name { font-weight: 700; letter-spacing: 0.02em; font-size: 13.5px; }
 
@@ -612,16 +611,19 @@ button:focus-visible, input:focus-visible, [contenteditable]:focus-visible {
 .handle[data-h='s'] { left: calc(50% - 4.5px); bottom: -5.5px; cursor: ns-resize; }
 .handle[data-h='sw'] { left: -5.5px; bottom: -5.5px; cursor: nesw-resize; }
 .handle[data-h='w'] { left: -5.5px; top: calc(50% - 4.5px); cursor: ew-resize; }
+/* v1.5 — poignée de rotation à DROITE du bord de la boîte (et non plus
+ * au-dessus) : demande utilisateur. La ligne de liaison est horizontale. */
 .handle--rot {
-  left: calc(50% - 5.5px); top: -34px;
+  left: auto; right: -34px; top: calc(50% - 5.5px);
   width: 11px; height: 11px; border-radius: 50%;
   cursor: grab;
   background: var(--accent); border-color: #fff;
 }
 .handle--rot:active { cursor: grabbing; }
 .handle--rot::after {
-  content: ''; position: absolute; left: 50%; bottom: -21px; width: 1.5px; height: 21px;
-  background: var(--accent); transform: translateX(-50%);
+  content: ''; position: absolute; top: 50%; left: -21px;
+  width: 21px; height: 1.5px;
+  background: var(--accent); transform: translateY(-50%);
 }
 
 .endpoint {
@@ -820,6 +822,10 @@ input[type='range'] { accent-color: var(--accent); width: 100%; }
   animation: pop-in 0.14s ease;
 }
 .dialog-title { font-size: 15px; font-weight: 700; margin-bottom: 12px; }
+/* v1.5 — logo officiel en tête du dialogue « À propos » */
+.about-logo {
+  width: 56px; height: 56px; display: block; margin: 0 auto 12px;
+}
 .dialog-body { font-size: 13px; color: var(--text-dim); line-height: 1.65; }
 .dialog-body .field-label { display: block; margin-bottom: 6px; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
@@ -952,22 +958,22 @@ body.mb-desktop-darwin #topbar .save-status {
 }
 
 /* =========================================================================
- * v1.4 — Écran d'accueil (application de bureau) — design à barre latérale.
- * Palette locale plus profonde que le canvas (écran « launch ») :
- * fond #08080C, sidebar #0D0D13, cartes #12121A, accent bleu (#4C8DFF,
- * encre sombre dessus — comme le jaune du design d'origine, en bleu).
+ * v1.5 — Écran d'accueil (application de bureau) — design à barre latérale.
+ * Interface #232323 (demande utilisateur v1.5) : fond et surfaces neutres,
+ * cartes #2A2A2A sur #232323, sidebar #1E1E1E, bordures #3A3A3A, accent
+ * bleu conservé (#4C8DFF, encre sombre dessus).
  * Sous les dialogues (z 400) pour que les confirmations restent visibles,
  * au-dessus de tout le reste.
  * ========================================================================= */
 #home-screen {
   position: fixed; inset: 0; z-index: 350;
-  background: #08080C;
-  --h-card: #12121A;
-  --h-elev: #1A1A23;
-  --h-border: #24242E;
-  --h-text: #F4F4F6;
-  --h-dim: #9CA0AC;
-  --h-faint: #676B77;
+  background: #232323;
+  --h-card: #2A2A2A;
+  --h-elev: #2E2E2E;
+  --h-border: #3A3A3A;
+  --h-text: #F5F5F5;
+  --h-dim: #B4B4B4;
+  --h-faint: #8A8A8A;
   --h-accent: #4C8DFF;
   --h-accent-ink: #0A1224;
 }
@@ -977,13 +983,14 @@ body.mb-desktop-darwin #topbar .save-status {
 /* ---------------------------------------------------------- sidebar */
 .home-side {
   width: 232px; flex: 0 0 232px;
-  background: #0D0D13;
+  background: #1E1E1E;
   border-right: 1px solid var(--h-border);
   display: flex; flex-direction: column; gap: 3px;
   padding: 20px 12px 14px;
 }
 .home-side-brand { display: flex; align-items: center; gap: 10px; padding: 4px 10px 15px; color: var(--h-text); }
-.home-logo { color: var(--h-accent); display: flex; }
+.home-logo { flex: 0 0 auto; display: flex; }
+.home-logo img { width: 24px; height: 24px; display: block; border-radius: 6px; }
 .home-logo-name { font-size: 15px; font-weight: 750; letter-spacing: 0.01em; }
 .home-side-group { display: flex; flex-direction: column; gap: 3px; }
 .home-side-sep { height: 1px; margin: 12px 10px; background: var(--h-border); }
@@ -998,7 +1005,7 @@ body.mb-desktop-darwin #topbar .save-status {
 }
 .home-side-item .hs-icn { display: flex; flex: 0 0 auto; }
 .home-side-item:hover { background: rgba(255, 255, 255, 0.05); color: var(--h-text); }
-.home-side-item.is-current { background: #17171F; color: var(--h-text); }
+.home-side-item.is-current { background: #2E2E2E; color: var(--h-text); }
 .home-side-item.is-current .hs-icn { color: var(--h-accent); }
 .home-side-item--accent { background: var(--h-accent); color: var(--h-accent-ink); font-weight: 650; }
 .home-side-item--accent:hover { background: #5E9BFF; color: var(--h-accent-ink); }
@@ -1012,9 +1019,8 @@ body.mb-desktop-darwin #topbar .save-status {
 }
 .home-head-id { display: flex; align-items: center; gap: 15px; min-width: 0; }
 .home-app-mark {
-  width: 46px; height: 46px; border-radius: 13px; flex: 0 0 auto;
-  background: conic-gradient(from 210deg, #7A522E, #B0673F, #E4D0B8, #7A522E);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14), 0 4px 14px rgba(0, 0, 0, 0.4);
+  width: 46px; height: 46px; flex: 0 0 auto; display: block;
+  filter: drop-shadow(0 4px 14px rgba(0, 0, 0, 0.4));
 }
 .home-title {
   margin: 0; font-size: 25px; font-weight: 800;
@@ -1024,7 +1030,7 @@ body.mb-desktop-darwin #topbar .save-status {
 .home-head-tools { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
 .home-search {
   display: flex; align-items: center; gap: 8px;
-  background: #12121A; border: 1px solid var(--h-border);
+  background: #2A2A2A; border: 1px solid var(--h-border);
   border-radius: 9px; padding: 0 11px; height: 34px;
   color: var(--h-faint); transition: border-color .15s ease;
 }
@@ -1041,13 +1047,13 @@ body.mb-desktop-darwin #topbar .save-status {
 .home-btn {
   display: inline-flex; align-items: center; gap: 8px;
   padding: 9px 16px; border-radius: 9px;
-  background: #16161E; color: #E7E8EC;
+  background: #2D2D2D; color: #E8E8E8;
   border: 1px solid var(--h-border);
   font-family: var(--font); font-size: 13px; font-weight: 600;
   cursor: pointer;
   transition: background .12s ease, border-color .12s ease, transform .08s ease;
 }
-.home-btn:hover { background: #1D1D27; border-color: #2E2E3A; }
+.home-btn:hover { background: #383838; border-color: #4A4A4A; }
 .home-btn:active { transform: translateY(1px); }
 .home-btn--primary {
   background: var(--h-accent); color: var(--h-accent-ink); border-color: transparent;
@@ -1081,7 +1087,7 @@ body.mb-desktop-darwin #topbar .save-status {
     background .15s ease, box-shadow .15s ease;
 }
 .home-card:hover {
-  border-color: rgba(76, 141, 255, 0.55); background: #14141D;
+  border-color: rgba(76, 141, 255, 0.55); background: #2F2F2F;
   transform: translateY(-2px);
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4);
 }
@@ -1089,11 +1095,11 @@ body.mb-desktop-darwin #topbar .save-status {
 .home-card-thumb {
   position: relative;
   aspect-ratio: 16 / 10; border-radius: 9px; overflow: hidden;
-  background: repeating-linear-gradient(135deg, #15151E 0 14px, #191923 14px 28px);
+  background: repeating-linear-gradient(135deg, #2B2B2B 0 14px, #303030 14px 28px);
   display: flex; align-items: center; justify-content: center;
 }
 .home-card-img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.home-card-ph { color: #353542; }
+.home-card-ph { color: #4A4A4A; }
 .home-card-fav {
   position: absolute; top: 8px; right: 8px;
   width: 24px; height: 24px; border-radius: 50%;
@@ -1120,7 +1126,7 @@ body.mb-desktop-darwin #topbar .save-status {
   background: transparent; border: none; color: var(--h-faint);
   cursor: pointer; display: flex; align-items: center; justify-content: center;
 }
-.home-card-menu:hover { background: #22222C; color: var(--h-text); }
+.home-card-menu:hover { background: #383838; color: var(--h-text); }
 .home-card-meta {
   padding: 1px 4px 4px 26px;
   font-size: 11.5px; color: var(--h-faint);
@@ -1129,31 +1135,31 @@ body.mb-desktop-darwin #topbar .save-status {
 
 /* ------------------------------------------------- état vide */
 .home-empty {
-  border: 1px dashed #2A2A36; border-radius: 14px;
+  border: 1px dashed #404040; border-radius: 14px;
   padding: 44px 24px; text-align: center;
 }
-.home-empty-icn { color: #3A3A46; display: flex; justify-content: center; margin-bottom: 10px; }
+.home-empty-icn { color: #4E4E4E; display: flex; justify-content: center; margin-bottom: 10px; }
 .home-empty-main { color: var(--h-dim); font-weight: 600; margin: 0 0 6px; }
 .home-empty-sub { color: var(--h-faint); margin: 0; font-size: 12.5px; }
 
 /* ------------------------------------------------- menus ⋯ */
 .home-menu {
   position: fixed; z-index: 360; min-width: 215px;
-  background: #1A1A23; border: 1px solid #2A2A35; border-radius: 11px;
+  background: var(--h-elev); border: 1px solid #3D3D3D; border-radius: 11px;
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5); padding: 5px;
 }
 .home-menu-item {
   display: flex; align-items: center; gap: 10px;
   width: 100%; padding: 8px 10px;
   background: none; border: none; border-radius: 7px;
-  color: #DDDEE3; font-family: var(--font); font-size: 12.5px;
+  color: #DCDCDC; font-family: var(--font); font-size: 12.5px;
   text-align: left; cursor: pointer;
 }
-.home-menu-item:hover { background: #24242F; color: #FFFFFF; }
+.home-menu-item:hover { background: #3A3A3A; color: #FFFFFF; }
 .home-menu-item--danger { color: #E5645C; }
 .home-menu-item--danger:hover { background: rgba(229, 100, 92, 0.12); color: #FF7B72; }
 .home-menu-icn { color: inherit; display: flex; opacity: 0.8; }
-.home-menu-sep { height: 1px; margin: 5px 8px; background: #2A2A35; }
+.home-menu-sep { height: 1px; margin: 5px 8px; background: #3D3D3D; }
 
 /* ------------------------------------- fenêtre native (macOS/Windows) */
 /* macOS (barre intégrée) : la sidebar descend sous les traffic lights,
