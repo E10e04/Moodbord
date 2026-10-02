@@ -603,8 +603,37 @@
     });
   }
 
+  /* Liste des fichiers du dépôt au tag donné.
+   *   1. API git/trees de GitHub (informations complètes) ;
+   *   2. repli : data.jsdelivr.com (CDN public, CORS ouvert, hors quota
+   *      de l'API — utile quand la limite horaire 60 req/h/IP est
+   *      atteinte) — arbre imbriqué aplati au même format.
+   * → Promise<{ tree: [{ path, type, size }] }> */
+  function fetchTree(tagRef) {
+    return fetchJson(API + '/git/trees/' + tagRef + '?recursive=1').catch(function () {
+      return fetch('https://data.jsdelivr.com/v1/packages/gh/' + REPO + '@' + tagRef, {
+        cache: 'no-store'
+      })
+        .then(function (r) {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.json();
+        })
+        .then(function (root) {
+          var flat = [];
+          (function walk(nodes, prefix) {
+            (nodes || []).forEach(function (n) {
+              var p = prefix ? prefix + '/' + n.name : n.name;
+              if (n.type === 'directory') walk(n.files, p);
+              else if (n.type === 'file') flat.push({ path: p, type: 'blob', size: n.size || 0 });
+            });
+          })(root.files, '');
+          return { tree: flat };
+        });
+    });
+  }
+
   /* Télécharge et installe les fichiers de l'extension depuis le tag de
-   * la release (arbre git complet, filtré au dossier moodboard-cep/ —
+   * la release (arbre complet, filtré au dossier moodboard-cep/ —
    * exactement le contenu du zip officiel), puis propose le rechargement
    * du panneau. */
   function updateCep(info, ui) {
@@ -632,7 +661,7 @@
     var tagRef = 'v' + info.tag;
     ui.update({ pct: 3, detail: 'Liste des fichiers de la release ' + tagRef + '…', sub: '' });
 
-    fetchJson(API + '/git/trees/' + tagRef + '?recursive=1')
+    fetchTree(tagRef)
       .then(function (tree) {
         var files = [];
         (tree.tree || []).forEach(function (t) {
