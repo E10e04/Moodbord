@@ -191,7 +191,7 @@ Dézipper l'archive **à la racine** du dossier extensions, de sorte que `CSXS/`
 > 5. relancer Illustrator.
 >
 > **Vérifiez la version installée** : le badge en bas à droite de la barre d'état
-> du panneau doit afficher **v1.3.0**. S'il affiche autre chose, l'ancienne
+> du panneau doit afficher **v1.6.0**. S'il affiche autre chose, l'ancienne
 > installation est encore active.
 
 ### 3. Activer le PlayerDebugMode
@@ -267,6 +267,26 @@ Si un jour les **drags ne répondent plus alors que le zoom molette fonctionne**
 `MB.interact.diag()` retourne le nombre d'événements **réellement livrés** par le moteur de chaque famille (`pointerdown`, `mousedown`, `pointermove`, `mousemove`, `blur`, `pointercancel`…) ainsi que l'état de la machine à gestes (`gesture`, `spaceDown`, `tool`). Depuis la v1.0.1, la couche d'interaction est **adaptive** : elle branche à la fois les Pointer Events et les événements souris, et bascule automatiquement sur la souris si le moteur CEP hôte ne livre pas les Pointer Events (cas observé selon les versions d'Illustrator).
 
 Depuis la **v1.0.2**, les gestes **survivent** aux événements `blur` / `pointercancel` parasites que certains hôtes CEP émettent au milieu d'un drag (symptôme typique : « le zoom marche mais rien ne se déplace ») : le geste continue s'il reçoit encore des événements, et n'est annulé proprement (avec rollback) que si plus rien n'arrive pendant 600 ms.
+
+#### Nouveautés v1.6.0 — planches liées, édition texte, polices du système
+
+1. **Outil Planche (E)** : crée un moodboard lié DANS le moodboard ouvert.
+   La carte (miniature du contenu + compteur) s'ouvre par double-clic ou sa
+   flèche ; **Alt+←** ou le fil d'Ariane racine ▸ planche permettent de
+   revenir. Imbrication récursive ; l'arbre complet est enregistré dans le
+   fichier du moodboard racine (une seule sauvegarde embrasse tout) ;
+   suppression d'une planche non vide = confirmation.
+2. **Édition texte** : ⌘/Ctrl+A/C/X explicites pendant l'édition (fonctionnent
+   même quand l'hôte intercepte les raccourcis), hauteur vivante du texte
+   multi-paragraphes (la boîte grandit à la frappe — l'ancienne mesure ne
+   voyait jamais le contenu), navigation ↑/↓ entre paragraphes.
+3. **Polices du système** : le sélecteur liste toutes les polices de
+   l'ordinateur (TextFonts d'Illustrator dans le panneau CEP, Local Font
+   Access dans l'application, repli web au navigateur) avec recherche
+   instantanée et police **par défaut** (★, persistée dans `prefs.json`)
+   appliquée aux nouveaux textes/notes.
+4. **Liens** : boutons **Coller** (normalisation `https://`) et **Copier**
+   dans l'inspecteur ; ⌘A/⌘C/⌘X explicites dans tous les champs d'interface.
 
 #### Nouveautés v1.3.0 — enregistrement, écran d'accueil, liens
 

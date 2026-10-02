@@ -57,7 +57,7 @@
   }
 
   function titleEditable(el) {
-    return ['note', 'section', 'column', 'checklist', 'palette', 'color', 'typography', 'link'].indexOf(el.type) >= 0;
+    return ['note', 'section', 'column', 'checklist', 'palette', 'color', 'typography', 'link', 'board'].indexOf(el.type) >= 0;
   }
 
   function show(clientX, clientY, hitEl, canvasPt) {
@@ -80,11 +80,16 @@
         MB.store.duplicateSelection();
       }, { kbd: '⌘D' }));
       menuEl.appendChild(item('Supprimer', function () {
-        MB.store.deleteSelection();
+        MB.app.deleteSelection();
       }, { kbd: '⌫' }));
       if (titleEditable(resolved)) {
         menuEl.appendChild(item('Renommer', function () {
           MB.interact.startEditing(resolved, resolved.type === 'color' || resolved.type === 'palette' || resolved.type === 'typography' ? 'name' : 'title');
+        }));
+      }
+      if (resolved.type === 'board') {
+        menuEl.appendChild(item('Ouvrir la planche', function () {
+          if (MB.boards) MB.boards.enter(resolved);
         }));
       }
       if (MB.store.selectedIds().length >= 2) {
@@ -141,6 +146,9 @@
       menuEl.appendChild(item('Créer une section', function () {
         MB.interact.createAt('section', canvasPt);
       }));
+      menuEl.appendChild(item('Créer une planche liée', function () {
+        MB.interact.createAt('board', canvasPt);
+      }, { kbd: 'E' }));
       menuEl.appendChild(sep());
       var canPaste = !!(MB.store.s().clipboard && MB.store.s().clipboard.length);
       menuEl.appendChild(item('Coller', function () {

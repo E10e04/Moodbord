@@ -52,7 +52,9 @@
     var ink = U.readableOn(d.color);
     return (
       '<div class="mb-note-body mb-editable" data-field="text" style="background:' + d.color +
-      ';color:' + ink + ';font-size:' + d.fontSize + 'px;">' + nl2br(d.text || '') + '</div>'
+      ';color:' + ink + ';font-size:' + d.fontSize + 'px' +
+      (d.fontFamily ? ';font-family:\'' + U.escapeHtml(d.fontFamily) + '\'' : '') +
+      '">' + nl2br(d.text || '') + '</div>'
     );
   }
 
@@ -167,6 +169,37 @@
       '<div class="mb-typo-name mb-editable" data-field="name">' + esc(d.fontFamily) + '</div>' +
       '<div class="mb-typo-sample" style="font-family:\'' + esc(d.fontFamily) + '\'">Aa</div>' +
       '<div class="mb-typo-lines" style="font-family:\'' + esc(d.fontFamily) + '\'">' + lines + '</div>' +
+      '</div>'
+    );
+  }
+
+  /* ------------------------------------------------------------ BOARD */
+
+  function renderBoard(el) {
+    var d = el.data;
+    var count = d && d.doc && Array.isArray(d.doc.elements) ? d.doc.elements.length : d.elCount || 0;
+    var thumb = d && d.thumb;
+    var ph =
+      '<div class="mb-board-ph">' +
+      '<span class="mb-board-ph-mark" aria-hidden="true"></span>' +
+      '<span class="mb-board-ph-line"></span><span class="mb-board-ph-line"></span>' +
+      '<span class="mb-board-ph-line mb-board-ph-line--s"></span>' +
+      '</div>';
+    return (
+      '<div class="mb-board-card">' +
+      '<div class="mb-board-thumb">' +
+      (thumb
+        ? '<img src="' + U.escapeHtml(thumb) + '" alt="" draggable="false">'
+        : ph) +
+      '<span class="mb-board-badge" aria-hidden="true">' + (MB.icons ? MB.icons.get('board', 11) : '') + '</span>' +
+      '</div>' +
+      '<div class="mb-board-bar">' +
+      '<div class="mb-board-title mb-editable" data-field="title">' + esc(d.title || 'Planche') + '</div>' +
+      '<button class="mb-board-open" type="button" data-act="board-open" title="Ouvrir la planche" aria-label="Ouvrir la planche">' +
+      (MB.icons ? MB.icons.get('external', 12) : '→') +
+      '</button>' +
+      '</div>' +
+      '<div class="mb-board-count">' + count + ' élément' + (count > 1 ? 's' : '') + '</div>' +
       '</div>'
     );
   }
@@ -389,6 +422,7 @@
     table: renderTable,
     checklist: renderChecklist,
     sketch: renderSketch,
+    board: renderBoard,
     group: renderGroup
   };
 
@@ -430,6 +464,7 @@
 
     var autoTypes = {
       text: el.data.autoH !== false,
+      note: true,
       checklist: true,
       comment: true
     };
@@ -457,19 +492,26 @@
   }
 
   /* Mesure la hauteur réelle du corps (unités canvas) et cale el.h.
-   * Appelée uniquement le nœud étant attaché au DOM. */
+   * Appelée uniquement le nœud étant attaché au DOM.
+   *
+   * BUG CORRIGÉ (v1.6) : l'ancienne mesure (getBoundingClientRect / zoom)
+   * revenait TOUJOURS à la hauteur de la boîte (height:100 % du corps) —
+   * jamais au contenu — le texte multi-paragraphes débordait donc
+   * silencieusement sous l'élément. scrollHeight mesure le CONTENU en
+   * unités de mise en page (insensible au zoom par transform) : c'est la
+   * valeur attendue pour el.h. */
   function applyAutoHeight(view, el) {
     var autoTypes = {
       text: el.data.autoH !== false,
+      note: true,
       checklist: true,
       comment: true
     };
     if (!autoTypes[el.type]) return;
     var body = view.node.firstElementChild;
     if (!body || !body.isConnected) return;
-    var needed = Math.ceil(body.getBoundingClientRect().height / (MB.store.s().camera.zoom || 1));
-    // getBoundingClientRect inclut le zoom : repasse en unités canvas
-    if (Math.abs(needed - el.h) > 2) {
+    var needed = Math.ceil(body.scrollHeight);
+    if (needed > 0 && Math.abs(needed - el.h) > 2) {
       el.h = needed;
       view.node.style.height = el.h + 'px';
       MB.board.refreshOverlay();

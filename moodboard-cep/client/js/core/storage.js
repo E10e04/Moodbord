@@ -171,17 +171,26 @@
   }
 
   function serialize() {
+    /* v1.6 — planches liées : réécrire le document courant dans l'arbre
+     * racine AVANT de sérialiser, puis sérialiser le RACINE (le fichier
+     * embarque tout l'arbre — nom, caméra et éléments du document
+     * racine, la planche ouverte étant emboîtée dans son élément). */
+    if (MB.boards) MB.boards.syncUp();
     var st = MB.store.s();
+    var inside = !!(MB.boards && MB.boards.insideBoard());
+    var rootName = inside ? MB.boards.crumb()[0] : st.project.name;
+    var rootEls = inside ? MB.boards.rootElements() : st.elements;
+    var cam = inside ? MB.boards.rootCamera() : st.camera;
     return {
       version: 1,
-      name: st.project.name,
+      name: rootName,
       savedAt: new Date().toISOString(),
       camera: {
-        x: U.round(st.camera.x, 2),
-        y: U.round(st.camera.y, 2),
-        zoom: U.round(st.camera.zoom, 4)
+        x: U.round(cam.x, 2),
+        y: U.round(cam.y, 2),
+        zoom: U.round(cam.zoom, 4)
       },
-      elements: st.elements.map(cleanElement),
+      elements: rootEls.map(cleanElement),
       settings: {
         snap: st.ui.snap,
         grid: st.ui.grid
@@ -459,34 +468,56 @@
   }
 
   function readPrefs() {
+    var base = { lastDir: '', defaultFont: '' };
     if (isFs()) {
       var r = readText(dataDir + '/' + PREFS_FILE);
       if (!r.error && r.text) {
         try {
           var p = JSON.parse(r.text);
           if (p && typeof p === 'object') {
-            return { lastDir: isAbsPath(p.lastDir || '') ? p.lastDir : '' };
+            return {
+              lastDir: isAbsPath(p.lastDir || '') ? p.lastDir : '',
+              defaultFont: typeof p.defaultFont === 'string' ? p.defaultFont : ''
+            };
           }
         } catch (e) {
           /* prefs illisibles : valeurs par défaut */
         }
       }
-      return { lastDir: '' };
+      return base;
     }
     try {
-      return { lastDir: localStorage.getItem('mb.lastDir') || '' };
+      var raw = localStorage.getItem('mb.prefs.v1');
+      var pj = raw ? JSON.parse(raw) : null;
+      var lastDir = localStorage.getItem('mb.lastDir') || '';
+      return {
+        lastDir: lastDir,
+        defaultFont: pj && typeof pj.defaultFont === 'string' ? pj.defaultFont : ''
+      };
     } catch (e) {
-      return { lastDir: '' };
+      return base;
     }
   }
 
   function writePrefs(p) {
     try {
-      if (isFs()) writeText(dataDir + '/' + PREFS_FILE, JSON.stringify(p));
-      else localStorage.setItem('mb.lastDir', p.lastDir || '');
+      var merged = Object.assign(readPrefs(), p || {});
+      if (isFs()) writeText(dataDir + '/' + PREFS_FILE, JSON.stringify(merged));
+      else {
+        localStorage.setItem('mb.prefs.v1', JSON.stringify(merged));
+        localStorage.setItem('mb.lastDir', merged.lastDir || '');
+      }
     } catch (e) {
       /* non bloquant */
     }
+  }
+
+  /* v1.6 — préférence unitaire (police par défaut…) : fusion sans jamais
+   * écraser les autres clés du fichier prefs. */
+  function setPref(key, value) {
+    var patch = {};
+    patch[key] = value;
+    writePrefs(patch);
   }
 
   /* ------------------------------------------------------- récents (v1.3/v1.4)
@@ -715,6 +746,9 @@
   }
 
   function openFile(doc, path) {
+    /* v1.6 — ouvrir un AUTRE document : vider la pile de planches
+     * (après syncUp, l'arbre courant reste cohérent en mémoire). */
+    if (MB.boards) MB.boards.reset();
     MB.store.loadDocument({
       name: doc.name || 'Sans titre',
       path: path || null,
@@ -885,6 +919,8 @@
     serialize: serialize,
     markDirty: markDirty,
     markSaved: markSaved,
+    prefs: readPrefs,
+    setPref: setPref,
     save: save,
     saveAs: saveAs,
     saveDialog: saveDialog,

@@ -88,14 +88,14 @@ par [GitHub Actions](.github/workflows/build.yml) sur des machines GitHub —
 1. Onglet **[Actions](https://github.com/E10e04/Moodbord/actions)** du dépôt.
 2. Flèche ▾ à droite de « Build & Release » → **Run workflow** → bouton vert.
 3. ~10 minutes plus tard : résumé du run → section **Artifacts** —
-   `Moodboard-Setup-1.5.0.exe`, zip portable Windows, `.dmg` x64 + arm64,
+   `Moodboard-Setup-1.6.0.exe`, zip portable Windows, `.dmg` x64 + arm64,
    zip de l'extension CEP.
 
 ### Release publique (tag)
 
 ```bash
-git tag v1.5.0
-git push origin v1.5.0
+git tag v1.6.0
+git push origin v1.6.0
 ```
 → un **Release** public est créé automatiquement avec tous les installateurs
 en pièces jointes (c'est la façon d'obtenir une page Releases téléchargeable
@@ -194,7 +194,7 @@ npm run dist:mac               # → dist/Moodboard-1.4.0-x64.dmg + arm64.dmg (s
 
 ## 🧪 Vérifications effectuées
 
-- **Web/CEP — 197/197 tests E2E navigateur** (5 suites : v1.5.0 ×2 phases, v1.3.0, v1.2.0, events, v1.0.2) + **83/83 assertions de stockage** (simulation fidèle du moteur CEP) : drags au 1/100 de pixel,
+- **Web/CEP — 320/320 tests E2E navigateur** (7 suites : v1.6.0, v1.5.0 ×2 phases, v1.4.0 ×2 phases, v1.3.0, v1.2.0, events, v1.0.2) + **83/83 assertions de stockage** (simulation fidèle du moteur CEP) : drags au 1/100 de pixel,
   simulation CEP sans Pointer Events, survie blur/pointercancel, undo exact.
 - **Bureau — 10/10 tests E2E** sous Electron headless (Xvfb) : déplacement
   d'élément delta monde exact, autosave persisté sur disque via IPC, CSP
@@ -217,6 +217,42 @@ npm run dist:mac               # → dist/Moodboard-1.4.0-x64.dmg + arm64.dmg (s
    placeholder générés par IA.
 
 ## 📜 Changelog
+
+### v1.6.0 — planches liées, édition texte corrigée, polices du système, presse-papiers des liens
+
+1. **Outil Planche — moodboards liés** : l'outil **Planche (E)** crée un
+   moodboard DANS le moodboard ouvert — la carte apparaît sur le canvas et
+   on y entre immédiatement pour travailler. Double-clic (ou flèche de la
+   carte) pour l'ouvrir, **Alt+←** ou **fil d'Ariane** (Racine ▸ Planche ▸ …)
+   pour revenir. L'imbrication est récursive (planche dans planche), la carte
+   affiche une **miniature réelle** de son contenu + son compteur, et tout
+   l'arbre est enregistré DANS le fichier du moodboard racine (une seule
+   sauvegarde embarque tout). La suppression d'une planche non vide demande
+   confirmation ; l'autosave et l'écran d'accueil sont cohérents avec l'arbre.
+2. **Édition de texte réparée** :
+   - **⌘/Ctrl+A, ⌘C, ⌘X** pendant l'édition d'une note/texte sont désormais
+     traités explicitement (sélection totale, copie, coupe) — ils fonctionnent
+     identiquement dans le panneau CEP, l'application et le navigateur même
+     quand l'hôte (Illustrator, macOS sans menu d'édition) les intercepte ;
+   - **hauteur vivante** : la boîte du texte/note/commentaire grandit à
+     mesure qu'on écrit (mesure du contenu — l'ancienne métrique mesurait la
+     boîte, jamais le contenu : le texte multi-paragraphes débordait
+     silencieusement, et la navigation aux flèches semblait morte) ;
+   - les flèches ↑/↓ naviguent entre les paragraphes et l'élément ne bouge
+     plus quand on écrit.
+3. **Polices du système** : le sélecteur de police (inspecteur Texte, Note,
+   Typographie) affiche **toutes les polices de l'ordinateur** — énumérées
+   via l'API Local Font Access dans l'application et via les TextFonts
+   d'Illustrator dans le panneau CEP (repli web dans le navigateur) — avec
+   **recherche instantanée** et **police par défaut** (★, persistée dans
+   `prefs.json`) appliquée à tout nouveau texte/note.
+4. **Presse-papiers des liens** : l'inspecteur Lien gagne **Coller** (lit le
+   presse-papiers, normalise `example.com` → `https://example.com`) et
+   **Copier** ; ⌘A/⌘C/⌘X fonctionnent aussi explicitement dans les champs
+   de l'interface.
+5. **Application de bureau** : menu **Édition** natif (rôles Annuler/
+   Rétablir/Couper/Copier/Coller/Tout sélectionner — indispensable sur macOS
+   pour que les raccourcis atteignent la page) et permission Local Fonts.
 
 ### v1.5.0 — identité officielle, accueil #232323, poignée de rotation à droite
 

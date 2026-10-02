@@ -161,33 +161,137 @@
 
   /* ---------------------------------------------------------- police */
 
+  var FONT_LIST_MAX = 320;
+
+  function normalizeForSearch(s) {
+    return String(s || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+  }
+
+  /* v1.6 — popover police : recherche instantanée + TOUTES les polices du
+   * système (MB.fonts) + police PAR DÉFAUT (★, utilisée pour tout nouveau
+   * texte/note). Le pied indique la source (système/Illustrateur/liste
+   * web) et l'étoile définit la police par défaut. */
   function fontPopover(anchor, current, onPick) {
-    var fonts = [
-      'Georgia', 'Times New Roman', 'Palatino Linotype', 'Garamond',
-      'Arial', 'Verdana', 'Trebuchet MS', 'Tahoma', 'Courier New', 'Impact'
-    ];
-    var html = '<div class="font-list">' + fonts.map(function (f) {
-      return '<button class="font-item" data-font="' + f + '" style="font-family:\'' + f + '\'">' + f + '</button>';
-    }).join('') + '</div>';
-    MB.ui.popover(anchor, html, {
-      bind: function (p) {
-        p.querySelectorAll('.font-item').forEach(function (f) {
-          f.addEventListener('click', function () {
-            onPick(f.dataset.font);
+    MB.fonts.whenReady(function () {
+      var fonts = MB.fonts.list();
+      var searching = '';
+
+      function renderList(p, filter) {
+        var list = p.querySelector('.font-list');
+        if (!list) return;
+        var f = normalizeForSearch(filter || '');
+        var shown = 0;
+        var html = '';
+        for (var i = 0; i < fonts.length && shown < FONT_LIST_MAX; i++) {
+          var name = fonts[i];
+          if (f && normalizeForSearch(name).indexOf(f) < 0) continue;
+          shown++;
+          var isDef = MB.fonts.isDefault(name);
+          var isCur = current() === name;
+          html +=
+            '<div class="font-item' + (isCur ? ' is-current' : '') + '" data-font="' + U.escapeHtml(name) + '" ' +
+            'style="font-family:\'' + U.escapeHtml(name) + '\'" role="button" tabindex="0" ' +
+            'title="' + U.escapeHtml(name) + (isDef ? ' (police par défaut)' : '') + '">' +
+            '<span class="font-item-name">' + U.escapeHtml(name) + '</span>' +
+            '<button type="button" class="font-item-star' + (isDef ? ' is-on' : '') + '" data-star="' + U.escapeHtml(name) + '" ' +
+            'title="' + (isDef ? 'Police par défaut actuelle' : 'Définir comme police par défaut') + '" aria-label="Définir comme police par défaut">' +
+            MB.icons.get(isDef ? 'starFill' : 'star', 13) +
+            '</button>' +
+            '</div>';
+        }
+        if (!shown) {
+          html = '<div class="font-empty">Aucune police trouvée.</div>';
+        } else if (fonts.length > FONT_LIST_MAX && shown === FONT_LIST_MAX) {
+          html += '<div class="font-empty">Affichage limité à ' + FONT_LIST_MAX + ' polices — affinez la recherche.</div>';
+        }
+        list.innerHTML = html;
+
+        list.querySelectorAll('.font-item').forEach(function (item) {
+          function pick() {
+            onPick(item.dataset.font);
             MB.ui.closePopover();
+          }
+          item.addEventListener('click', function (ev) {
+            if (ev.target.closest('.font-item-star')) return;
+            pick();
+          });
+          item.addEventListener('keydown', function (ev) {
+            if (ev.key === 'Enter' || ev.key === ' ') {
+              ev.preventDefault();
+              pick();
+            }
+          });
+        });
+        list.querySelectorAll('.font-item-star').forEach(function (star) {
+          star.addEventListener('click', function (ev) {
+            ev.stopPropagation();
+            MB.fonts.setDefault(star.dataset.star);
+            renderList(p, p.querySelector('.font-search') ? p.querySelector('.font-search').value : '');
+            var foot = p.querySelector('.font-foot-cur');
+            if (foot) foot.textContent = MB.fonts.default();
           });
         });
       }
+
+      var sourceLabel =
+        MB.fonts.source() === 'system' ? 'Polices de l\u2019ordinateur'
+        : MB.fonts.source() === 'host' ? 'Polices Illustrator'
+        : 'Polices web intégrées';
+      var html =
+        '<div class="font-pop">' +
+        '<input class="input font-search" type="text" placeholder="Rechercher une police…" spellcheck="false" aria-label="Rechercher une police">' +
+        '<div class="font-list" role="listbox" aria-label="Polices disponibles"></div>' +
+        '<div class="font-foot">★ Par défaut : <span class="font-foot-cur">' + U.escapeHtml(MB.fonts.default()) + '</span>' +
+        '<span class="font-foot-src">· ' + U.escapeHtml(sourceLabel) + '</span></div>' +
+        '</div>';
+      MB.ui.popover(anchor, html, {
+        bind: function (p) {
+          /* Ajuster la hauteur de la liste à l'espace disponible : le
+           * popover est positionné AVANT que la liste ne soit remplie
+           * (hauteur mesurée vide) — sans cela il déborde de la fenêtre
+           * sur les petits écrans et le pied devient invisible. */
+          function refit() {
+            var list = p.querySelector('.font-list');
+            if (!list) return;
+            var r = p.getBoundingClientRect();
+            var space = window.innerHeight - 8 - r.top;
+            var maxList = Math.max(120, Math.min(264, space - 108));
+            list.style.maxHeight = maxList + 'px';
+            var ph = p.offsetHeight;
+            if (r.top + ph > window.innerHeight - 8) {
+              p.style.top = Math.max(8, window.innerHeight - 8 - ph) + 'px';
+            }
+          }
+          renderList(p, '');
+          refit();
+          var search = p.querySelector('.font-search');
+          if (search) {
+            setTimeout(function () {
+              try { search.focus(); } catch (e) { /* noop */ }
+            }, 30);
+            search.addEventListener('input', function () {
+              if (search.value !== searching) {
+                searching = search.value;
+                renderList(p, searching);
+              }
+            });
+          }
+          window.addEventListener('resize', refit, { once: true });
+        }
+      });
     });
   }
 
   function fontButton(current, onPick) {
     var b = U.el('button', 'ctx-btn ctx-font-btn');
     b.type = 'button';
-    b.setAttribute('data-tip', 'Police');
+    b.setAttribute('data-tip', 'Police (recherche + polices du système, ★ = par défaut)');
     b.innerHTML = '<span style="font-family:\'' + U.escapeHtml(current) + '\'">' + U.escapeHtml(current) + '</span>' + MB.icons.get('chevronDown', 12);
     b.addEventListener('click', function () {
-      fontPopover(b, current(), onPick);
+      fontPopover(b, current, onPick);
     });
     return b;
   }

@@ -98,9 +98,10 @@
 
       case 'note': {
         var ink = U.readableOn(d.color);
+        var noteFont = d.fontFamily || 'Georgia';
         t = '<rect x="' + el.x + '" y="' + el.y + '" width="' + el.w + '" height="' + el.h +
           '" rx="4" fill="' + d.color + '"' + rotAttr() + '/>' +
-          multiLineText(el.x + 14, el.y + 24, d.text, 'font-family="Georgia" font-size="' + d.fontSize + '" fill="' + ink + '"', d.fontSize * 1.4);
+          multiLineText(el.x + 14, el.y + 24, d.text, 'font-family="' + esc(noteFont) + '" font-size="' + d.fontSize + '" fill="' + ink + '"', d.fontSize * 1.4);
         break;
       }
 
@@ -230,6 +231,20 @@
       case 'group':
         t = '';
         break;
+
+      /* v1.6 — planche liée : carte résumée (titre + compteur) ; le
+       * contenu de la planche ne se déplie pas dans l'export SVG. */
+      case 'board': {
+        var bCount = d && d.doc && Array.isArray(d.doc.elements) ? d.doc.elements.length : 0;
+        t =
+          '<rect x="' + el.x + '" y="' + el.y + '" width="' + el.w + '" height="' + el.h +
+          '" rx="12" fill="#232323" stroke="#3A3A3A" stroke-width="1.5"' + rotAttr() + '/>' +
+          '<rect x="' + (el.x + 10) + '" y="' + (el.y + 10) + '" width="' + (el.w - 20) + '" height="' + (el.h - 62) + '" rx="8" fill="#2A2A2A"/>' +
+          multiLineText(el.x + 14, el.y + 26, d.title || 'Planche', 'font-family="Georgia" font-size="15" font-weight="700" fill="#F5F5F5"', 19) +
+          multiLineText(el.x + 14, el.y + el.h - 20, bCount + ' élément' + (bCount > 1 ? 's' : ''), 'font-family="Georgia" font-size="11" fill="#B4B4B4"', 14) +
+          '<text x="' + (el.x + el.w - 34) + '" y="' + (el.y + el.h - 20) + '" font-family="Georgia" font-size="11" fill="#4C8DFF">→ planche</text>';
+        break;
+      }
     }
     return t;
   }

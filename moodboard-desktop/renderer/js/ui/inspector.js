@@ -172,20 +172,26 @@
       s.appendChild(textControls(el));
     } else if (el.type === 'note') {
       s = section('Note');
-      var row = U.el('div', 'btn-row');
-      row.appendChild(C.colorButton(function () {
-        return d.color;
-      }, function (hex) {
-        C.applyDataTo([el], 'Couleur de la note', { color: hex });
+      var rowN = U.el('div', 'btn-row');
+      rowN.appendChild(C.fontButton(function () {
+        return d.fontFamily || 'Georgia';
+      }, function (f) {
+        C.applyDataTo([el], 'Police', { fontFamily: f });
         MB.board.renderContent(el.id);
-      }, 'Couleur du post-it'));
-      row.appendChild(C.sizeControl(function () {
+      }));
+      rowN.appendChild(C.sizeControl(function () {
         return d.fontSize;
       }, function (v) {
         C.applyDataTo([el], 'Taille', { fontSize: Math.max(10, v) });
         MB.board.renderContent(el.id);
       }));
-      s.appendChild(row);
+      rowN.appendChild(C.colorButton(function () {
+        return d.color;
+      }, function (hex) {
+        C.applyDataTo([el], 'Couleur de la note', { color: hex });
+        MB.board.renderContent(el.id);
+      }, 'Couleur du post-it'));
+      s.appendChild(rowN);
     } else if (el.type === 'comment') {
       s = section('Commentaire');
       var row2 = U.el('div', 'btn-row');
@@ -414,6 +420,7 @@
       var urlInput = U.el('input', 'input');
       urlInput.value = d.url;
       urlInput.placeholder = 'https://…';
+      urlInput.spellcheck = false;
       urlInput.addEventListener('change', function () {
         var url = urlInput.value.trim();
         C.applyDataTo([el], 'Modifier le lien', {
@@ -423,12 +430,55 @@
         });
       });
       s.appendChild(urlInput);
+      /* v1.6 — presse-papiers explicite : selon l'hôte (Illustrator
+       * notamment), ⌘V/⌘C natifs peuvent être interceptés — ces boutons
+       * garantissent coller/copier un lien dans tous les environnements. */
+      var rowClip = U.el('div', 'btn-row');
+      rowClip.appendChild(C.textButton('Coller', function () {
+        MB.clip.readText().then(function (text) {
+          if (text === null || text === undefined || text === '') {
+            MB.ui.toast('Presse-papiers vide ou inaccessible.', 'info');
+            return;
+          }
+          var url = String(text).trim();
+          if (!/^[a-z][a-z0-9+.-]*:/i.test(url) && /\./.test(url)) url = 'https://' + url;
+          urlInput.value = url;
+          urlInput.dispatchEvent(new Event('change', { bubbles: true }));
+          MB.ui.toast('Lien collé depuis le presse-papiers', 'success');
+        });
+      }, 'Coller le lien du presse-papiers'));
+      rowClip.appendChild(C.textButton('Copier', function () {
+        MB.clip.copyText(d.url || '').then(function (ok) {
+          MB.ui.toast(ok ? 'Lien copié : ' + d.url : 'Copie impossible.', ok ? 'success' : 'error');
+        });
+      }, 'Copier l’URL dans le presse-papiers'));
+      s.appendChild(rowClip);
       var rowU = U.el('div', 'btn-row');
       rowU.appendChild(C.textButton('Ouvrir', function () {
         if (MB.cep.available()) MB.cep.openURL(d.url);
         else window.open(d.url, '_blank');
       }));
       s.appendChild(rowU);
+    } else if (el.type === 'board') {
+      s = section('Planche liée');
+      var bCount = d && d.doc && Array.isArray(d.doc.elements) ? d.doc.elements.length : 0;
+      var rowB0 = U.el('div', 'insp-row');
+      rowB0.appendChild(U.el('span', 'insp-kv', 'Contenu'));
+      rowB0.appendChild(U.el('span', 'insp-kv insp-kv--val', bCount + ' élément' + (bCount > 1 ? 's' : '')));
+      s.appendChild(rowB0);
+      var rowB1 = U.el('div', 'btn-row');
+      rowB1.appendChild(C.textButton(bCount ? 'Ouvrir la planche' : 'Travailler dedans', function () {
+        if (MB.boards) MB.boards.enter(el);
+      }));
+      rowB1.appendChild(C.textButton('Renommer', function () {
+        MB.interact.startEditing(el, 'title');
+      }));
+      s.appendChild(rowB1);
+      var rowB2 = U.el('div', 'insp-hint');
+      rowB2.innerHTML =
+        'Double-cliquez la carte pour ouvrir la planche · Alt+← pour revenir au moodboard parent.' +
+        '<br>Le contenu de la planche est enregistré DANS le fichier du moodboard racine.';
+      s.appendChild(rowB2);
     } else if (el.type === 'shape') {
       s = section('Forme');
       var rowS = U.el('div', 'btn-row');
@@ -723,7 +773,7 @@
       MB.app.toggleHide(true);
     }));
     row.appendChild(C.iconButton('trash', 'Supprimer', function () {
-      MB.store.deleteSelection();
+      MB.app.deleteSelection();
     }));
     s.appendChild(row);
     if (els.length >= 2) {

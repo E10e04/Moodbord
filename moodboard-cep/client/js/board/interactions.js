@@ -29,7 +29,8 @@
 
   var CLICK_CREATE = {
     text: 1, note: 1, color: 1, palette: 1, typography: 1,
-    link: 1, checklist: 1, comment: 1, table: 1, image: 1, import: 1
+    link: 1, checklist: 1, comment: 1, table: 1, image: 1, import: 1,
+    board: 1
   };
   var RECT_CREATE = { section: 1, column: 1, shape: 1 };
 
@@ -38,7 +39,8 @@
     color: 'couleur', palette: 'palette', typography: 'typographie',
     link: 'lien', file: 'fichier', line: 'ligne', shape: 'forme',
     section: 'section', column: 'colonne', table: 'tableau',
-    checklist: 'checklist', sketch: 'croquis', group: 'groupe'
+    checklist: 'checklist', sketch: 'croquis', board: 'planche',
+    group: 'groupe'
   };
 
   function wrapEl() {
@@ -63,6 +65,12 @@
     if (!o.keepTool) Store.setTool('select');
     if (type === 'text' || type === 'note' || type === 'comment') {
       startEditing(el, 'text');
+    }
+    /* v1.6 — planche liée : on entre immédiatement dans la nouvelle
+     * planche pour travailler dedans (Alt+← ou fil d'Ariane pour
+     * revenir au moodboard parent). */
+    if (type === 'board' && MB.boards) {
+      MB.boards.enter(el);
     }
     return el;
   }
@@ -201,9 +209,26 @@
   }
 
   /* Échap dans un champ d'édition = valider et sortir (§28).
-     Entrée valide les cellules et les tâches ; le texte multiligne garde Entrée. */
+     Entrée valide les cellules et les tâches ; le texte multiligne garde Entrée.
+
+     v1.6 — PRESSE-PAPIERS EXPLICITE : selon l'environnement (panneau CEP
+     dans Illustrator, application sans menu d'édition natif), ⌘A/⌘C/⌘X
+     peuvent être avalés par l'hôte AVANT d'atteindre le champ. On les
+     traite explicitement (preventDefault + opération manuelle via
+     MB.clip) — le comportement devient identique partout.
+     Les flèches (navigation paragraphe) et le collage restent natifs. */
   function attachEditingKeys(node, multiline) {
     node.addEventListener('keydown', function (e) {
+      var mod = e.metaKey || e.ctrlKey;
+      var k = e.key ? e.key.toLowerCase() : '';
+      if (mod && (k === 'a' || k === 'c' || k === 'x')) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (k === 'a') MB.clip.selectAllNode(node);
+        else if (k === 'c') MB.clip.copySelection();
+        else MB.clip.cutSelection(node);
+        return;
+      }
       if (e.key === 'Escape') {
         e.preventDefault();
         e.stopPropagation();
@@ -215,6 +240,26 @@
       }
       e.stopPropagation(); // les raccourcis globaux ne s'appliquent pas pendant l'édition
     });
+  }
+
+  /* v1.6 — hauteur vivante pendant l'édition : le texte multi-paragraphes
+   * reste visible (la boîte grandit à mesure qu'on écrit, comme à la
+   * sortie). Mesure sur l'événement input + une passe au démarrage. */
+  function liveAutoHeight(el) {
+    var id = el.id;
+    return function () {
+      var live = Store.el(id);
+      var view = Board.viewOf(id);
+      if (!live || !view) return;
+      var body = view.node.firstElementChild;
+      if (!body || !body.isConnected) return;
+      var needed = Math.ceil(body.scrollHeight);
+      if (needed > 0 && Math.abs(needed - live.h) > 2) {
+        live.h = needed;
+        view.node.style.height = live.h + 'px';
+        Board.refreshOverlay();
+      }
+    };
   }
 
   function startEditing(el, field) {
@@ -229,6 +274,13 @@
     MB.hist.begin('Modifier ' + typeName(el.type));
     node.focus();
     attachEditingKeys(node, true);
+    /* v1.6 — hauteur vivante : le contenu existant qui déborde est
+     * immédiatement ré-emboîté, puis la boîte suit la frappe. */
+    if (field === 'text' && (el.type === 'text' || el.type === 'note' || el.type === 'comment')) {
+      var grow = liveAutoHeight(el);
+      node.addEventListener('input', grow);
+      requestAnimationFrame(grow);
+    }
     try {
       var rng = document.createRange();
       rng.selectNodeContents(node);
@@ -1358,6 +1410,14 @@
       return;
     }
 
+    /* v1.6 — planche liée : double-clic (hors titre) = entrer dedans. */
+    var boardHost = e.target.closest('.mb-el--board');
+    if (boardHost) {
+      var bEl = Store.el(boardHost.dataset.id);
+      if (bEl && !bEl.locked && MB.boards) MB.boards.enter(bEl);
+      return;
+    }
+
     var groupHost = e.target.closest('.mb-el');
     if (groupHost) {
       var gEl = Store.el(groupHost.dataset.id);
@@ -1419,6 +1479,14 @@
         if (MB.cep && MB.cep.available()) MB.cep.openURL(url);
         else window.open(url, '_blank');
       }
+      return;
+    }
+
+    /* v1.6 — flèche d'ouverture de la carte planche. */
+    if (act === 'board-open') {
+      var hostB = actNode.closest('.mb-el');
+      var bEl2 = hostB ? Store.el(hostB.dataset.id) : null;
+      if (bEl2 && MB.boards) MB.boards.enter(bEl2);
       return;
     }
 

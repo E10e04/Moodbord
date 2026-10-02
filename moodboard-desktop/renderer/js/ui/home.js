@@ -519,6 +519,7 @@
     var doc = sessionDoc();
 
     function go() {
+      if (MB.boards) MB.boards.reset();
       MB.store.loadDocument({ name: 'Sans titre', elements: [] });
       MB.camera.fit(null);
       MB.storage.markSaved();
@@ -735,6 +736,10 @@
   }
 
   function show() {
+    /* v1.6 — planches liées : réécrire l'arbre en mémoire avant de
+     * recouvrir le canvas (les mutations de l'inspecteur « récents » ne
+     * doivent jamais perdre le contenu d'une planche ouverte). */
+    if (MB.boards) MB.boards.syncUp();
     if (!root) buildDom();
     render();
     root.hidden = false;

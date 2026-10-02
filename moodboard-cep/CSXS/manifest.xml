@@ -3,7 +3,7 @@
                    Version="10.0"
                    ExtensionBundleId="com.moodboard.cep"
                    ExtensionBundleName="Moodboard"
-                   ExtensionBundleVersion="1.5.0">
+                   ExtensionBundleVersion="1.6.0">
   <ExtensionList>
     <Extension Id="com.moodboard.cep.panel" Version="1.5.0"/>
   </ExtensionList>

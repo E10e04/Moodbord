@@ -20,7 +20,7 @@
  * ========================================================================= */
 'use strict';
 
-const { app, BrowserWindow, Menu, ipcMain, dialog, shell } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, dialog, shell, session } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
@@ -188,6 +188,24 @@ function buildMenu() {
       { label: 'Exporter le SVG…', click: () => send('file:export-svg') },
       { type: 'separator' },
       { role: 'close', label: 'Fermer la fenêtre' }
+    ]
+  });
+
+  /* v1.6 — menu Édition : les RÔLES natifs sont indispensables sur macOS
+   * (sans menu d'édition, ⌘C/⌘X/⌘V/⌘A n'atteignent jamais le renderer —
+   * comportement documenté d'Electron). Les rôles ciblent l'élément
+   * focalisé (champ d'inspecteur, édition canvas) et fonctionnent aussi
+   * sur Windows/Linux. */
+  template.push({
+    label: 'Édition',
+    submenu: [
+      { role: 'undo', label: 'Annuler' },
+      { role: 'redo', label: 'Rétablir' },
+      { type: 'separator' },
+      { role: 'cut', label: 'Couper' },
+      { role: 'copy', label: 'Copier' },
+      { role: 'paste', label: 'Coller' },
+      { role: 'selectAll', label: 'Tout sélectionner' }
     ]
   });
 
@@ -371,6 +389,15 @@ ipcMain.handle('shell:reveal', async (_e, p) => {
 /* ------------------------------------------------------------- cycle app */
 
 app.whenReady().then(() => {
+  /* v1.6 — polices du système (Local Font Access) : permission accordée
+   * à notre propre renderer — MB.fonts énumère TOUTES les polices
+   * installées sur l'ordinateur via window.queryLocalFonts(). */
+  const sess = session.defaultSession;
+  sess.setPermissionRequestHandler((_wc, permission, callback) => {
+    callback(permission === 'local-fonts');
+  });
+  sess.setPermissionCheckHandler((_wc, permission) => permission === 'local-fonts');
+
   buildMenu();
   createWindow();
 

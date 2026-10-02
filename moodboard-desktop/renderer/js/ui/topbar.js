@@ -280,6 +280,9 @@
       });
     }
 
+    // v1.6 — fil d'Ariane des planches liées : racine ▸ planche ▸ …
+    initCrumb();
+
     // nom du projet
     var nameInput = document.getElementById('proj-name');
     nameInput.addEventListener('change', function () {
@@ -336,6 +339,49 @@
       }
     });
     MB.store.on('camera', function () {});
+  }
+
+  /* v1.6 — Fil d'Ariane : « Racine ▸ Planche A ▸ Planche B » — chaque
+   * segment (sauf le dernier) ramène au niveau correspondant. */
+  function initCrumb() {
+    var crumb = document.getElementById('board-crumb');
+    if (!crumb) return;
+
+    function render() {
+      if (!MB.boards || !MB.boards.insideBoard()) {
+        crumb.hidden = true;
+        crumb.innerHTML = '';
+        return;
+      }
+      var titles = MB.boards.crumb();
+      var html = '';
+      for (var i = 0; i < titles.length; i++) {
+        if (i > 0) {
+          html += '<span class="crumb-sep" aria-hidden="true">' + MB.icons.get('chevronRight', 11) + '</span>';
+        }
+        var last = i === titles.length - 1;
+        html +=
+          '<button type="button" class="crumb-item' + (last ? ' is-current' : '') + '" data-level="' + i + '"' +
+          (last ? ' disabled' : '') +
+          ' title="' + U.escapeHtml(last ? titles[i] : 'Revenir à ' + titles[i]) + '">' +
+          U.escapeHtml(titles[i]) +
+          '</button>';
+      }
+      crumb.innerHTML = html;
+      crumb.hidden = false;
+      crumb.querySelectorAll('.crumb-item:not(.is-current)').forEach(function (b) {
+        b.addEventListener('click', function () {
+          var level = parseInt(b.dataset.level, 10);
+          if (MB.boards) MB.boards.exitTo(level);
+        });
+      });
+    }
+
+    if (MB.boards && MB.boards.onChange) MB.boards.onChange(render);
+    MB.store.on('project', function () {
+      render();
+    });
+    render();
   }
 
   function zoomMenu(anchor) {

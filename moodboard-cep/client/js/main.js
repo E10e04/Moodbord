@@ -11,6 +11,8 @@
   function boot() {
     if (MB.desktop) MB.desktop.init(); // classe body + titre + menus natifs (inerte hors application)
     MB.storage.init();
+    if (MB.boards) MB.boards.init(); // v1.6 — planches liées
+    if (MB.fonts) MB.fonts.init(); // v1.6 — polices système + police par défaut
     if (MB.diaglog) MB.diaglog.init(); // journal fichier + capture d'erreurs
     MB.cep.init();
     MB.board.init();
@@ -56,6 +58,7 @@
 
   function loadDemo(confirmFirst) {
     var go = function () {
+      if (MB.boards) MB.boards.reset();
       var doc = MB.demo.build();
       MB.store.loadDocument(doc);
       MB.camera.fit(null, 90);
@@ -91,6 +94,7 @@
       danger: true
     }).then(function (ok) {
       if (!ok) return;
+      if (MB.boards) MB.boards.reset();
       MB.store.loadDocument({ name: 'Sans titre', elements: [] });
       MB.camera.fit(null);
       MB.storage.markSaved();
@@ -104,6 +108,36 @@
   var App = {
     newBoard: newBoard,
     loadDemo: loadDemo,
+
+    /* v1.6 — suppression avec garde : une planche liée qui contient du
+     * travail mérite une confirmation explicite. */
+    deleteSelection: function () {
+      var sel = MB.store.selected();
+      var heavy = sel.filter(function (e) {
+        return e.type === 'board' && e.data && e.data.doc && Array.isArray(e.data.doc.elements) && e.data.doc.elements.length > 0;
+      });
+      var go = function () {
+        MB.store.deleteSelection();
+      };
+      if (heavy.length) {
+        var n = heavy.reduce(function (acc, e) {
+          return acc + e.data.doc.elements.length;
+        }, 0);
+        MB.ui.confirmDialog({
+          title: heavy.length > 1 ? 'Supprimer les planches liées ?' : 'Supprimer la planche liée ?',
+          message:
+            heavy.length > 1
+              ? heavy.length + ' planches seront supprimées avec tout leur contenu (' + n + ' éléments au total).'
+              : 'La planche « ' + (heavy[0].data.title || 'Planche') + ' » contient ' + n + ' élément(s) — tout son contenu sera définitivement supprimé.',
+          confirmLabel: 'Supprimer',
+          danger: true
+        }).then(function (ok) {
+          if (ok) go();
+        });
+        return;
+      }
+      go();
+    },
 
     togglePanel: function (which) {
       var st = MB.store.s();
@@ -421,6 +455,39 @@
     MB.hist.commit();
   }
 
+  /* v1.6 — Presse-papiers d'un champ d'interface (INPUT/TEXTAREA) :
+   * ⌘A sélectionne tout le champ, ⌘C copie la sélection, ⌘X coupe.
+   * preventDefault + opération manuelle : le comportement devient
+   * identique dans le panneau CEP, l'application et le navigateur. */
+  function fieldClipboard(e, k, t) {
+    if (k === 'a') {
+      if (typeof t.select === 'function') {
+        e.preventDefault();
+        t.select();
+      }
+      return;
+    }
+    var s = t.selectionStart;
+    var epos = t.selectionEnd;
+    if (typeof s !== 'number' || typeof epos !== 'number' || epos <= s) return;
+    var sel = t.value.substring(s, epos);
+    e.preventDefault();
+    MB.clip.copyText(sel).then(function (ok) {
+      if (!ok) {
+        MB.ui.toast('Copie impossible — utilisez le clic droit du champ.', 'error');
+        return;
+      }
+      if (k === 'x') {
+        t.value = t.value.slice(0, s) + t.value.slice(epos);
+        t.setSelectionRange(s, s);
+        try {
+          t.dispatchEvent(new Event('input', { bubbles: true }));
+          t.dispatchEvent(new Event('change', { bubbles: true }));
+        } catch (err) { /* vieux moteurs */ }
+      }
+    });
+  }
+
   function bindKeyboard() {
     // Capture : on voit les touches AVANT tout stopPropagation d'un
     // enfant (les gardes « typing » ci-dessous protègent l'édition).
@@ -468,7 +535,16 @@
       if (e.key === 'Delete' || e.key === 'Backspace') {
         if (!typing && MB.store.selectedIds().length) {
           e.preventDefault();
-          MB.store.deleteSelection();
+          MB.app.deleteSelection();
+        }
+        return;
+      }
+
+      // v1.6 — Alt+← : sortir d'une planche liée (retour au parent)
+      if (!typing && e.altKey && (e.key === 'ArrowLeft' || e.key === 'Left')) {
+        if (MB.boards && MB.boards.insideBoard()) {
+          e.preventDefault();
+          MB.boards.exit();
         }
         return;
       }
@@ -484,7 +560,20 @@
 
         // Pendant une saisie d'interface : les raccourcis TEXTE restent
         // au champ (sélectionner/copier le mot tapé, pas le tableau).
-        if (typing && (k === 'a' || k === 'c' || k === 'x' || k === 'v')) return;
+        // v1.6 — traitement EXPLICITE (⌘A/⌘C/⌘X) : selon l'hôte
+        // (Illustrator peut voler les raccourcis du panneau), le natif
+        // n'arrive pas toujours au champ — on applique l'opération
+        // manuellement pour INPUT/TEXTAREA (le contenteditable du canvas
+        // est géré par attachEditingKeys). ⌘V reste natif (la lecture du
+        // presse-papiers ne peut pas être garantie partout — l'inspecteur
+        // des liens fournit un bouton « Coller » dédié).
+        if (typing && (k === 'a' || k === 'c' || k === 'x')) {
+          if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) {
+            fieldClipboard(e, k, t);
+          }
+          return;
+        }
+        if (typing && k === 'v') return;
 
         if (k === 'z') {
           e.preventDefault();

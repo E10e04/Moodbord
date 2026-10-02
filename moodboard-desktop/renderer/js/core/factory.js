@@ -42,7 +42,7 @@
           var t = base('text', p, Object.assign({ w: 280, h: 64 }, extra));
           t.data = {
             text: 'Texte',
-            fontFamily: 'Georgia',
+            fontFamily: (extra && extra.fontFamily) || (MB.fonts ? MB.fonts.default() : 'Georgia'),
             fontSize: 26,
             bold: false,
             italic: false,
@@ -63,7 +63,8 @@
           n.data = {
             text: 'Double-cliquez pour écrire…',
             color: '#F7D46A',
-            fontSize: 15
+            fontSize: 15,
+            fontFamily: (extra && extra.fontFamily) || (MB.fonts ? MB.fonts.default() : 'Georgia')
           };
           return n;
         }
@@ -127,7 +128,7 @@
         case 'typography': {
           var ty = base('typography', p, Object.assign({ w: 236, h: 252 }, extra));
           ty.data = {
-            fontFamily: (extra && extra.fontFamily) || 'Georgia',
+            fontFamily: (extra && extra.fontFamily) || (MB.fonts ? MB.fonts.default() : 'Georgia'),
             sampleText: 'Portez ce vieux whisky au juge blond qui fume',
             sizes: [40, 28, 18, 13]
           };
@@ -252,6 +253,18 @@
             thickness: 3
           };
           return sk;
+        }
+
+        case 'board': {
+          /* Planche liée (v1.6) : renferme un document complet. */
+          var bd = base('board', p, Object.assign({ w: 264, h: 200 }, extra));
+          bd.data = {
+            title: (extra && extra.title) || 'Planche',
+            elCount: 0,
+            thumb: null,
+            doc: (extra && extra.doc) || { elements: [], camera: null }
+          };
+          return bd;
         }
 
         case 'group': {
