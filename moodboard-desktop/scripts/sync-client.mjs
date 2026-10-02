@@ -26,23 +26,28 @@ cpSync(src, dest, { recursive: true, dereference: true });
 /* Différence intentionnelle avec le client CEP/web : la copie desktop
  * embarque une CSP stricte (Electron le réclame ; les styles inline de
  * l'app imposent 'unsafe-inline' pour style-src, aucun script inline
- * n'existe). Le fichier d'origine (CEP/web) reste inchangé. */
+ * n'existe). v1.7 : connect-src autorise l'API GitHub pour la
+ * vérification des mises à jour (le téléchargement des installateurs
+ * vit dans le processus principal, hors CSP du renderer).
+ * La balise est REMPLACÉE si une version antérieure est déjà présente. */
 const indexPath = path.join(dest, 'index.html');
 let html = readFileSync(indexPath, 'utf8');
-if (!/Content-Security-Policy/.test(html)) {
-  const csp =
-    '<meta http-equiv="Content-Security-Policy" content="' +
-    "default-src 'none'; " +
-    "script-src 'self'; " +
-    "style-src 'self' 'unsafe-inline'; " +
-    "img-src 'self' data: blob:; " +
-    "font-src 'self' data:; " +
-    'base-uri &#39;none&#39;; form-action &#39;none&#39;' +
-    '">';
-  html = html.replace(
-    /<meta charset="utf-8">/,
-    '<meta charset="utf-8">\n' + csp
-  );
+const csp =
+  '<meta http-equiv="Content-Security-Policy" content="' +
+  "default-src 'none'; " +
+  "script-src 'self'; " +
+  "style-src 'self' 'unsafe-inline'; " +
+  "img-src 'self' data: blob:; " +
+  "font-src 'self' data:; " +
+  'connect-src &#39;self&#39; https://api.github.com https://github.com https://raw.githubusercontent.com https://objects.githubusercontent.com; ' +
+  'base-uri &#39;none&#39;; form-action &#39;none&#39;' +
+  '">';
+if (/<meta[^>]+Content-Security-Policy/.test(html)) {
+  html = html.replace(/<meta[^>]+Content-Security-Policy[^>]*>/, csp);
+  writeFileSync(indexPath, html);
+  console.log('[sync] CSP stricte mise à jour dans renderer/index.html (desktop uniquement)');
+} else {
+  html = html.replace(/<meta charset="utf-8">/, '<meta charset="utf-8">\n' + csp);
   writeFileSync(indexPath, html);
   console.log('[sync] CSP stricte injectée dans renderer/index.html (desktop uniquement)');
 }

@@ -178,16 +178,16 @@
   function renderBoard(el) {
     var d = el.data;
     var count = d && d.doc && Array.isArray(d.doc.elements) ? d.doc.elements.length : d.elCount || 0;
-    /* v1.6.1 — carte compacte : plus de grande zone d'aperçu, plus de
-     * badge « planche » bleu. Le nom est centré dans sa barre ; la
-     * flèche d'ouverture vit dans la barre du bas, à droite (à la place
-     * de l'ancien libellé bleu « → planche »). */
+    /* v1.7 — design demandé : grande zone principale où le NOM de la
+     * planche est centré au milieu de son conteneur ; barre du bas avec
+     * le compteur d'éléments à gauche et la flèche d'ouverture à droite
+     * (exactement au niveau de l'ancien libellé bleu « → planche »). */
     return (
       '<div class="mb-board-card">' +
-      '<div class="mb-board-bar mb-board-bar--name">' +
+      '<div class="mb-board-body">' +
       '<div class="mb-board-title mb-editable" data-field="title">' + esc(d.title || 'Planche') + '</div>' +
       '</div>' +
-      '<div class="mb-board-bar mb-board-bar--info">' +
+      '<div class="mb-board-foot">' +
       '<span class="mb-board-count">' + count + ' élément' + (count > 1 ? 's' : '') + '</span>' +
       '<button class="mb-board-open" type="button" data-act="board-open" title="Ouvrir la planche" aria-label="Ouvrir la planche">' +
       (MB.icons ? MB.icons.get('external', 14) : '→') +

@@ -218,6 +218,36 @@ npm run dist:mac               # → dist/Moodboard-1.4.0-x64.dmg + arm64.dmg (s
 
 ## 📜 Changelog
 
+### v1.7.0 — mises à jour GitHub, préférences, enregistrement direct, carte planche redessinée
+
+1. **Mises à jour depuis le dépôt GitHub** : à chaque démarrage, si la
+   machine est connectée à internet, l'application et l'extension
+   vérifient les **releases du dépôt**. Une nouvelle version déclenche un
+   **popup de proposition** : « Mettre à jour maintenant » télécharge puis
+   installe **avec la progression à l'écran** (application : l'installateur
+   de la plateforme est téléchargé en streaming puis lancé ; extension :
+   les fichiers sont remplacés dans le dossier d'installation puis le
+   panneau se recharge). « Plus tard » reste sans conséquence — le
+   **numéro de version** (barre d'état, en bas) devient cliquable à tout
+   moment pour relancer ou vérifier manuellement la mise à jour (il
+   s'illumine quand une mise à jour est disponible).
+2. **Fichier ▸ Préférences… (⌘/Ctrl+,)** : choix du **dossier des fichiers
+   temporaires et des enregistrements automatiques** (autosave, récents,
+   journaux) — sélecteur natif, migration des fichiers existants au
+   changement, retour au dossier par défaut en un clic. La préférence est
+   partagée par l'application et l'extension (elles suivent le même
+   dossier), et reste visible/révélable depuis le dialogue.
+3. **Enregistrement intelligent** : **⌘/Ctrl+S réécrit directement le
+   fichier déjà enregistré** (plus de dialogue à chaque fois). Le
+   **premier** enregistrement choisit l'emplacement ; **Enregistrer
+   sous… (⇧⌘S)** choisit toujours un nouvel emplacement.
+4. **Carte planche redessinée** (design demandé) : grande zone principale
+   où le **nom de la planche est centré au milieu de son conteneur** ;
+   barre du bas avec le **compteur d'éléments à gauche** et la **flèche
+   d'ouverture à droite, au niveau de l'ancien libellé bleu « → planche »**
+   (flèche bleue, SVG export aligné : séparateur, nom centré au-dessus de
+   la barre, compteur et flèche en bas).
+
 ### v1.6.1 — planches : création sans entrée, retour par le nom, carte compacte
 
 1. **Création sans ouverture automatique** : l'outil **Planche (E)** crée

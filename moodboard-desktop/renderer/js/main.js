@@ -24,6 +24,10 @@
     MB.ui.contextbar.init();
     MB.ui.contextmenu.init();
     if (MB.ui.home) MB.ui.home.init(); // v1.3 — écran d'accueil (bureau uniquement, inerte ailleurs)
+    if (MB.updater) {
+      MB.updater.init(); // v1.7 — mises à jour GitHub (pastille version)
+      MB.updater.startupCheck(); // vérification à chaque démarrage (si connecté)
+    }
     bindKeyboard();
     bindKeyboardFocus();
     bindPanels();
@@ -327,8 +331,24 @@
   function bindStatusbar() {
     var wrap = document.getElementById('board-wrap');
     var versionEl = document.getElementById('sb-version');
-    if (versionEl)
+    if (versionEl) {
+      /* v1.7 — le numéro de version ouvre le gestionnaire de mises à
+       * jour (état, vérification manuelle, installation). */
       versionEl.textContent = 'v' + (MB.VERSION || '?') + (MB.desktop && MB.desktop.active ? ' · Desktop' : '');
+      versionEl.setAttribute('role', 'button');
+      versionEl.setAttribute('tabindex', '0');
+      versionEl.setAttribute('aria-label', 'Mises à jour');
+      var openUpdater = function () {
+        if (MB.updater && MB.updater.dialog) MB.updater.dialog();
+      };
+      versionEl.addEventListener('click', openUpdater);
+      versionEl.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          openUpdater();
+        }
+      });
+    }
     MB.store.on('elements', statusCounts);
     MB.store.on('selection', statusCounts);
     MB.store.on('tool', function (tool) {
@@ -590,6 +610,12 @@
           e.preventDefault();
           if (e.shiftKey) MB.storage.saveAs();
           else MB.storage.save();
+          return;
+        }
+        /* v1.7 — Préférences (⌘/Ctrl+,), raccourci standard. */
+        if (k === ',') {
+          e.preventDefault();
+          if (MB.ui.preferencesDialog) MB.ui.preferencesDialog();
           return;
         }
         if (k === 'o') {

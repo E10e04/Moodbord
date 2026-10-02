@@ -56,7 +56,12 @@
           }, ''),
           m('Exporter la sélection en SVG…', function () {
             MB.exporter.exportSvg(MB.store.selected());
-          }, '')
+          }, ''),
+          sep(),
+          /* v1.7 — dossier des fichiers temporaires et autosaves. */
+          m('Préférences…', function () {
+            MB.ui.preferencesDialog();
+          }, '⌘,')
         ]
       },
       {

@@ -58,6 +58,10 @@
       'file:export-svg': function () {
         MB.exporter.exportSvg(null);
       },
+      /* v1.7 — Préférences (menu natif Fichier ▸ Préférences…). */
+      'app:preferences': function () {
+        if (MB.ui.preferencesDialog) MB.ui.preferencesDialog();
+      },
       'help:shortcuts': function () {
         MB.ui.shortcutsDialog();
       },
@@ -117,6 +121,47 @@
         return Promise.resolve({ err: 1 });
       }
       return Promise.resolve(api.reveal(path));
+    },
+    /* v1.7 — Préférences : dialogue natif de choix d'un dossier.
+     * Retour Promise<{ err, path }>. */
+    canPickDir: !!(active && typeof api.pickDir === 'function'),
+    pickDir: function (opts) {
+      if (!active || typeof api.pickDir !== 'function') {
+        return Promise.resolve({ err: 1 });
+      }
+      return api.pickDir(opts || {});
+    },
+    /* v1.7 — Mises à jour : téléchargement streamé par le processus
+     * principal (installateurs lourds), progression par événements,
+     * lancement du fichier téléchargé, ouverture d'URL externe. */
+    canDownloadUpdate: !!(active && typeof api.downloadUpdate === 'function'),
+    downloadUpdate: function (url, dir) {
+      if (!active || typeof api.downloadUpdate !== 'function') {
+        return Promise.resolve({ err: 1 });
+      }
+      return api.downloadUpdate(url, dir);
+    },
+    onUpdateProgress: function (cb) {
+      if (active && typeof api.onUpdateProgress === 'function') api.onUpdateProgress(cb);
+    },
+    canLaunch: !!(active && typeof api.launch === 'function'),
+    launch: function (path) {
+      if (!active || typeof api.launch !== 'function') {
+        return Promise.resolve({ err: 1 });
+      }
+      return api.launch(path);
+    },
+    canOpenUrl: !!(active && typeof api.openUrl === 'function'),
+    openUrl: function (url) {
+      if (!active || typeof api.openUrl !== 'function') {
+        return Promise.resolve({ err: 1 });
+      }
+      return api.openUrl(url);
+    },
+    /* v1.7 — quitter proprement (après lancement d'un installateur). */
+    canQuit: !!(active && typeof api.quit === 'function'),
+    quit: function () {
+      if (active && typeof api.quit === 'function') api.quit();
     }
   };
 })();

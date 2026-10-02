@@ -76,21 +76,36 @@
      appel (événement de compatibilité) inoffensif. */
   function onBackdrop(e) {
     if (e.target === this && this.parentNode) {
+      /* v1.7 — _close (idempotente) quand le dialogue en fournit une. */
+      if (this._close) {
+        this._close(null);
+        return;
+      }
       this.parentNode.removeChild(this);
       var back = this;
       back._resolve && back._resolve(null);
     }
   }
 
-  function dialog(bodyHtml, actions) {
+  function dialog(bodyHtml, actions, opts) {
     return new Promise(function (resolve) {
       var host = document.getElementById('layer-dialogs');
       var back = U.el('div', 'dialog-backdrop');
       back._resolve = resolve;
       var box = U.el('div', 'dialog');
       box.innerHTML = bodyHtml;
+      /* v1.7 — fermeture programmatique (dialogues interactifs :
+       * Préférences, mises à jour…) ; idempotente. */
+      var closed = false;
+      function close(val) {
+        if (closed) return;
+        closed = true;
+        if (back.parentNode) back.parentNode.removeChild(back);
+        resolve(val);
+      }
+      back._close = close;
       var foot = U.el('div', 'dialog-actions');
-      actions.forEach(function (a) {
+      (actions || []).forEach(function (a) {
         var b = U.el(
           'button',
           'btn ' + (a.kind === 'primary' ? 'btn-primary' : a.kind === 'danger' ? 'btn-danger' : 'btn-ghost'),
@@ -99,12 +114,11 @@
         b.addEventListener('click', function () {
           var val = a.value;
           if (a.getValue) val = a.getValue(box);
-          back.parentNode.removeChild(back);
-          resolve(val);
+          close(val);
         });
         foot.appendChild(b);
       });
-      box.appendChild(foot);
+      if ((actions || []).length) box.appendChild(foot);
       back.appendChild(box);
       host.appendChild(back);
       var firstInput = box.querySelector('input, textarea');
@@ -114,6 +128,9 @@
           if (firstInput.select) firstInput.select();
         }, 0);
       }
+      /* v1.7 — corps interactif : le dialogue peut se re-rendre en place
+       * (choix de dossier, progression de téléchargement…). */
+      if (opts && typeof opts.bind === 'function') opts.bind(box, close);
       back.addEventListener('pointerdown', onBackdrop);
       // Repli souris (moteurs CEP sans Pointer Events) — double appel
       // inoffensif grâce à la garde parentNode.
@@ -186,7 +203,9 @@
       ['⌘/Ctrl + D', 'Dupliquer'],
       ['⌘/Ctrl + A', 'Tout sélectionner'],
       ['⌘/Ctrl + G', 'Grouper (⇧ pour dissocier)'],
-      ['⌘/Ctrl + S', 'Enregistrer (⇧ = Enregistrer sous…)'],
+      ['⌘/Ctrl + S', 'Enregistrer (fichier courant ; 1er enregistrement : choix de l‘emplacement)'],
+      ['⌘/Ctrl + ⇧ + S', 'Enregistrer sous… (choisir un nouvel emplacement)'],
+      ['⌘/Ctrl + ,', 'Préférences (dossier des fichiers temporaires et autosaves)'],
       ['⌘/Ctrl + 0', 'Zoom 100 %'],
       ['⇧ + 1', 'Ajuster à l’écran'],
       ['⇧ + 2', 'Zoom sur la sélection'],
@@ -217,6 +236,107 @@
       '</div>',
       [{ label: 'Fermer', value: true, kind: 'primary' }]
     );
+  }
+
+  /* ------------------------------------------------------ préférences */
+
+  /* v1.7 — Préférences (Fichier ▸ Préférences… / ⌘,) : choix du dossier
+   * des fichiers temporaires et des enregistrements automatiques
+   * (autosave, récents, journaux). Le dossier par défaut reste indiqué
+   * en permanence ; le changement migre les fichiers existants. */
+  function preferencesDialog() {
+    var S = MB.storage;
+
+    function render(box) {
+      var canFs = S.isFs();
+      var custom = S.dataDirIsCustom();
+      var cur = S.dataDir() || '(indisponible)';
+      var def = S.dataDirDefault() || '';
+      var revealable = !!(MB.desktop && MB.desktop.canReveal);
+      box.innerHTML =
+        '<div class="dialog-title">Préférences</div>' +
+        '<div class="dialog-body">' +
+        '<span class="field-label">Fichiers temporaires &amp; enregistrements automatiques</span>' +
+        '<div class="prefs-path' + (custom ? ' is-custom' : '') + '" title="' + U.escapeHtml(cur) + '">' +
+        U.escapeHtml(cur) +
+        '</div>' +
+        '<div class="prefs-sub">' +
+        (custom
+          ? 'Dossier personnalisé — les autosaves et fichiers temporaires y sont écrits.'
+          : 'Dossier par défaut' + (def ? ' — ' + U.escapeHtml(def) : '') + '.') +
+        '</div>' +
+        '<div class="prefs-actions">' +
+        '<button type="button" class="btn btn-primary btn--xs" data-act="pick"' +
+        (canFs ? '' : ' disabled') + '>Choisir un dossier…</button>' +
+        '<button type="button" class="btn btn-ghost btn--xs" data-act="reveal"' +
+        (canFs && revealable ? '' : ' disabled') + '>Révéler</button>' +
+        '<button type="button" class="btn btn-ghost btn--xs" data-act="reset"' +
+        (custom ? '' : ' disabled') + '>Dossier par défaut</button>' +
+        '</div>' +
+        (canFs
+          ? ''
+          : '<p class="prefs-note">La persistance fichier n‘est pas disponible dans cet ' +
+            'environnement (aperçu navigateur) — les préférences s‘appliquent à ' +
+            'l‘application et au panneau Illustrator.</p>') +
+        '</div>' +
+        '<div class="dialog-actions">' +
+        '<button type="button" class="btn btn-primary" data-act="close">Fermer</button>' +
+        '</div>';
+
+      box.querySelector('[data-act="close"]').addEventListener('click', function () {
+        closePrefs();
+      });
+      if (!canFs) return;
+
+      box.querySelector('[data-act="pick"]').addEventListener('click', function () {
+        S.pickDataDir().then(function (dir) {
+          if (!dir) return; // annulé
+          var r = S.setDataDir(dir);
+          if (r.error) {
+            toast(r.error, 'error');
+            return;
+          }
+          if (!r.unchanged) {
+            toast(
+              r.moved && r.moved.length
+                ? 'Dossier enregistré — ' + r.moved.length + ' fichier(s) déplacé(s)'
+                : 'Dossier enregistré',
+              'success'
+            );
+          }
+          render(box);
+        });
+      });
+
+      var revealBtn = box.querySelector('[data-act="reveal"]');
+      if (!revealBtn.disabled) {
+        revealBtn.addEventListener('click', function () {
+          var d = S.dataDir();
+          if (d) MB.desktop.reveal(d);
+        });
+      }
+
+      var resetBtn = box.querySelector('[data-act="reset"]');
+      if (!resetBtn.disabled) {
+        resetBtn.addEventListener('click', function () {
+          var r = S.resetDataDir();
+          if (r.error) {
+            toast(r.error, 'error');
+            return;
+          }
+          toast('Dossier par défaut rétabli', 'success');
+          render(box);
+        });
+      }
+    }
+
+    var closePrefs = null;
+    dialog('', [], {
+      bind: function (box, close) {
+        closePrefs = close;
+        render(box);
+      }
+    });
   }
 
   /* ----------------------------------------------------- diagnostics */
@@ -453,6 +573,7 @@
   MB.ui.promptDialog = promptDialog;
   MB.ui.shortcutsDialog = shortcutsDialog;
   MB.ui.aboutDialog = aboutDialog;
+  MB.ui.preferencesDialog = preferencesDialog;
   MB.ui.diagnosticsDialog = diagnosticsDialog;
   MB.ui.ghost = {
     start: ghostStart,

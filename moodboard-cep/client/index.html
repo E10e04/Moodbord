@@ -92,7 +92,7 @@
   <!-- ===== Barre d'état ===== -->
   <footer id="statusbar">
     <div class="sb-left" id="sb-hint">Sélection — cliquez un objet, glissez pour le déplacer</div>
-    <div class="sb-right"><button id="sb-kbd" class="sb-kbd" data-tip="Raccourcis clavier : actifs quand le panneau détient le focus (clic dans le panneau)" aria-label="État des raccourcis clavier"></button><span class="sb-version" id="sb-version" data-tip="Version installée — doit correspondre au zip déployé"></span><span id="sb-count"></span></div>
+    <div class="sb-right"><button id="sb-kbd" class="sb-kbd" data-tip="Raccourcis clavier : actifs quand le panneau détient le focus (clic dans le panneau)" aria-label="État des raccourcis clavier"></button><span class="sb-version" id="sb-version" role="button" tabindex="0" data-tip="Version — cliquez pour vérifier les mises à jour" aria-label="Mises à jour"></span><span id="sb-count"></span></div>
   </footer>
 </div>
 
@@ -122,6 +122,7 @@
 <script src="js/core/boards.js"></script>
 <script src="js/core/fonts.js"></script>
 <script src="js/core/storage.js"></script>
+<script src="js/core/updater.js"></script>
 <script src="js/core/demo.js"></script>
 
 <!-- ===== Canvas engine ===== -->

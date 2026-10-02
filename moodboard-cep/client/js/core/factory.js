@@ -257,9 +257,9 @@
 
         case 'board': {
           /* Planche liée (v1.6) : renferme un document complet.
-           * v1.6.1 — carte compacte (nom centré + compteur + flèche) :
-           * hauteur par défaut resserrée. */
-          var bd = base('board', p, Object.assign({ w: 264, h: 88 }, extra));
+           * v1.7 — design avec grande zone principale (nom centré au
+           * milieu) + barre du bas (compteur + flèche) : carte haute. */
+          var bd = base('board', p, Object.assign({ w: 264, h: 168 }, extra));
           bd.data = {
             title: (extra && extra.title) || 'Planche',
             elCount: 0,

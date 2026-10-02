@@ -32,10 +32,26 @@
 
   var MODE = 'web';
   var cs = null;
-  var dataDir = ''; // '' => persistance fichier indisponible (repli localStorage)
+  /* v1.7 — deux dossiers distincts :
+   *   baseDir — dossier de données PAR DÉFAUT (résolu comme avant) ;
+   *             prefs.json y vit TOUJOURS (pointeur stable partagé par
+   *             l'application et l'extension) ;
+   *   dataDir — dossier ACTIF pour les données (autosave, récents,
+   *             journaux) : baseDir, ou dossier choisi dans les
+   *             Préférences (« fichiers temporaires et autosaves »). */
+  var baseDir = '';
+  var dataDir = '';
   var WEB_KEY = 'mb.autosave.v1';
   var WEB_FLAG = 'mb.demoLoaded';
   var fsWarned = false; // un seul toast d'échec d'autosave par session
+
+  /* Fichiers de données qui suivent le dossier choisi dans les
+   * Préférences (copiés lors du changement de dossier). */
+  var DATA_FILES = ['autosave.moodboard', 'recent.json', 'flag-demo.done', 'diagnostic.log'];
+
+  function joinPath(a, b) {
+    return String(a || '').replace(/[\\/]+$/, '') + '/' + b;
+  }
 
   function isCep() {
     return MODE === 'cep';
@@ -468,16 +484,17 @@
   }
 
   function readPrefs() {
-    var base = { lastDir: '', defaultFont: '' };
-    if (isFs()) {
-      var r = readText(dataDir + '/' + PREFS_FILE);
+    var base = { lastDir: '', defaultFont: '', dataDir: '' };
+    if (baseDir) {
+      var r = readText(baseDir + '/' + PREFS_FILE);
       if (!r.error && r.text) {
         try {
           var p = JSON.parse(r.text);
           if (p && typeof p === 'object') {
             return {
               lastDir: isAbsPath(p.lastDir || '') ? p.lastDir : '',
-              defaultFont: typeof p.defaultFont === 'string' ? p.defaultFont : ''
+              defaultFont: typeof p.defaultFont === 'string' ? p.defaultFont : '',
+              dataDir: isAbsPath(p.dataDir || '') ? p.dataDir : ''
             };
           }
         } catch (e) {
@@ -492,7 +509,8 @@
       var lastDir = localStorage.getItem('mb.lastDir') || '';
       return {
         lastDir: lastDir,
-        defaultFont: pj && typeof pj.defaultFont === 'string' ? pj.defaultFont : ''
+        defaultFont: pj && typeof pj.defaultFont === 'string' ? pj.defaultFont : '',
+        dataDir: pj && isAbsPath(pj.dataDir || '') ? pj.dataDir : ''
       };
     } catch (e) {
       return base;
@@ -502,7 +520,7 @@
   function writePrefs(p) {
     try {
       var merged = Object.assign(readPrefs(), p || {});
-      if (isFs()) writeText(dataDir + '/' + PREFS_FILE, JSON.stringify(merged));
+      if (baseDir) writeText(baseDir + '/' + PREFS_FILE, JSON.stringify(merged));
       else {
         localStorage.setItem('mb.prefs.v1', JSON.stringify(merged));
         localStorage.setItem('mb.lastDir', merged.lastDir || '');
@@ -518,6 +536,95 @@
     var patch = {};
     patch[key] = value;
     writePrefs(patch);
+  }
+
+  /* ------------------------------------------------- dossier de données (v1.7)
+   * Préférence « fichiers temporaires et autosaves » : la valeur vit
+   * dans prefs.json DU DOSSIER PAR DÉFAUT (baseDir) — les deux
+   * environnements (application et extension) partagent le même
+   * pointeur ; seules les DONNÉES déménagent. */
+
+  /* Applique la préférence au démarrage : dossier valide + inscriptible
+   * requis, sinon retour silencieux au dossier par défaut. */
+  function applyDataDirPref() {
+    dataDir = baseDir;
+    if (!baseDir) return;
+    var custom = readPrefs().dataDir;
+    if (custom && isAbsPath(custom) && !samePath(custom, baseDir)) {
+      ensureDir(custom);
+      if (probeFs(custom)) {
+        dataDir = custom;
+        console.log('[Moodboard] Dossier de données personnalisé : ' + custom);
+        return;
+      }
+      console.warn(
+        '[Moodboard] Dossier personnalisé inaccessible (' + custom + ') — retour au dossier par défaut.'
+      );
+    }
+  }
+
+  /* Dialogue natif de choix d'un dossier — Promise<chemin|null>. */
+  function pickDataDir() {
+    var start = dataDir || baseDir || '';
+    if (MODE === 'desktop') {
+      if (MB.desktop && typeof MB.desktop.pickDir === 'function') {
+        return MB.desktop.pickDir({
+          prompt: 'Dossier des fichiers Moodboard',
+          defaultDir: start
+        }).then(
+          function (r) {
+            return r && r.err === 0 && r.path ? r.path : null;
+          },
+          function () {
+            return null;
+          }
+        );
+      }
+      return Promise.resolve(null);
+    }
+    if (isCep() && window.cep && window.cep.fs && window.cep.fs.showOpenDialogEx) {
+      try {
+        var res = window.cep.fs.showOpenDialogEx(
+          false,
+          true,
+          'Dossier des fichiers Moodboard',
+          start || null
+        );
+        if (res && res.err === 0 && res.data && res.data.length) {
+          return Promise.resolve(res.data[0]);
+        }
+      } catch (e) {
+        /* signature non supportée par cette version de CEP */
+      }
+    }
+    return Promise.resolve(null);
+  }
+
+  /* Change le dossier actif : valide, migre les fichiers de données
+   * (autosave, récents…), mémorise la préférence. Retour {ok} ou
+   * {error}. prefValue permet d'écrire '' lors d'une remise à défaut. */
+  function setDataDir(newDir, prefValue) {
+    if (!baseDir) return { error: 'Persistance fichier indisponible dans cet environnement.' };
+    if (!isAbsPath(newDir)) return { error: 'Chemin invalide.' };
+    if (samePath(newDir, dataDir)) return { ok: true, dir: newDir, unchanged: true };
+    ensureDir(newDir);
+    if (!probeFs(newDir)) return { error: 'Ce dossier n‘est pas accessible en écriture.' };
+    var oldDir = dataDir;
+    var moved = [];
+    DATA_FILES.forEach(function (f) {
+      var r = oldDir ? readText(joinPath(oldDir, f)) : { error: 'aucun' };
+      if (!r.error && r.text) {
+        if (!writeText(joinPath(newDir, f), r.text).error) moved.push(f);
+      }
+    });
+    dataDir = newDir;
+    setPref('dataDir', prefValue === undefined ? newDir : prefValue);
+    return { ok: true, dir: newDir, moved: moved };
+  }
+
+  /* Remise au dossier par défaut (Préférences ▸ « Dossier par défaut »). */
+  function resetDataDir() {
+    return setDataDir(baseDir, '');
   }
 
   /* ------------------------------------------------------- récents (v1.3/v1.4)
@@ -685,11 +792,51 @@
     });
   }
 
-  /* v1.3 — Enregistrer, Enregistrer sous… et ⌘/Ctrl+S ouvrent TOUJOURS
-   * l'explorateur / le Finder pour choisir l'emplacement du fichier,
-   * pré-rempli du dernier dossier utilisé puis du nom courant. */
+  /* v1.7 — Politique d'enregistrement :
+   *   - « Enregistrer » / ⌘S : si le projet PROVIENT d'un fichier (ouvert)
+   *     ou a déjà été enregistré quelque part, on réécrit DIRECTEMENT ce
+   *     fichier — plus de dialogue. Sinon (premier enregistrement), on
+   *     choisit l'emplacement comme un « Enregistrer sous… ».
+   *   - « Enregistrer sous… » / ⇧⌘S : choisit TOUJOURS un nouvel
+   *     emplacement (nouveau fichier). */
   function save() {
+    var st = MB.store.s();
+    if (isFs() && isAbsPath(st.project.path)) {
+      saveToPath(st.project.path);
+      return;
+    }
     saveAs();
+  }
+
+  /* Écrit le projet dans un chemin déjà connu (⌘S sur un fichier
+   * ouvert/enregistré) : silencieux, sans dialogue. */
+  function saveToPath(target) {
+    var payload = JSON.stringify(serialize());
+    var w = writeText(target, payload);
+    if (w.error) {
+      MB.ui.toast(
+        'Échec de l‘enregistrement (' + w.error + ') — utilisez Fichier ▸ Enregistrer sous…',
+        'error'
+      );
+      return;
+    }
+    afterSaved(target, 'Enregistré · ' + basename(target));
+  }
+
+  /* Suite commune à un enregistrement réussi (saveToPath / saveAs). */
+  function afterSaved(target, message) {
+    markSaved();
+    /* Mémoire de l'emplacement pour le prochain enregistrement. */
+    writePrefs({ lastDir: dirname(target) });
+    rememberRecent(target);
+    /* v1.4 — miniature de l'écran d'accueil (best effort, asynchrone :
+     * la carte garde son motif par défaut si la rastérisation échoue). */
+    if (MB.exporter && typeof MB.exporter.thumbnail === 'function') {
+      MB.exporter.thumbnail(480, 320, function (dataUrl) {
+        if (dataUrl) setRecentThumb(target, dataUrl);
+      });
+    }
+    MB.ui.toast(message || 'Projet enregistré', 'success');
   }
 
   function saveAs() {
@@ -710,18 +857,7 @@
         return;
       }
       MB.store.setProject({ path: target });
-      markSaved();
-      /* Mémoire de l'emplacement pour le prochain enregistrement. */
-      writePrefs({ lastDir: dirname(target) });
-      rememberRecent(target);
-      /* v1.4 — miniature de l'écran d'accueil (best effort, asynchrone :
-       * la carte garde son motif par défaut si la rastérisation échoue). */
-      if (MB.exporter && typeof MB.exporter.thumbnail === 'function') {
-        MB.exporter.thumbnail(480, 320, function (dataUrl) {
-          if (dataUrl) setRecentThumb(target, dataUrl);
-        });
-      }
-      MB.ui.toast('Projet enregistré', 'success');
+      afterSaved(target, 'Projet enregistré');
     }
 
     if (isDesktop()) {
@@ -863,16 +999,20 @@
       /* Application autonome (Electron) : priorité absolue. */
       if (MB.desktop && MB.desktop.active) {
         MODE = 'desktop';
+        baseDir = '';
         dataDir = '';
         try {
           var d = MB.desktop.dataDir();
           if (isAbsPath(d)) {
             ensureDir(d);
-            if (probeFs(d)) dataDir = d;
+            if (probeFs(d)) baseDir = d;
           }
         } catch (e) {
-          dataDir = '';
+          baseDir = '';
         }
+        /* v1.7 — applique la préférence « fichiers temporaires et
+         * autosaves » (Préférences…), sinon dossier par défaut. */
+        applyDataDirPref();
         if (dataDir) {
           console.log('[Moodboard] Dossier de données (application) : ' + dataDir);
         } else {
@@ -890,7 +1030,8 @@
           cs = null;
         }
         if (!cs) return;
-        dataDir = resolveDataDir();
+        baseDir = resolveDataDir();
+        applyDataDirPref();
         if (dataDir) {
           console.log('[Moodboard] Dossier de données : ' + dataDir);
         } else {
@@ -916,6 +1057,16 @@
     dataDir: function () {
       return dataDir;
     },
+    /* v1.7 — Préférences : dossier des fichiers temporaires/autosaves. */
+    dataDirDefault: function () {
+      return baseDir;
+    },
+    dataDirIsCustom: function () {
+      return !!(dataDir && baseDir && !samePath(dataDir, baseDir));
+    },
+    pickDataDir: pickDataDir,
+    setDataDir: setDataDir,
+    resetDataDir: resetDataDir,
     serialize: serialize,
     markDirty: markDirty,
     markSaved: markSaved,

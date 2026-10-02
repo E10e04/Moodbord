@@ -23,6 +23,7 @@
 const { app, BrowserWindow, Menu, ipcMain, dialog, shell, session } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const https = require('https');
 
 /* Chargement depuis file:// avec CSP stricte : les sous-ressources
  * relatives (js/, css/, assets/) doivent rester autorisées. */
@@ -180,6 +181,10 @@ function buildMenu() {
       { label: 'Ouvrir…', click: () => send('file:open') },
       { label: 'Enregistrer', click: () => send('file:save') },
       { label: 'Enregistrer sous…', click: () => send('file:saveas') },
+      { type: 'separator' },
+      /* v1.7 — Préférences : dossier des fichiers temporaires et
+       * autosaves (délégué à la page, raccourci ⌘, géré par elle). */
+      { label: 'Préférences…', click: () => send('app:preferences') },
       { type: 'separator' },
       { label: 'Importer des images…', click: () => send('file:import-images') },
       { label: 'Charger le tableau de démonstration', click: () => send('file:demo') },
@@ -368,8 +373,30 @@ ipcMain.handle('dialog:open', async () => {
   return r.canceled || !r.filePaths || !r.filePaths.length ? null : r.filePaths[0];
 });
 
+/* v1.7 — Préférences : dialogue natif de choix d'un DOSSIER (dossier des
+ * fichiers temporaires et autosaves). Retour { err, path }. */
+ipcMain.handle('dialog:pickDir', async (ev, opts) => {
+  const o = opts || {};
+  if (!win || win.isDestroyed()) return { err: 1 };
+  const cfg = {
+    title: (o && o.prompt) || 'Choisir un dossier',
+    properties: ['openDirectory', 'createDirectory']
+  };
+  if (typeof o.defaultDir === 'string' && path.isAbsolute(o.defaultDir)) {
+    try {
+      if (fs.existsSync(o.defaultDir)) cfg.defaultPath = o.defaultDir;
+    } catch (err) {
+      /* sans dossier initial */
+    }
+  }
+  const r = await dialog.showOpenDialog(win, cfg);
+  if (r.canceled || !r.filePaths || !r.filePaths.length) return { err: 1 };
+  return { err: 0, path: r.filePaths[0] };
+});
+
 ipcMain.handle('desktop:info', () => ({
   platform: process.platform,
+  arch: process.arch, /* v1.7 — sélection de l'installateur (dmg x64/arm64) */
   versions: process.versions,
   userData: app.getPath('userData')
 }));
@@ -383,6 +410,121 @@ ipcMain.handle('shell:reveal', async (_e, p) => {
     return { err: 0 };
   } catch (err) {
     return { err: 1 };
+  }
+});
+
+/* ------------------------------------------------- v1.7 — mises à jour
+ * Le téléchargement des installateurs (dizaines de Mo) vit dans le
+ * processus principal : streaming direct vers le disque (pas de chaîne
+ * IPC géante), progression envoyée au renderer par événements. */
+
+/* Lancer un fichier téléchargé (installateur .exe / image disque .dmg). */
+ipcMain.handle('shell:launch', async (_e, p) => {
+  if (typeof p !== 'string' || !path.isAbsolute(p)) return { err: 1 };
+  try {
+    const errMsg = await shell.openPath(p);
+    return { err: errMsg ? 1 : 0 };
+  } catch (err) {
+    return { err: 1 };
+  }
+});
+
+/* Ouvrir une URL dans le navigateur par défaut (page des releases). */
+ipcMain.handle('shell:openUrl', async (_e, url) => {
+  if (typeof url !== 'string' || !/^https:\/\/(api\.)?github\.com\//.test(url)) {
+    return { err: 1 };
+  }
+  try {
+    await shell.openExternal(url);
+    return { err: 0 };
+  } catch (err) {
+    return { err: 1 };
+  }
+});
+
+/* Quitter proprement (après lancement d'un installateur). */
+ipcMain.on('app:quit', () => {
+  if (win && !win.isDestroyed()) win.__forceClose = true;
+  app.quit();
+});
+
+/* Télécharge `url` (release GitHub — redirections suivies) dans `dir` ;
+ * événements 'update-progress' { received, total, pct } vers le renderer.
+ * Retour { err, path, size } ou { err, message }. */
+ipcMain.handle('update:download', async (ev, url, dir) => {
+  if (typeof url !== 'string' || !/^https:\/\//.test(url)) return { err: 1 };
+  if (typeof dir !== 'string' || !path.isAbsolute(dir)) return { err: 1 };
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+  } catch (err) {
+    return { err: 1 };
+  }
+  let name = 'installateur';
+  try {
+    name = decodeURIComponent(new URL(url).pathname.split('/').pop()) || name;
+  } catch (err) {
+    /* nom par défaut */
+  }
+  const dest = path.join(dir, name);
+  const sendProgress = (received, total) => {
+    if (win && !win.isDestroyed()) {
+      win.webContents.send('update-progress', {
+        received: received,
+        total: total,
+        pct: total ? Math.min(100, (received / total) * 100) : 0
+      });
+    }
+  };
+  try {
+    await new Promise((resolve, reject) => {
+      const get = (u, depth) => {
+        if (depth > 6) {
+          reject(new Error('trop de redirections'));
+          return;
+        }
+        const req = https.get(u, { headers: { 'User-Agent': 'Moodboard-Updater' } }, (res) => {
+          if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+            res.resume();
+            get(new URL(res.headers.location, u).href, depth + 1);
+            return;
+          }
+          if (res.statusCode !== 200) {
+            res.resume();
+            reject(new Error('HTTP ' + res.statusCode));
+            return;
+          }
+          const total = parseInt(res.headers['content-length'] || '0', 10);
+          let received = 0;
+          let lastSent = 0;
+          const out = fs.createWriteStream(dest);
+          res.on('data', (chunk) => {
+            received += chunk.length;
+            const now = Date.now();
+            if (now - lastSent > 120) {
+              lastSent = now;
+              sendProgress(received, total);
+            }
+          });
+          res.on('error', reject);
+          out.on('error', reject);
+          out.on('finish', () => {
+            sendProgress(received, total);
+            resolve();
+          });
+          res.pipe(out);
+        });
+        req.on('error', reject);
+      };
+      get(url, 0);
+    });
+    return { err: 0, path: dest, size: fs.statSync(dest).size };
+  } catch (err) {
+    try {
+      fs.unlinkSync(dest);
+    } catch (e) {
+      /* fichier peut-être absent */
+    }
+    return { err: 1, message: String((err && err.message) || err) };
   }
 });
 
