@@ -64,7 +64,8 @@
             text: 'Double-cliquez pour écrire…',
             color: '#F7D46A',
             fontSize: 15,
-            fontFamily: (extra && extra.fontFamily) || (MB.fonts ? MB.fonts.default() : 'Georgia')
+            fontFamily: (extra && extra.fontFamily) || (MB.fonts ? MB.fonts.default() : 'Georgia'),
+            html: ''
           };
           return n;
         }
@@ -74,7 +75,9 @@
           c.data = {
             text: 'Un commentaire…',
             author: 'Vous',
-            color: '#4C8DFF'
+            color: '#4C8DFF',
+            fontFamily: (extra && extra.fontFamily) || (MB.fonts ? MB.fonts.default() : 'Georgia'),
+            fontSize: 13
           };
           return c;
         }
@@ -141,7 +144,8 @@
           lk.data = {
             url: url,
             title: (extra && extra.title) || U.titleFromUrl(url),
-            domain: U.domainOf(url)
+            domain: U.domainOf(url),
+            titleFont: (extra && extra.titleFont) || ''
           };
           return lk;
         }
@@ -197,7 +201,9 @@
           sc.data = {
             title: 'Section',
             color: '#2C2C2C',
-            showTitle: true
+            showTitle: true,
+            titleFont: (extra && extra.titleFont) || '',
+            titleSize: 15
           };
           return sc;
         }
@@ -206,7 +212,9 @@
           var co = base('column', p, Object.assign({ w: 250, h: 400 }, extra));
           co.data = {
             title: 'Colonne',
-            color: '#2A2A2A'
+            color: '#2A2A2A',
+            titleFont: (extra && extra.titleFont) || '',
+            titleSize: 15
           };
           return co;
         }
@@ -227,7 +235,17 @@
             rows: rows,
             cols: colsN,
             header: !(extra && extra.header === false),
-            cells: cells
+            cells: cells,
+            /* v1.8 — couleurs par cellule / en-tête / ligne / colonne +
+             * police du texte du tableau. */
+            cellBg: (extra && extra.cellBg) || '#252525',
+            headBg: (extra && extra.headBg) || '#3A3A3A',
+            textColor: (extra && extra.textColor) || '#F5F5F5',
+            headColor: (extra && extra.headColor) || '#F5F5F5',
+            rowBgs: (extra && extra.rowBgs) || [],
+            colBgs: (extra && extra.colBgs) || [],
+            fontFamily: (extra && extra.fontFamily) || (MB.fonts ? MB.fonts.default() : 'Georgia'),
+            fontSize: (extra && extra.fontSize) || 12
           };
           return tb;
         }
@@ -240,7 +258,9 @@
           var ck = base('checklist', p, Object.assign({ w: 260, h: 60 + items.length * 38 }, extra));
           ck.data = {
             title: (extra && extra.title) || 'Checklist',
-            items: items
+            items: items,
+            fontFamily: (extra && extra.fontFamily) || (MB.fonts ? MB.fonts.default() : 'Georgia'),
+            fontSize: 13
           };
           return ck;
         }
@@ -264,9 +284,23 @@
             title: (extra && extra.title) || 'Planche',
             elCount: 0,
             thumb: null,
+            titleFont: (extra && extra.titleFont) || '',
+            titleSize: 19,
             doc: (extra && extra.doc) || { elements: [], camera: null }
           };
           return bd;
+        }
+
+        case 'import': {
+          /* v1.8 — carte d'import : station de dépôt sur le canvas.
+           * Double-clic → explorateur ; glisser-déposer de fichiers sur
+           * la carte → import sur place (images, fichiers, moodboards —
+           * un .moodboard importé devient une planche liée nommée). */
+          var im = base('import', p, Object.assign({ w: 250, h: 190 }, extra));
+          im.data = {
+            title: (extra && extra.title) || 'Importer des médias'
+          };
+          return im;
         }
 
         case 'group': {

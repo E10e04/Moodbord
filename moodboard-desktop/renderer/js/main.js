@@ -21,6 +21,7 @@
     MB.ui.topbar.init();
     MB.ui.library.init();
     MB.ui.inspector.init();
+    if (MB.ui.richbar) MB.ui.richbar.init(); // v1.8 — barre de mise en forme (édition riche)
     MB.ui.contextbar.init();
     MB.ui.contextmenu.init();
     if (MB.ui.home) MB.ui.home.init(); // v1.3 — écran d'accueil (bureau uniquement, inerte ailleurs)
@@ -98,11 +99,14 @@
       danger: true
     }).then(function (ok) {
       if (!ok) return;
+      /* v1.8 — l'autosave est purgé AVANT le changement de document :
+       * c'est le slot du projet qu'on quitte qui doit être effacé
+       * (slots par projet — cf. storage.js). */
+      MB.storage.clearAutosave();
       if (MB.boards) MB.boards.reset();
       MB.store.loadDocument({ name: 'Sans titre', elements: [] });
       MB.camera.fit(null);
       MB.storage.markSaved();
-      MB.storage.clearAutosave();
       MB.ui.toast('Nouveau tableau', 'success');
     });
   }
@@ -174,6 +178,19 @@
         });
       });
       MB.store.clearSelection();
+      /* v1.8 — le panneau Projet (éléments masqués) se rafraîchit :
+       * l'événement « elements » est émis après la mutation. */
+      MB.store.emit('elements');
+    },
+
+    /* v1.8 — révéler UN élément masqué (bouton œil du panneau Projet). */
+    revealElement: function (id) {
+      var el = MB.store.el(id);
+      if (!el || !el.hidden) return;
+      MB.store.mutate('Révéler', function () {
+        MB.store.updateElement(id, { hidden: false }, { transaction: true });
+      });
+      MB.store.emit('elements');
     },
 
     revealAll: function () {
@@ -190,6 +207,7 @@
           if (el.hidden) MB.store.updateElement(el.id, { hidden: false }, { transaction: true });
         });
       });
+      MB.store.emit('elements');
     },
 
     reorderSelection: function (mode) {

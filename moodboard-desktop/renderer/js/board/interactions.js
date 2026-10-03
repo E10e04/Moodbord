@@ -26,6 +26,7 @@
   var editingItem = null;
   var editingCell = null;
   var editingOriginal = null;
+  var editingOriginalHtml = null;
 
   var CLICK_CREATE = {
     text: 1, note: 1, color: 1, palette: 1, typography: 1,
@@ -40,7 +41,7 @@
     link: 'lien', file: 'fichier', line: 'ligne', shape: 'forme',
     section: 'section', column: 'colonne', table: 'tableau',
     checklist: 'checklist', sketch: 'croquis', board: 'planche',
-    group: 'groupe'
+    group: 'groupe', import: 'carte d’import'
   };
 
   function wrapEl() {
@@ -122,7 +123,51 @@
     });
   }
 
-  /* Import de fichiers (drop multi-fichiers avec cascade, §24/§23). */
+  function readAsText(file) {
+    return new Promise(function (resolve, reject) {
+      if (MB.storage.hasOsPaths() && file.path) {
+        var res = MB.storage.readText(file.path);
+        if (!res || res.error) return reject(new Error('Lecture impossible'));
+        resolve(res.text);
+        return;
+      }
+      var fr = new FileReader();
+      fr.onload = function () {
+        resolve(String(fr.result));
+      };
+      fr.onerror = function () {
+        reject(new Error('Lecture impossible'));
+      };
+      fr.readAsText(file);
+    });
+  }
+
+  /* v1.8 — import d'un fichier .moodboard : il devient une PLANCHE liée
+   * dans le moodboard courant, avec le nom du moodboard importé et le
+   * nombre d’éléments qu’il contient (demande utilisateur). */
+  function importMoodboardFile(f, point, i) {
+    return readAsText(f).then(function (raw) {
+      var parsed = MB.storage.parseDoc ? MB.storage.parseDoc(raw) : null;
+      if (!parsed || !parsed.doc) {
+        throw new Error('Fichier .moodboard invalide');
+      }
+      var doc = parsed.doc;
+      var title = doc.name || String(f.name || 'Planche').replace(/\.moodboard$/i, '');
+      var bEl = MB.factory.create('board', point, {
+        title: title,
+        doc: { elements: doc.elements, camera: doc.camera, name: title },
+        elCount: (doc.elements || []).length
+      });
+      bEl.x = bEl.x + i * 26;
+      bEl.y = bEl.y + i * 26;
+      Store.addElements([bEl], { transaction: true });
+      return bEl;
+    });
+  }
+
+  /* Import de fichiers (drop multi-fichiers avec cascade, §24/§23).
+   * v1.8 — les .moodboard deviennent des planches liées ; le reste
+   * suit l’ancien comportement (image → image, autre → carte fichier). */
   function importFiles(fileList, atPoint) {
     var files = Array.prototype.slice.call(fileList || []);
     if (!files.length) return;
@@ -137,10 +182,15 @@
         Store.setSelection(created.map(function (c) {
           return c.id;
         }));
+        var boards = created.filter(function (e) {
+          return e.type === 'board';
+        }).length;
         MB.ui.toast(
           created.length === 1
-            ? '1 élément importé'
-            : created.length + ' éléments importés',
+            ? boards
+              ? 'Planche liée importée'
+              : '1 élément importé'
+            : created.length + ' éléments importés' + (boards ? ' (dont ' + boards + ' planche' + (boards > 1 ? 's' : '') + ')' : ''),
           'success'
         );
       } else if (failures) {
@@ -155,6 +205,23 @@
     files.forEach(function (f, i) {
       var isImg = /^image\//.test(f.type) ||
         /\.(png|jpe?g|gif|webp|svg|bmp|avif)$/i.test(f.name || '');
+      var isMb = /\.moodboard$/i.test(f.name || '') ||
+        (f.type === 'application/json' && /\.json$/i.test(f.name || ''));
+      if (isMb && !isImg) {
+        importMoodboardFile(f, point, i)
+          .then(function (el) {
+            created.push(el);
+          })
+          .catch(function (err) {
+            failures++;
+            console.warn('Import moodboard échoué :', f.name, err);
+          })
+          .then(function () {
+            pending--;
+            if (pending === 0) finish();
+          });
+        return;
+      }
       readAsDataURL(f)
         .then(function (dataUrl) {
           if (isImg) {
@@ -246,7 +313,11 @@
 
   /* v1.6 — hauteur vivante pendant l'édition : le texte multi-paragraphes
    * reste visible (la boîte grandit à mesure qu'on écrit, comme à la
-   * sortie). Mesure sur l'événement input + une passe au démarrage. */
+   * sortie). Mesure sur l'événement input + une passe au démarrage.
+   * v1.8 — CROISSANCE UNIQUEMENT : une note redimensionnée manuellement
+   * (autoH coupé) ne doit pas « sauter » à la hauteur du contenu dès le
+   * premier appui d'édition — la boîte grandit quand le contenu déborde,
+   * elle ne rétrécit jamais sous la main de l'utilisateur. */
   function liveAutoHeight(el) {
     var id = el.id;
     return function () {
@@ -256,12 +327,43 @@
       var body = view.node.firstElementChild;
       if (!body || !body.isConnected) return;
       var needed = Math.ceil(body.scrollHeight);
-      if (needed > 0 && Math.abs(needed - live.h) > 2) {
+      if (needed > 0 && needed > live.h + 2) {
         live.h = needed;
         view.node.style.height = live.h + 'px';
         Board.refreshOverlay();
       }
     };
+  }
+
+  /* v1.8 — champs RICHES : le corps des notes et des textes s’édite en
+   * HTML (gras, italique, souligné, surlignage, listes à puces, police
+   * par sélection) — voir core/richtext.js et ui/richbar.js. Les autres
+   * champs (titres, noms, tâches, cellules) restent en texte brut. */
+  function isRichField(el, field) {
+    return field === 'text' && !!el && (el.type === 'note' || el.type === 'text');
+  }
+
+  /* Le collage dans un champ riche insère du TEXTE BRUT : le HTML
+   * externe (Word, navigateurs…) apporte des styles incompatibles avec
+   * le canvas — la sanitiséation n’autorise que ce que l’éditeur produit. */
+  function bindPlainPaste(node) {
+    node.addEventListener('paste', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      var text = '';
+      if (e.clipboardData && typeof e.clipboardData.getData === 'function') {
+        text = e.clipboardData.getData('text/plain');
+      } else if (window.clipboardData) {
+        text = window.clipboardData.getData('Text');
+      }
+      if (text) {
+        if (document.execCommand) {
+          document.execCommand('insertText', false, text);
+        } else {
+          node.appendChild(document.createTextNode(text));
+        }
+      }
+    });
   }
 
   function startEditing(el, field) {
@@ -270,9 +372,16 @@
     var node = editableNode(el, field);
     if (!node) return;
     Store.setUI({ editingId: el.id });
-    node.setAttribute('contenteditable', 'plaintext-only');
+    var rich = isRichField(el, field);
+    node.setAttribute('contenteditable', rich ? 'true' : 'plaintext-only');
+    if (rich) bindPlainPaste(node);
     node.classList.add('is-editing');
     editingOriginal = field === 'name' ? el.data.name : el.data[field];
+    if (rich) {
+      editingOriginalHtml = MB.rich ? MB.rich.sanitize(node.innerHTML) : null;
+    } else {
+      editingOriginalHtml = null;
+    }
     MB.hist.begin('Modifier ' + typeName(el.type));
     node.focus();
     attachEditingKeys(node, true);
@@ -305,12 +414,21 @@
     var node = view ? view.node.querySelector('.is-editing') : null;
     if (el && node) {
       var field = node.getAttribute('data-field');
+      var rich = isRichField(el, field);
       var text = node.innerText.replace(/\n+$/, '');
       if (field === 'text') el.data.text = text;
       else if (field === 'title') el.data.title = text;
       else if (field === 'name') el.data.name = text;
+      if (rich) {
+        /* v1.8 — le corps riche est sanitisé puis conservé dans
+         * data.html ; data.text (recherche, export, repli) reste la
+         * version texte. */
+        el.data.html = MB.rich ? MB.rich.sanitize(node.innerHTML) : '';
+        if (!el.data.html) delete el.data.html;
+      }
       var now = field === 'name' ? el.data.name : el.data[field];
-      if (now !== editingOriginal) {
+      var nowHtml = rich ? (el.data.html !== undefined ? el.data.html : '') : null;
+      if (now !== editingOriginal || (rich && nowHtml !== editingOriginalHtml)) {
         Store.nextRev(el);
         MB.storage.markDirty();
       } else {
@@ -319,6 +437,7 @@
     }
     Store.setUI({ editingId: null });
     editingOriginal = null;
+    editingOriginalHtml = null;
     if (view && el) view.renderContent(el);
     if (el) Board.updateViews([el.id]);
   }
@@ -586,6 +705,28 @@
     return { x: cx + r.x, y: cy + r.y };
   }
 
+  /* v1.8 — tailles minimales au redimensionnement : une poignée tirée
+   * au-delà du bord opposé ne doit JAMAIS replier la carte à 10 px
+   * (rapport utilisateur : note longue redimensionnée par le bas → toute
+   * la carte « se replie »). Les types à hauteur automatique gardent
+   * une hauteur minimum lisible (plusieurs lignes). */
+  var MIN_SIZES = {
+    note: { w: 88, h: 96 },
+    text: { w: 64, h: 40 },
+    comment: { w: 100, h: 72 },
+    checklist: { w: 120, h: 96 },
+    table: { w: 120, h: 60 },
+    import: { w: 140, h: 110 },
+    link: { w: 120, h: 56 },
+    file: { w: 120, h: 56 },
+    board: { w: 140, h: 88 }
+  };
+
+  function minSizeFor(el) {
+    var m = MIN_SIZES[el && el.type] || { w: 28, h: 22 };
+    return m;
+  }
+
   function startResize(e, h, id) {
     var el = Store.el(id);
     if (!el || el.locked) return;
@@ -720,7 +861,7 @@
     for (var i = st.elements.length - 1; i >= 0; i--) {
       var t = st.elements[i];
       if (t.hidden || t.locked) continue;
-      if (t.type === 'line' || t.type === 'sketch' || t.type === 'group') continue;
+      if (t.type === 'line' || t.type === 'sketch' || t.type === 'group' || t.type === 'import') continue;
       if (excludeIds.indexOf(t.id) >= 0) continue;
       var sides = [
         ['left', t.x, t.y + t.h / 2],
@@ -915,12 +1056,13 @@
         var d = { x: p2.x - cx, y: p2.y - cy };
         var l = U.rot(d.x, d.y, -U.degToRad(g.start.rot));
         var dir = handleDir(g.h);
+        var min = minSizeFor(el);
         var newW = g.start.w;
         var newH = g.start.h;
-        if (dir.hx > 0) newW = Math.max(10, l.x + g.start.w / 2);
-        if (dir.hx < 0) newW = Math.max(10, g.start.w / 2 - l.x);
-        if (dir.hy > 0) newH = Math.max(10, l.y + g.start.h / 2);
-        if (dir.hy < 0) newH = Math.max(10, g.start.h / 2 - l.y);
+        if (dir.hx > 0) newW = Math.max(min.w, l.x + g.start.w / 2);
+        if (dir.hx < 0) newW = Math.max(min.w, g.start.w / 2 - l.x);
+        if (dir.hy > 0) newH = Math.max(min.h, l.y + g.start.h / 2);
+        if (dir.hy < 0) newH = Math.max(min.h, g.start.h / 2 - l.y);
 
         var ratio = g.ratio;
         if (e.shiftKey) ratio = ratio ? null : g.start.h / g.start.w;
@@ -1124,11 +1266,14 @@
       case 'resize': {
         hideBadge();
         MB.hist.commit();
-        if (g.el.type === 'text') {
-          var v = Board.viewOf(g.el.id);
-          if (v) {
-            g.el.data.autoH = false;
-          }
+        /* v1.8 — le redimensionnement manuel coupe la hauteur automatique
+         * pour TOUS les types à hauteur vivante (note, commentaire,
+         * checklist, texte) : la taille choisie par l'utilisateur doit
+         * rester (le contenu reste éditable et la carte grandit à nouveau
+         * pendant l'édition). */
+        if (g.el && g.el.data && /^(text|note|comment|checklist)$/.test(g.el.type)) {
+          g.el.data.autoH = false;
+          Store.nextRev(g.el);
         }
         Board.updateViews([g.el.id]);
         break;
@@ -1227,7 +1372,11 @@
       }
 
       case 'create-click': {
-        if (g.tool === 'image' || g.tool === 'import') {
+        /* v1.8 — l’outil Importer : un clic sur le canvas crée la CARTE
+         * d’import (icône au centre, dépôt de fichiers, double-clic →
+         * explorateur) ; l’outil Image garde l’ancien comportement
+         * (sélecteur direct). */
+        if (g.tool === 'image') {
           openImportPicker(g.anchor);
           Store.setTool('select');
         } else {
@@ -1263,6 +1412,7 @@
    * journal de diagnostic (MB.diaglog). */
   var orphanTimer = null;
   var ORPHAN_MS = 600;
+  var dragCard = null; /* v1.8 — carte d’import survolée par un dépôt */
 
   function armOrphan(reason) {
     if (MB.diaglog) {
@@ -1376,6 +1526,18 @@
 
   function onDblClick(e) {
     if (e.target.closest('#contextbar, .ctx-pop, #empty-hint')) return;
+
+    /* v1.8 — carte d’import : le double-clic ouvre l’explorateur
+     * (Finder / Explorateur Windows) et les fichiers choisis atterrissent
+     * au centre de la carte. */
+    var importHost = e.target.closest('.mb-el--import');
+    if (importHost) {
+      var iEl = Store.el(importHost.dataset.id);
+      if (iEl && !iEl.locked) {
+        openImportPicker({ x: iEl.x + iEl.w / 2, y: iEl.y + iEl.h / 2 });
+      }
+      return;
+    }
 
     var fieldNode = e.target.closest('[data-field]');
     if (fieldNode) {
@@ -1536,18 +1698,42 @@
       e.preventDefault();
       e.dataTransfer.dropEffect = 'copy';
       wrapEl().classList.add('is-droptarget');
+      /* v1.8 — survol d’une carte d’import : la carte s’illumine (c’est
+       * elle la zone de dépôt). */
+      var card = e.target.closest ? e.target.closest('.mb-el--import') : null;
+      if (card !== dragCard) {
+        if (dragCard) dragCard.classList.remove('is-droptarget');
+        dragCard = card || null;
+        if (dragCard) dragCard.classList.add('is-droptarget');
+      }
     }
   }
 
   function onDragLeave() {
     wrapEl().classList.remove('is-droptarget');
+    if (dragCard) {
+      dragCard.classList.remove('is-droptarget');
+      dragCard = null;
+    }
   }
 
   function onDrop(e) {
     wrapEl().classList.remove('is-droptarget');
+    if (dragCard) {
+      dragCard.classList.remove('is-droptarget');
+      dragCard = null;
+    }
     if (!e.dataTransfer || !e.dataTransfer.files || !e.dataTransfer.files.length) return;
     e.preventDefault();
-    importFiles(e.dataTransfer.files, canvasPoint(e));
+    /* v1.8 — dépôt sur une carte d’import : les fichiers atterrissent au
+     * centre de la carte (images, documents, moodboards → planche). */
+    var card = e.target.closest ? e.target.closest('.mb-el--import') : null;
+    var host = card ? Store.el(card.dataset.id) : null;
+    if (host) {
+      importFiles(e.dataTransfer.files, { x: host.x + host.w / 2, y: host.y + host.h / 2 });
+    } else {
+      importFiles(e.dataTransfer.files, canvasPoint(e));
+    }
   }
 
   function onKeyDown(e) {

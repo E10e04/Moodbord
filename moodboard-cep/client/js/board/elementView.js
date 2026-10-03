@@ -53,7 +53,10 @@
           var again = node.querySelector('[data-field="' + field + '"]');
           if (again && MB.store.s().ui.editingId === x.id) {
             again.classList.add('is-editing');
-            again.setAttribute('contenteditable', 'plaintext-only');
+            /* v1.8 — les champs riches (corps des notes/textes) repassent
+             * en contenteditable HTML, les autres en texte brut. */
+            var rich = field === 'text' && (x.type === 'note' || x.type === 'text');
+            again.setAttribute('contenteditable', rich ? 'true' : 'plaintext-only');
           }
         }
         void cropMode;

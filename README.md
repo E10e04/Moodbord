@@ -194,7 +194,7 @@ npm run dist:mac               # → dist/Moodboard-1.4.0-x64.dmg + arm64.dmg (s
 
 ## 🧪 Vérifications effectuées
 
-- **Web/CEP — 365/365 tests E2E navigateur** (8 suites : v1.6.1, v1.6.0, v1.5.0 ×2 phases, v1.4.0 ×2 phases, v1.3.0, v1.2.0, events, v1.0.2) + **83/83 assertions de stockage** (simulation fidèle du moteur CEP) : drags au 1/100 de pixel,
+- **Web/CEP — 384/384 tests E2E navigateur** (9 suites : v1.8.0, v1.6.1, v1.6.0, v1.5.0 ×2 phases, v1.4.0 ×2 phases, v1.3.0, v1.2.0, events, v1.0.2) + **114/114 assertions de stockage** (83 v1.4-1.7 + 31 v1.8 : slots par projet, noms synchronisés) : drags au 1/100 de pixel,
   simulation CEP sans Pointer Events, survie blur/pointercancel, undo exact.
 - **Bureau — 10/10 tests E2E** sous Electron headless (Xvfb) : déplacement
   d'élément delta monde exact, autosave persisté sur disque via IPC, CSP
@@ -217,6 +217,46 @@ npm run dist:mac               # → dist/Moodboard-1.4.0-x64.dmg + arm64.dmg (s
    placeholder générés par IA.
 
 ## 📜 Changelog
+
+### v1.8.0 — notes riches, groupes réparés, outil Importer, tableaux, favoris
+
+1. **Notes et textes riches** : pendant l'édition, une **barre de mise en
+   forme** apparaît au-dessus de la carte — **gras, italique, souligné,
+   barré, surlignage, listes à puces / numérotées et police de la
+   sélection**. L'inspecteur convertit aussi une note entière en liste à
+   puces (ou retire la mise en forme). HTML sanitisé (liste blanche),
+   collage en texte brut, formatage persistant (`data.html` + repli
+   texte pour la recherche/export).
+2. **Éléments groupés réparés** : glisser un groupe déplace désormais
+   ses éléments ; suppression et copier-coller emportent le contenu
+   (correctif de la fermeture de sélection qui excluait les enfants).
+3. **Outil Importer repensé** : **double-clic sur l'outil → explorateur /
+   Finder** ; glisser l'outil sur le canvas crée une **carte d'import**
+   (icône au centre, glisser-déposer de fichiers dessus). Tout
+   s'importe — y compris les **moodboards** : un fichier `.moodboard`
+   devient une **planche liée** qui reprend son nom et son nombre
+   d'éléments.
+4. **Tableaux** : couleurs de toutes les cellules, de la ligne
+   d'en-têtes, d'une ligne ou d'une colonne précise + couleur du texte,
+   police et taille du tableau (inspecteur enrichi).
+5. **Police de tous les outils** : chaque outil qui écrit du texte
+   expose la police — notes, textes, commentaires, checklists,
+   tableaux, titres de sections, colonnes, planches et liens.
+6. **Favoris de polices** : épinglez vos familles (♥) puis filtrez le
+   popover avec le bouton **Favoris** — mémorisé pour tous les
+   moodboards (prefs partagées).
+7. **Dossier des caches global** : le dossier des Préférences
+   s'applique à **tous les moodboards** avec un **autosave par projet**
+   (jamais écrasé par un autre) ; ouvrir un projet restaure sa version
+   non enregistrée si elle est plus récente.
+8. **Nom du projet ↔ nom du fichier** : « Enregistrer sous… » propose le
+   nom saisi en barre supérieure et le fichier renommé met à jour le nom
+   du projet (barre supérieure, fil d'Ariane, contenu du fichier).
+9. **Panneau Projet** : les éléments masqués avec l'œil restent listés
+   avec un bouton de réactivation (et « Tout révéler »).
+10. **Notes stables** : le redimensionnement par le bas ne replie plus
+    la carte (hauteur minimum lisible) et la taille choisie n'est plus
+    écrasée par la hauteur automatique.
 
 ### v1.7.0 — mises à jour GitHub, préférences, enregistrement direct, carte planche redessinée
 

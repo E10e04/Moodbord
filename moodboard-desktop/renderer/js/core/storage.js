@@ -38,7 +38,14 @@
    *             l'application et l'extension) ;
    *   dataDir — dossier ACTIF pour les données (autosave, récents,
    *             journaux) : baseDir, ou dossier choisi dans les
-   *             Préférences (« fichiers temporaires et autosaves »). */
+   *             Préférences (« fichiers temporaires et autosaves »).
+   * v1.8 — le dossier choisi s'applique à TOUS les moodboards : chaque
+   *   projet enregistré possède SON slot d'autosave dans ce dossier
+   *   (autosave-<clé>.moodboard) référencé par autosave-index.json ; le
+   *   slot générique autosave.moodboard couvre les projets non
+   *   enregistrés. Ouvrir un projet NE supprime plus l'autosave d'un
+   *   autre (ancien comportement : un seul slot global écrasé à chaque
+   *   changement de fichier). */
   var baseDir = '';
   var dataDir = '';
   var WEB_KEY = 'mb.autosave.v1';
@@ -46,8 +53,10 @@
   var fsWarned = false; // un seul toast d'échec d'autosave par session
 
   /* Fichiers de données qui suivent le dossier choisi dans les
-   * Préférences (copiés lors du changement de dossier). */
+   * Préférences (copiés lors du changement de dossier). Les slots
+   * d'autosave par projet (v1.8) sont migrés via l'index. */
   var DATA_FILES = ['autosave.moodboard', 'recent.json', 'flag-demo.done', 'diagnostic.log'];
+  var AUTOSAVE_INDEX = 'autosave-index.json';
 
   function joinPath(a, b) {
     return String(a || '').replace(/[\\/]+$/, '') + '/' + b;
@@ -175,8 +184,91 @@
     return '';
   }
 
+  /* v1.8 — slot d'autosave PAR PROJET : la clé dérive du chemin du
+   * fichier (.moodboard) — basée sur un hash court pour rester
+   * lisible ET unique (les chemins peuvent partager leur suffixe). */
+  function hashPath(p) {
+    var s = String(p).toLowerCase();
+    var h = 5381;
+    for (var i = 0; i < s.length; i++) {
+      h = ((h << 5) + h + s.charCodeAt(i)) >>> 0;
+    }
+    var base = s.replace(/[\\/]+/g, '-').replace(/[^a-z0-9-]+/g, '').slice(-40);
+    return (base ? base + '-' : '') + h.toString(36);
+  }
+
+  function slotFileFor(path) {
+    if (!isAbsPath(path)) return 'autosave.moodboard';
+    return 'autosave-' + hashPath(path) + '.moodboard';
+  }
+
   function slotPath() {
-    return dataDir + '/autosave.moodboard';
+    return dataDir + '/' + slotFileFor(MB.store.s().project.path);
+  }
+
+  /* Index des slots (autosave-index.json) : [{file, path, name,
+   * savedAt}] — écrit à chaque autosave, lu pour la reprise de session
+   * (slot le plus récent) et la migration de dossier. */
+  function readAutosaveIndex() {
+    if (!isFs()) return [];
+    var r = readText(dataDir + '/' + AUTOSAVE_INDEX);
+    if (r.error || !r.text) return [];
+    try {
+      var arr = JSON.parse(r.text);
+      if (!Array.isArray(arr)) return [];
+      return arr.filter(function (x) {
+        return x && typeof x.file === 'string' && !/[\\/]/.test(x.file);
+      });
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function writeAutosaveIndex(list) {
+    if (!isFs()) return;
+    try {
+      writeText(dataDir + '/' + AUTOSAVE_INDEX, JSON.stringify(list.slice(0, 40)));
+    } catch (e) {
+      /* non bloquant */
+    }
+  }
+
+  function updateAutosaveIndex() {
+    if (!isFs()) return;
+    var st = MB.store.s();
+    var file = slotFileFor(st.project.path);
+    var entry = {
+      file: file,
+      path: isAbsPath(st.project.path) ? st.project.path : '',
+      name: st.project.name || 'Sans titre',
+      savedAt: new Date().toISOString()
+    };
+    var list = readAutosaveIndex().filter(function (e) {
+      return e.file !== file;
+    });
+    list.unshift(entry);
+    writeAutosaveIndex(list);
+  }
+
+  /* Le slot d'autosave existant le plus récent (reprise de session) :
+   * l'index d'abord (ordre savedAt), puis le slot générique legacy. */
+  function latestAutosaveSlot() {
+    if (!isFs()) return null;
+    var idx = readAutosaveIndex();
+    for (var i = 0; i < idx.length; i++) {
+      var r = readText(dataDir + '/' + idx[i].file);
+      if (!r.error && r.text && r.text.length > 2) {
+        var out = {};
+        for (var k in idx[i]) out[k] = idx[i][k];
+        if (!out.savedAt) out.savedAt = '';
+        return out;
+      }
+    }
+    var legacy = readText(dataDir + '/autosave.moodboard');
+    if (!legacy.error && legacy.text && legacy.text.length > 2) {
+      return { file: 'autosave.moodboard', path: '', name: '', savedAt: '' };
+    }
+    return null;
   }
 
   function cleanElement(e) {
@@ -411,6 +503,9 @@
         }
         return;
       }
+      /* v1.8 — le slot du projet courant est référencé dans l'index
+       * (reprise de session la plus récente + migration de dossier). */
+      updateAutosaveIndex();
     } else {
       if (!webStore(payload)) {
         MB.store.setUI({ saveState: 'unsaved' });
@@ -436,8 +531,7 @@
 
   function hasAutosave() {
     if (isFs()) {
-      var r = readText(slotPath());
-      return !r.error && !!r.text && r.text.length > 2;
+      return !!latestAutosaveSlot();
     }
     try {
       return !!localStorage.getItem(WEB_KEY);
@@ -447,19 +541,24 @@
   }
 
   function loadAutosave() {
-    var raw;
     if (isFs()) {
-      var r = readText(slotPath());
+      var slot = latestAutosaveSlot();
+      if (!slot) return { error: 'Aucun autosave.' };
+      var r = readText(dataDir + '/' + slot.file);
       if (r.error) return { error: 'Aucun autosave.' };
-      raw = r.text;
-    } else {
-      raw = localStorage.getItem(WEB_KEY);
-      if (!raw) return { error: 'Aucun autosave.' };
+      var parsed = parseDoc(r.text);
+      if (parsed.error) return parsed;
+      /* v1.8 — la session reprise se rattache à son fichier projet le
+       * cas échéant : ⌘S enregistre là où l'utilisateur avait enregistré. */
+      parsed.doc.path = isAbsPath(slot.path) ? slot.path : null;
+      return parsed;
     }
-    var parsed = parseDoc(raw);
-    if (parsed.error) return parsed;
-    parsed.doc.path = null;
-    return parsed;
+    var raw = localStorage.getItem(WEB_KEY);
+    if (!raw) return { error: 'Aucun autosave.' };
+    var parsedWeb = parseDoc(raw);
+    if (parsedWeb.error) return parsedWeb;
+    parsedWeb.doc.path = null;
+    return parsedWeb;
   }
 
   /* ------------------------------------------------------- opérations */
@@ -484,7 +583,7 @@
   }
 
   function readPrefs() {
-    var base = { lastDir: '', defaultFont: '', dataDir: '' };
+    var base = { lastDir: '', defaultFont: '', dataDir: '', fontFavs: [] };
     if (baseDir) {
       var r = readText(baseDir + '/' + PREFS_FILE);
       if (!r.error && r.text) {
@@ -494,7 +593,10 @@
             return {
               lastDir: isAbsPath(p.lastDir || '') ? p.lastDir : '',
               defaultFont: typeof p.defaultFont === 'string' ? p.defaultFont : '',
-              dataDir: isAbsPath(p.dataDir || '') ? p.dataDir : ''
+              dataDir: isAbsPath(p.dataDir || '') ? p.dataDir : '',
+              fontFavs: Array.isArray(p.fontFavs) ? p.fontFavs.filter(function (x) {
+                return typeof x === 'string' && x;
+              }) : []
             };
           }
         } catch (e) {
@@ -510,7 +612,8 @@
       return {
         lastDir: lastDir,
         defaultFont: pj && typeof pj.defaultFont === 'string' ? pj.defaultFont : '',
-        dataDir: pj && isAbsPath(pj.dataDir || '') ? pj.dataDir : ''
+        dataDir: pj && isAbsPath(pj.dataDir || '') ? pj.dataDir : '',
+        fontFavs: pj && Array.isArray(pj.fontFavs) ? pj.fontFavs : []
       };
     } catch (e) {
       return base;
@@ -601,8 +704,9 @@
   }
 
   /* Change le dossier actif : valide, migre les fichiers de données
-   * (autosave, récents…), mémorise la préférence. Retour {ok} ou
-   * {error}. prefValue permet d'écrire '' lors d'une remise à défaut. */
+   * (autosave — y compris les slots par projet via l'index —, récents…),
+   * mémorise la préférence. Retour {ok} ou {error}. prefValue permet
+   * d'écrire '' lors d'une remise à défaut. */
   function setDataDir(newDir, prefValue) {
     if (!baseDir) return { error: 'Persistance fichier indisponible dans cet environnement.' };
     if (!isAbsPath(newDir)) return { error: 'Chemin invalide.' };
@@ -611,7 +715,15 @@
     if (!probeFs(newDir)) return { error: 'Ce dossier n‘est pas accessible en écriture.' };
     var oldDir = dataDir;
     var moved = [];
-    DATA_FILES.forEach(function (f) {
+    /* v1.8 — la migration emporte AUSSI les slots d'autosave par
+     * projet (référencés par l'index) et l'index lui-même : le dossier
+     * choisi contient les caches de TOUS les moodboards. */
+    var files = DATA_FILES.slice();
+    readAutosaveIndex().forEach(function (e) {
+      if (files.indexOf(e.file) < 0) files.push(e.file);
+    });
+    files.push(AUTOSAVE_INDEX);
+    files.forEach(function (f) {
       var r = oldDir ? readText(joinPath(oldDir, f)) : { error: 'aucun' };
       if (!r.error && r.text) {
         if (!writeText(joinPath(newDir, f), r.text).error) moved.push(f);
@@ -840,23 +952,28 @@
   }
 
   function saveAs() {
-    var payload = JSON.stringify(serialize());
     var st = MB.store.s();
     var prefs = readPrefs();
-    /* Nom proposé : celui du fichier courant, sinon celui du projet. */
-    var fname = st.project.path ? basename(st.project.path) : safeName() + '.moodboard';
+    /* v1.8 — le nom proposé est TOUJOURS celui du projet (champ de la
+     * barre supérieure) : renommer puis Enregistrer / Enregistrer sous…
+     * propose le NOUVEAU nom (demande utilisateur). */
+    var fname = safeName() + '.moodboard';
     /* Dossier proposé : dernier enregistrement, sinon dossier du fichier
      * courant, sinon dossier par défaut de l'OS. */
     var dir = prefs.lastDir || (st.project.path ? dirname(st.project.path) : '');
 
     function landed(target) {
       if (!target) return; // annulé
+      /* v1.8 — le nom du fichier devient le nom du projet (champ haut,
+       * fil d'Ariane, sérialisation) : les deux restent synchrones. */
+      var name = basename(target).replace(/\.moodboard$/i, '') || 'Sans titre';
+      MB.store.setProject({ path: target, name: name });
+      var payload = JSON.stringify(serialize());
       var w = writeText(target, payload);
       if (w.error) {
         MB.ui.toast('Échec de l‘enregistrement : ' + w.error, 'error');
         return;
       }
-      MB.store.setProject({ path: target });
       afterSaved(target, 'Projet enregistré');
     }
 
@@ -875,13 +992,17 @@
       var target = saveDialog('Enregistrer le moodboard', fname, 'moodboard', dir);
       landed(target);
     } else {
-      downloadFile(safeName() + '.moodboard', payload);
+      downloadFile(safeName() + '.moodboard', JSON.stringify(serialize()));
       markSaved();
       MB.ui.toast('Projet exporté (.moodboard)', 'success');
     }
   }
 
   function openFile(doc, path) {
+    /* v1.8 — le dossier des caches (préférence) est RÉAPPLIQUÉ à chaque
+     * ouverture : le choix reste celui de l'utilisateur pour TOUS les
+     * moodboards, même après un changement de projet. */
+    applyDataDirPref();
     /* v1.6 — ouvrir un AUTRE document : vider la pile de planches
      * (après syncUp, l'arbre courant reste cohérent en mémoire). */
     if (MB.boards) MB.boards.reset();
@@ -902,7 +1023,10 @@
   }
 
   /* Ouvre un fichier .moodboard par son chemin (écran d'accueil,
-   * récents…) — retourne true si le projet est chargé. */
+   * récents…) — retourne true si le projet est chargé.
+   * v1.8 — si l'AUTOSAVE de CE projet (dossier des caches) est plus
+   * récent que le fichier, c'est la version non enregistrée qui est
+   * restaurée — c'est le rôle d'un autosave (aucun travail perdu). */
   function openPath(p) {
     if (!isAbsPath(p)) return false;
     var r = readText(p);
@@ -915,18 +1039,49 @@
       MB.ui.toast(parsed.error, 'error');
       return false;
     }
+    if (isFs()) {
+      var slotRaw = readText(dataDir + '/' + slotFileFor(p));
+      if (slotRaw && !slotRaw.error && slotRaw.text && slotRaw.text.length > 2) {
+        var slotParsed = parseDoc(slotRaw.text);
+        var fileAt = Date.parse(parsed.doc.savedAt || '') || 0;
+        var slotAt = Date.parse(slotParsed.doc ? slotParsed.doc.savedAt || '' : '') || 0;
+        if (
+          !slotParsed.error && slotParsed.doc && slotAt > fileAt &&
+          Array.isArray(slotParsed.doc.elements) && slotParsed.doc.elements.length
+        ) {
+          openFile(slotParsed.doc, p);
+          MB.ui.toast('Version non enregistrée restaurée (autosave plus récent que le fichier).', 'info');
+          return true;
+        }
+      }
+    }
     openFile(parsed.doc, p);
     return true;
   }
 
   /* Supprime l'autosave (fichier + stockage local) — utilisé par
-   * « Nouveau moodboard » pour ne pas ressusciter l'ancien travail. */
+   * « Nouveau moodboard » pour ne pas ressusciter l'ancien travail.
+   * v1.8 — supprime le slot du projet COURANT (à appeler avant
+   * loadDocument) et son entrée d'index ; le slot générique (projets
+   * non enregistrés) est également nettoyé. */
   function clearAutosave() {
     if (isFs()) {
+      var st = MB.store.s();
+      var files = { 'autosave.moodboard': true };
+      files[slotFileFor(st.project.path)] = true;
       try {
-        if (MODE === 'desktop') MB.desktop.unlink(slotPath());
-        else if (window.cep && window.cep.fs && window.cep.fs.deleteFile)
-          window.cep.fs.deleteFile(slotPath());
+        for (var f in files) {
+          var full = dataDir + '/' + f;
+          if (MODE === 'desktop') MB.desktop.unlink(full);
+          else if (window.cep && window.cep.fs && window.cep.fs.deleteFile) {
+            window.cep.fs.deleteFile(full);
+          }
+        }
+        writeAutosaveIndex(
+          readAutosaveIndex().filter(function (e) {
+            return !files[e.file];
+          })
+        );
       } catch (e) {
         /* non bloquant */
       }
@@ -1068,6 +1223,7 @@
     setDataDir: setDataDir,
     resetDataDir: resetDataDir,
     serialize: serialize,
+    parseDoc: parseDoc,
     markDirty: markDirty,
     markSaved: markSaved,
     prefs: readPrefs,

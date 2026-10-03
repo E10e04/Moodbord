@@ -173,11 +173,15 @@
   /* v1.6 — popover police : recherche instantanée + TOUTES les polices du
    * système (MB.fonts) + police PAR DÉFAUT (★, utilisée pour tout nouveau
    * texte/note). Le pied indique la source (système/Illustrateur/liste
-   * web) et l'étoile définit la police par défaut. */
+   * web) et l'étoile définit la police par défaut.
+   * v1.8 — FAVORIS : chaque police peut être épinglée (♥) ; le bouton
+   * « Favoris » au-dessus de la liste filtre pour ne montrer QUE les
+   * polices favorites (persistées dans prefs — tous moodboards). */
   function fontPopover(anchor, current, onPick) {
     MB.fonts.whenReady(function () {
       var fonts = MB.fonts.list();
       var searching = '';
+      var favOnly = false;
 
       function renderList(p, filter) {
         var list = p.querySelector('.font-list');
@@ -187,6 +191,7 @@
         var html = '';
         for (var i = 0; i < fonts.length && shown < FONT_LIST_MAX; i++) {
           var name = fonts[i];
+          if (favOnly && !MB.fonts.isFavorite(name)) continue;
           if (f && normalizeForSearch(name).indexOf(f) < 0) continue;
           shown++;
           var isDef = MB.fonts.isDefault(name);
@@ -196,6 +201,10 @@
             'style="font-family:\'' + U.escapeHtml(name) + '\'" role="button" tabindex="0" ' +
             'title="' + U.escapeHtml(name) + (isDef ? ' (police par défaut)' : '') + '">' +
             '<span class="font-item-name">' + U.escapeHtml(name) + '</span>' +
+            '<button type="button" class="font-item-heart' + (MB.fonts.isFavorite(name) ? ' is-on' : '') + '" data-heart="' + U.escapeHtml(name) + '" ' +
+            'title="' + (MB.fonts.isFavorite(name) ? 'Retirer des favoris' : 'Ajouter aux favoris') + '" aria-label="Favori">' +
+            MB.icons.get(MB.fonts.isFavorite(name) ? 'heartFill' : 'heart', 13) +
+            '</button>' +
             '<button type="button" class="font-item-star' + (isDef ? ' is-on' : '') + '" data-star="' + U.escapeHtml(name) + '" ' +
             'title="' + (isDef ? 'Police par défaut actuelle' : 'Définir comme police par défaut') + '" aria-label="Définir comme police par défaut">' +
             MB.icons.get(isDef ? 'starFill' : 'star', 13) +
@@ -203,7 +212,11 @@
             '</div>';
         }
         if (!shown) {
-          html = '<div class="font-empty">Aucune police trouvée.</div>';
+          html = '<div class="font-empty">' + (favOnly
+            ? (MB.fonts.hasAnyFavorite()
+              ? 'Aucun favori ne correspond à la recherche.'
+              : 'Aucune police en favori — cliquez le ♥ d‘une police pour l‘épingler.')
+            : 'Aucune police trouvée.') + '</div>';
         } else if (fonts.length > FONT_LIST_MAX && shown === FONT_LIST_MAX) {
           html += '<div class="font-empty">Affichage limité à ' + FONT_LIST_MAX + ' polices — affinez la recherche.</div>';
         }
@@ -215,7 +228,7 @@
             MB.ui.closePopover();
           }
           item.addEventListener('click', function (ev) {
-            if (ev.target.closest('.font-item-star')) return;
+            if (ev.target.closest('.font-item-star') || ev.target.closest('.font-item-heart')) return;
             pick();
           });
           item.addEventListener('keydown', function (ev) {
@@ -234,6 +247,28 @@
             if (foot) foot.textContent = MB.fonts.default();
           });
         });
+        list.querySelectorAll('.font-item-heart').forEach(function (heart) {
+          heart.addEventListener('click', function (ev) {
+            ev.stopPropagation();
+            MB.fonts.toggleFavorite(heart.dataset.heart);
+            renderList(p, p.querySelector('.font-search') ? p.querySelector('.font-search').value : '');
+            var favBtn = p.querySelector('.font-fav-toggle');
+            if (favBtn) syncFavButton(favBtn);
+            var footFav = p.querySelector('.font-foot-fav');
+            if (footFav) {
+              var n = MB.fonts.favorites().length;
+              footFav.textContent = n ? ' · ' + n + ' favori' + (n > 1 ? 's' : '') : '';
+            }
+          });
+        });
+      }
+
+      function syncFavButton(btn) {
+        var n = MB.fonts.favorites().length;
+        btn.classList.toggle('is-active', favOnly);
+        btn.classList.toggle('is-empty', !n);
+        btn.setAttribute('aria-pressed', favOnly ? 'true' : 'false');
+        btn.title = favOnly ? 'Afficher toutes les polices' : 'N‘afficher que les polices favorites (' + n + ')';
       }
 
       var sourceLabel =
@@ -242,9 +277,15 @@
         : 'Polices web intégrées';
       var html =
         '<div class="font-pop">' +
+        '<div class="font-tools">' +
         '<input class="input font-search" type="text" placeholder="Rechercher une police…" spellcheck="false" aria-label="Rechercher une police">' +
+        '<button type="button" class="font-fav-toggle" aria-pressed="false" aria-label="Afficher uniquement les polices favorites">' +
+        MB.icons.get('heartFill', 13) + '<span>Favoris</span>' +
+        '</button>' +
+        '</div>' +
         '<div class="font-list" role="listbox" aria-label="Polices disponibles"></div>' +
         '<div class="font-foot">★ Par défaut : <span class="font-foot-cur">' + U.escapeHtml(MB.fonts.default()) + '</span>' +
+        '<span class="font-foot-fav"></span>' +
         '<span class="font-foot-src">· ' + U.escapeHtml(sourceLabel) + '</span></div>' +
         '</div>';
       MB.ui.popover(anchor, html, {
@@ -266,6 +307,20 @@
             }
           }
           renderList(p, '');
+          var favBtn = p.querySelector('.font-fav-toggle');
+          if (favBtn) {
+            syncFavButton(favBtn);
+            favBtn.addEventListener('click', function () {
+              favOnly = !favOnly;
+              syncFavButton(favBtn);
+              renderList(p, p.querySelector('.font-search') ? p.querySelector('.font-search').value : '');
+            });
+          }
+          var footFav = p.querySelector('.font-foot-fav');
+          if (footFav) {
+            var n = MB.fonts.favorites().length;
+            if (n) footFav.textContent = ' · ' + n + ' favori' + (n > 1 ? 's' : '');
+          }
           refit();
           var search = p.querySelector('.font-search');
           if (search) {

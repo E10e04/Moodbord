@@ -68,6 +68,10 @@
     var z = U.el('span', 'insp-kv insp-kv--val', Math.round(st.camera.zoom * 100) + ' %');
     zoomRow.appendChild(z);
     s.appendChild(zoomRow);
+    /* v1.8 — ÉLÉMENTS MASQUÉS : tout élément caché avec l'œil reste
+     * listé ici (avec un bouton pour le réactiver) — plus besoin de
+     * « Révéler tout » en aveugle. */
+    s.appendChild(hiddenSection());
     var hint = U.el(
       'div',
       'insp-hint',
@@ -81,6 +85,50 @@
           '</em>')
     );
     s.appendChild(hint);
+    return s;
+  }
+
+  /* Libellé lisible d'un élément (liste des masqués). */
+  function elementLabel(e) {
+    var t = {
+      text: 'Texte', note: 'Note', comment: 'Commentaire', image: 'Image',
+      color: 'Couleur', palette: 'Palette', typography: 'Typographie',
+      link: 'Lien', file: 'Fichier', line: 'Ligne', shape: 'Forme',
+      section: 'Section', column: 'Colonne', table: 'Tableau',
+      checklist: 'Checklist', sketch: 'Croquis', board: 'Planche',
+      group: 'Groupe', import: 'Carte d’import'
+    }[e.type] || e.type;
+    var d = e.data || {};
+    var extra = d.title || d.name || d.text || (e.type === 'board' && d.doc && d.doc.name) || '';
+    extra = String(extra).replace(/\s+/g, ' ').trim().slice(0, 26);
+    return t + (extra ? ' · ' + extra : '');
+  }
+
+  function hiddenSection() {
+    var st = MB.store.s();
+    var hidden = st.elements.filter(function (e) {
+      return e.hidden;
+    });
+    if (!hidden.length) return U.el('div');
+    var s = section('Masqués (' + hidden.length + ')');
+    var list = U.el('div', 'hidden-list');
+    hidden.forEach(function (e) {
+      var row = U.el('div', 'hidden-row');
+      var label = U.el('span', 'hidden-label', U.escapeHtml(elementLabel(e)));
+      row.appendChild(label);
+      var eye = C.iconButton('eye', 'Réactiver cet élément', function () {
+        MB.app.revealElement(e.id);
+      });
+      eye.classList.add('hidden-eye');
+      row.appendChild(eye);
+      list.appendChild(row);
+    });
+    s.appendChild(list);
+    var rowAll = U.el('div', 'btn-row');
+    rowAll.appendChild(C.textButton('Tout révéler', function () {
+      MB.app.revealAll();
+    }));
+    s.appendChild(rowAll);
     return s;
   }
 
@@ -192,8 +240,46 @@
         MB.board.renderContent(el.id);
       }, 'Couleur du post-it'));
       s.appendChild(rowN);
+      /* v1.8 — mise en forme de la note ENTIÈRE : liste à puces,
+       * retrait du formatage (la mise en forme par SÉLECTION vit dans
+       * la barre au-dessus de la note pendant l'édition). */
+      var rowRich = U.el('div', 'btn-row');
+      rowRich.appendChild(C.textButton('• Liste à puces', function () {
+        if (!MB.rich) return;
+        var src = d.html !== undefined && d.html ? d.html : d.text || '';
+        var html = MB.rich.toBulletList(src);
+        if (!html) {
+          MB.ui.toast('La note est vide.', 'info');
+          return;
+        }
+        C.applyDataTo([el], 'Liste à puces', { html: html, autoH: true });
+        MB.board.renderContent(el.id);
+        refresh();
+      }, 'Convertir toute la note en liste à puces'));
+      rowRich.appendChild(C.textButton('Aa Plain', function () {
+        C.applyDataTo([el], 'Retirer la mise en forme', { html: '', autoH: true });
+        MB.board.renderContent(el.id);
+        refresh();
+      }, 'Retirer la mise en forme de la note'));
+      s.appendChild(rowRich);
+      var hintRich = U.el('div', 'insp-hint', 'Double-cliquez la note : la barre au-dessus met en forme la sélection (gras, italique, soulignage, surlignage, listes, police).');
+      s.appendChild(hintRich);
     } else if (el.type === 'comment') {
       s = section('Commentaire');
+      var rowCm = U.el('div', 'btn-row');
+      rowCm.appendChild(C.fontButton(function () {
+        return d.fontFamily || 'Georgia';
+      }, function (f) {
+        C.applyDataTo([el], 'Police', { fontFamily: f });
+        MB.board.renderContent(el.id);
+      }));
+      rowCm.appendChild(C.sizeControl(function () {
+        return d.fontSize || 13;
+      }, function (v) {
+        C.applyDataTo([el], 'Taille', { fontSize: U.clamp(v, 9, 60) });
+        MB.board.renderContent(el.id);
+      }));
+      s.appendChild(rowCm);
       var row2 = U.el('div', 'btn-row');
       row2.appendChild(C.colorButton(function () {
         return d.color;
@@ -459,6 +545,15 @@
         else window.open(d.url, '_blank');
       }));
       s.appendChild(rowU);
+      /* v1.8 — police du titre du lien. */
+      var rowLkF = U.el('div', 'btn-row');
+      rowLkF.appendChild(C.fontButton(function () {
+        return d.titleFont || 'Georgia';
+      }, function (f) {
+        C.applyDataTo([el], 'Police du titre', { titleFont: f });
+        MB.board.renderContent(el.id);
+      }));
+      s.appendChild(rowLkF);
     } else if (el.type === 'board') {
       s = section('Planche liée');
       var bCount = d && d.doc && Array.isArray(d.doc.elements) ? d.doc.elements.length : 0;
@@ -474,6 +569,21 @@
         MB.interact.startEditing(el, 'title');
       }));
       s.appendChild(rowB1);
+      /* v1.8 — police du titre de la carte planche. */
+      var rowBf = U.el('div', 'btn-row');
+      rowBf.appendChild(C.fontButton(function () {
+        return d.titleFont || 'Georgia';
+      }, function (f) {
+        C.applyDataTo([el], 'Police du titre', { titleFont: f });
+        MB.board.renderContent(el.id);
+      }));
+      rowBf.appendChild(C.sizeControl(function () {
+        return d.titleSize || 19;
+      }, function (v) {
+        C.applyDataTo([el], 'Taille du titre', { titleSize: U.clamp(v, 10, 48) });
+        MB.board.renderContent(el.id);
+      }));
+      s.appendChild(rowBf);
       var rowB2 = U.el('div', 'insp-hint');
       rowB2.innerHTML =
         'Cliquez sur la flèche de la carte pour ouvrir la planche · Alt+← ou son nom en haut pour revenir.' +
@@ -523,6 +633,21 @@
         MB.interact.startEditing(el, 'title');
       }));
       s.appendChild(rowSec);
+      /* v1.8 — police du titre de la section / colonne. */
+      var rowSecF = U.el('div', 'btn-row');
+      rowSecF.appendChild(C.fontButton(function () {
+        return d.titleFont || 'Georgia';
+      }, function (f) {
+        C.applyDataTo([el], 'Police du titre', { titleFont: f });
+        MB.board.renderContent(el.id);
+      }));
+      rowSecF.appendChild(C.sizeControl(function () {
+        return d.titleSize || 15;
+      }, function (v) {
+        C.applyDataTo([el], 'Taille du titre', { titleSize: U.clamp(v, 9, 40) });
+        MB.board.renderContent(el.id);
+      }));
+      s.appendChild(rowSecF);
       if (el.type === 'section') {
         var rowSec2 = U.el('div', 'btn-row');
         rowSec2.appendChild(C.toggle('eye', 'Titre visible', function () {
@@ -533,6 +658,18 @@
         }));
         s.appendChild(rowSec2);
       }
+    } else if (el.type === 'import') {
+      s = section('Import');
+      var rowIm = U.el('div', 'btn-row');
+      rowIm.appendChild(C.textButton('Choisir des fichiers…', function () {
+        MB.interact.openImportPicker({ x: el.x + el.w / 2, y: el.y + el.h / 2 });
+      }, 'Ouvrir l’explorateur'));
+      s.appendChild(rowIm);
+      var hintIm = U.el('div', 'insp-hint');
+      hintIm.innerHTML =
+        'Double-cliquez la carte ou déposez-y des fichiers : images, documents et moodboards' +
+        ' — un <strong>.moodboard</strong> importé devient une planche liée (nom + nombre d’éléments).';
+      s.appendChild(hintIm);
     } else if (el.type === 'table') {
       s = section('Tableau');
       var rowTb = U.el('div', 'btn-row');
@@ -576,6 +713,109 @@
         MB.board.renderContent(el.id);
       }));
       s.appendChild(rowTb2);
+
+      /* v1.8 — COULEURS du tableau : toutes les cellules, la ligne
+       * d'en-têtes, ou une ligne / colonne précise. */
+      var rowTbC = U.el('div', 'btn-row');
+      rowTbC.appendChild(C.colorButton(function () {
+        return d.cellBg || '#252525';
+      }, function (hex) {
+        C.applyDataTo([el], 'Fond des cellules', { cellBg: hex });
+        MB.board.renderContent(el.id);
+      }, 'Fond de toutes les cellules'));
+      rowTbC.appendChild(C.colorButton(function () {
+        return d.headBg || '#3A3A3A';
+      }, function (hex) {
+        C.applyDataTo([el], 'Fond de l’en-tête', { headBg: hex });
+        MB.board.renderContent(el.id);
+      }, 'Fond de la ligne d’en-têtes'));
+      rowTbC.appendChild(C.colorButton(function () {
+        return d.textColor || '#F5F5F5';
+      }, function (hex) {
+        C.applyDataTo([el], 'Couleur du texte', { textColor: hex });
+        MB.board.renderContent(el.id);
+      }, 'Couleur du texte des cellules'));
+      rowTbC.appendChild(C.colorButton(function () {
+        return d.headColor || '#F5F5F5';
+      }, function (hex) {
+        C.applyDataTo([el], 'Couleur du texte d’en-tête', { headColor: hex });
+        MB.board.renderContent(el.id);
+      }, 'Couleur du texte des en-têtes'));
+      s.appendChild(rowTbC);
+
+      /* Peinture d'une LIGNE / COLONNE précise. */
+      var rowIdx = { v: 1 };
+      var colIdx = { v: 1 };
+
+      function setPaint(kind, n, hex) {
+        var arr = ((kind === 'row' ? d.rowBgs : d.colBgs) || []).slice();
+        while (arr.length < n) arr.push('');
+        arr[n - 1] = hex;
+        var patch = {};
+        patch[kind === 'row' ? 'rowBgs' : 'colBgs'] = arr;
+        C.applyDataTo([el], kind === 'row' ? 'Couleur de ligne' : 'Couleur de colonne', patch);
+        MB.board.renderContent(el.id);
+      }
+
+      var paintGrid = U.el('div', 'field-grid');
+      paintGrid.appendChild(C.numberRow('Ligne n°', function () {
+        return rowIdx.v;
+      }, function (v, commit) {
+        rowIdx.v = U.clamp(Math.round(v) || 1, 1, d.rows);
+        if (commit) refresh();
+      }, { min: 1, max: d.rows, step: 1 }));
+      paintGrid.appendChild(C.numberRow('Colonne n°', function () {
+        return colIdx.v;
+      }, function (v, commit) {
+        colIdx.v = U.clamp(Math.round(v) || 1, 1, d.cols);
+        if (commit) refresh();
+      }, { min: 1, max: d.cols, step: 1 }));
+      s.appendChild(paintGrid);
+
+      var rowPaint = U.el('div', 'btn-row');
+      var rowBtn = C.textButton('Peindre la ligne ' + rowIdx.v, function () {
+        C.colorPopover(rowBtn, function () {
+          return (d.rowBgs && d.rowBgs[rowIdx.v - 1]) || d.cellBg || '#252525';
+        }, function (hex) {
+          setPaint('row', rowIdx.v, hex);
+          refresh();
+        });
+      }, 'Couleur de la ligne choisie ci-dessus');
+      rowPaint.appendChild(rowBtn);
+      rowPaint.appendChild(C.iconButton('x', 'Retirer la couleur de la ligne', function () {
+        setPaint('row', rowIdx.v, '');
+        refresh();
+      }));
+      var colBtn = C.textButton('Peindre la colonne ' + colIdx.v, function () {
+        C.colorPopover(colBtn, function () {
+          return (d.colBgs && d.colBgs[colIdx.v - 1]) || d.cellBg || '#252525';
+        }, function (hex) {
+          setPaint('col', colIdx.v, hex);
+          refresh();
+        });
+      }, 'Couleur de la colonne choisie ci-dessus');
+      rowPaint.appendChild(colBtn);
+      rowPaint.appendChild(C.iconButton('x', 'Retirer la couleur de la colonne', function () {
+        setPaint('col', colIdx.v, '');
+        refresh();
+      }));
+      s.appendChild(rowPaint);
+
+      /* v1.8 — POLICE du texte du tableau. */
+      var rowTbF = U.el('div', 'btn-row');
+      rowTbF.appendChild(C.fontButton(function () {
+        return d.fontFamily || 'Georgia';
+      }, function (f) {
+        C.applyDataTo([el], 'Police', { fontFamily: f });
+        MB.board.renderContent(el.id);
+      }));
+      rowTbF.appendChild(C.sizeControl(function () {
+        return d.fontSize || 12;
+      }, function (v) {
+        C.applyDataTo([el], 'Taille', { fontSize: U.clamp(v, 8, 40) });
+        MB.board.renderContent(el.id);
+      }));
+      s.appendChild(rowTbF);
     } else if (el.type === 'checklist') {
       s = section('Checklist');
       var rowCk = U.el('div', 'btn-row');
@@ -593,6 +833,21 @@
         refresh();
       }));
       s.appendChild(rowCk);
+      /* v1.8 — police de la checklist (titre + tâches). */
+      var rowCkF = U.el('div', 'btn-row');
+      rowCkF.appendChild(C.fontButton(function () {
+        return d.fontFamily || 'Georgia';
+      }, function (f) {
+        C.applyDataTo([el], 'Police', { fontFamily: f });
+        MB.board.renderContent(el.id);
+      }));
+      rowCkF.appendChild(C.sizeControl(function () {
+        return d.fontSize || 13;
+      }, function (v) {
+        C.applyDataTo([el], 'Taille', { fontSize: U.clamp(v, 9, 30) });
+        MB.board.renderContent(el.id);
+      }));
+      s.appendChild(rowCkF);
     } else if (el.type === 'sketch') {
       s = section('Croquis');
       var rowSk = U.el('div', 'btn-row');

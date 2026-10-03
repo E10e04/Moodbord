@@ -30,7 +30,11 @@
     list: [],
     source: 'fallback',
     ready: false,
-    defaultFont: 'Georgia'
+    defaultFont: 'Georgia',
+    /* v1.8 — favoris : filtre du popover de polices. Persistés dans
+     * prefs.json (clé fontFavs) — communs à l'application et à
+     * l'extension, indépendants du moodboard ouvert. */
+    favorites: {}
   };
 
   var waiters = [];
@@ -128,6 +132,14 @@
     var p = MB.storage.prefs ? MB.storage.prefs() : null;
     var f = p && typeof p.defaultFont === 'string' ? p.defaultFont : '';
     if (f) state.defaultFont = f;
+    /* v1.8 — favoris persistés (liste de noms de familles). */
+    if (p && Array.isArray(p.fontFavs)) {
+      var map = {};
+      for (var i = 0; i < p.fontFavs.length; i++) {
+        if (p.fontFavs[i]) map[String(p.fontFavs[i])] = true;
+      }
+      state.favorites = map;
+    }
   }
 
   function saveDefault() {
@@ -149,6 +161,36 @@
 
   function isDefault(name) {
     return String(name).toLowerCase() === state.defaultFont.toLowerCase();
+  }
+
+  /* ------------------------------ favoris (v1.8) --------------------- */
+
+  function saveFavorites() {
+    var arr = Object.keys(state.favorites);
+    if (MB.storage.setPref) MB.storage.setPref('fontFavs', arr);
+  }
+
+  function isFavorite(name) {
+    return !!state.favorites[String(name)];
+  }
+
+  function toggleFavorite(name) {
+    var n = String(name || '').trim();
+    if (!n) return false;
+    if (state.favorites[n]) delete state.favorites[n];
+    else state.favorites[n] = true;
+    saveFavorites();
+    emitChange();
+    return !!state.favorites[n];
+  }
+
+  function favoriteList() {
+    /* favoris triés comme la liste courante (ordre alphabétique),
+     * les familles disparues de la liste sont conservées quand même
+     * (la police peut revenir avec une autre source). */
+    return Object.keys(state.favorites).sort(function (a, b) {
+      return a.localeCompare(b, 'fr', { sensitivity: 'base' });
+    });
   }
 
   /* ------------------------------ publics ------------------------------ */
@@ -190,6 +232,13 @@
     },
     setDefault: setDefault,
     isDefault: isDefault,
+    /* v1.8 — favoris de polices (filtre du popover). */
+    isFavorite: isFavorite,
+    toggleFavorite: toggleFavorite,
+    favorites: favoriteList,
+    hasAnyFavorite: function () {
+      return Object.keys(state.favorites).length > 0;
+    },
     onChange: function (fn) {
       listeners.push(fn);
       return fn;

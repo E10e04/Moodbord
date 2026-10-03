@@ -1417,3 +1417,119 @@ body.mb-desktop-win32 #home-screen .home-main-inner { padding-top: 44px; }
 
 /* Édition : aucun rognage du texte en cours de frappe (v1.6) */
 .mb-note-body.is-editing { overflow: visible; }
+
+/* =========================================================================
+ * v1.8 — Notes riches, favoris de polices, éléments masqués,
+ * carte d'import, couleurs de tableau.
+ * ========================================================================= */
+
+/* Édition riche : le corps des notes/textes porte des listes et du
+ * formatage — marges contenues pour rester dans la carte. */
+.mb-note-body ul, .mb-note-body ol,
+.mb-text-body ul, .mb-text-body ol {
+  margin: 0.35em 0; padding-left: 1.25em;
+  text-align: left; /* les listes ne suivent pas l'alignement du bloc */
+}
+.mb-note-body li, .mb-text-body li { margin: 0.12em 0; }
+.mb-note-body ol ol, .mb-note-body ul ul,
+.mb-text-body ol ol, .mb-text-body ul ul { margin: 0.1em 0; }
+
+/* Barre de mise en forme flottante (au-dessus de l'élément édité). */
+#richbar.richbar {
+  position: absolute; z-index: 60; /* au-dessus de la sélection (45) */
+  display: flex; align-items: center; gap: 2px;
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 4px 6px;
+  box-shadow: var(--shadow);
+  max-width: calc(100% - 24px);
+  flex-wrap: wrap;
+}
+.richbar .rich-btn svg { display: block; }
+.rich-btn--hl { color: #F7D46A; }
+
+/* Popover surlignage : pastilles de couleurs. */
+.hl-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+  padding: 6px; width: 128px;
+}
+.hl-grid .swatch { width: 100%; height: 26px; }
+
+/* Popover polices : barre recherche + bouton Favoris (v1.8). */
+.font-tools { display: flex; align-items: center; gap: 6px; }
+.font-tools .font-search { flex: 1; min-width: 0; }
+.font-fav-toggle {
+  flex: none;
+  display: inline-flex; align-items: center; gap: 4px;
+  height: 28px; padding: 0 8px;
+  background: transparent; border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-dim); font-size: 11px; cursor: pointer;
+}
+.font-fav-toggle:hover { color: var(--text); border-color: var(--text-dim); }
+.font-fav-toggle.is-active {
+  color: #E8708F; border-color: #E8708F;
+  background: rgba(232, 112, 143, 0.12);
+}
+.font-fav-toggle.is-empty { opacity: 0.62; }
+.font-item-heart {
+  flex: none;
+  display: flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px;
+  margin-right: 2px;
+  border: none; border-radius: 5px;
+  background: transparent;
+  color: #6F6F6F;
+  cursor: pointer;
+}
+.font-item-heart:hover { background: #3A3A3A; color: #E8708F; }
+.font-item-heart.is-on { color: #E8708F; }
+
+/* Panneau Projet : liste des éléments masqués. */
+.hidden-list {
+  display: flex; flex-direction: column; gap: 2px;
+  max-height: 180px; overflow-y: auto;
+  margin-top: 6px;
+  padding-right: 2px;
+}
+.hidden-row {
+  display: flex; align-items: center; gap: 6px;
+  padding: 3px 4px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+}
+.hidden-row:hover { background: rgba(255, 255, 255, 0.06); }
+.hidden-label {
+  flex: 1; min-width: 0;
+  font-size: 11.5px; color: var(--text-dim);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.hidden-eye { flex: none; }
+.hidden-eye svg { color: var(--accent); }
+
+/* Carte d'import (outil Importer glissé sur le canvas). */
+.mb-import-card {
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; padding: 14px;
+  border: 1.5px dashed #4A4A4A;
+  border-radius: 12px;
+  background: rgba(30, 30, 30, 0.45);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+.mb-import-card:hover { border-color: var(--accent); background: rgba(76, 141, 255, 0.06); }
+.mb-el--import.is-droptarget .mb-import-card {
+  border-color: var(--accent);
+  background: rgba(76, 141, 255, 0.14);
+}
+.mb-import-icon { color: #9A9A9A; }
+.mb-import-icon svg { display: block; }
+.mb-import-title { font-size: 13.5px; font-weight: 700; color: var(--text); }
+.mb-import-hint { font-size: 10.5px; color: var(--text-faint); line-height: 1.5; }
+
+/* Préférences : rappel « tous les moodboards » (v1.8). */
+.prefs-sub--all { color: var(--text-dim); }
+.prefs-sub--all strong { color: var(--accent); font-weight: 600; }

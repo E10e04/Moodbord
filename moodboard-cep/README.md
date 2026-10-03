@@ -191,7 +191,7 @@ Dézipper l'archive **à la racine** du dossier extensions, de sorte que `CSXS/`
 > 5. relancer Illustrator.
 >
 > **Vérifiez la version installée** : le badge en bas à droite de la barre d'état
-> du panneau doit afficher **v1.6.1**. S'il affiche autre chose, l'ancienne
+> du panneau doit afficher **v1.8.0**. S'il affiche autre chose, l'ancienne
 > installation est encore active.
 
 ### 3. Activer le PlayerDebugMode
@@ -267,6 +267,44 @@ Si un jour les **drags ne répondent plus alors que le zoom molette fonctionne**
 `MB.interact.diag()` retourne le nombre d'événements **réellement livrés** par le moteur de chaque famille (`pointerdown`, `mousedown`, `pointermove`, `mousemove`, `blur`, `pointercancel`…) ainsi que l'état de la machine à gestes (`gesture`, `spaceDown`, `tool`). Depuis la v1.0.1, la couche d'interaction est **adaptive** : elle branche à la fois les Pointer Events et les événements souris, et bascule automatiquement sur la souris si le moteur CEP hôte ne livre pas les Pointer Events (cas observé selon les versions d'Illustrator).
 
 Depuis la **v1.0.2**, les gestes **survivent** aux événements `blur` / `pointercancel` parasites que certains hôtes CEP émettent au milieu d'un drag (symptôme typique : « le zoom marche mais rien ne se déplace ») : le geste continue s'il reçoit encore des événements, et n'est annulé proprement (avec rollback) que si plus rien n'arrive pendant 600 ms.
+
+#### Nouveautés v1.8.0 — notes riches, groupes, import, tableaux, favoris
+
+1. **Notes (et textes) riches** : pendant l'édition, une **barre de mise en
+   forme** apparaît au-dessus de la carte — **gras, italique, souligné,
+   barré, surlignage, listes à puces / numérotées et police de la
+   sélection**. L'inspecteur convertit aussi toute une note en liste à
+   puces (ou retire la mise en forme). Le HTML est sanitisé (liste
+   blanche), le collage insère du texte brut, et le formatage survit à
+   l'enregistrement (`data.html` + repli texte).
+2. **Groupes réparés** : glisser un **groupe** déplace désormais ses
+   éléments (correctif de la fermeture de sélection), la suppression et le
+   copier-coller emportent le contenu au complet.
+3. **Outil Importer repensé** : **double-clic sur l'outil → explorateur /
+   Finder** ; glisser l'outil sur le canvas crée une **carte d'import**
+   (icône au centre, dépôt de fichiers dessus). Tout s'importe — y compris
+   les **moodboards** : un `.moodboard` déposé devient une **planche liée**
+   qui reprend son nom et son nombre d'éléments.
+4. **Tableaux** : couleurs de **toutes les cellules**, de la **ligne
+   d'en-têtes**, d'une **ligne** ou d'une **colonne** précise (ainsi que la
+   couleur du texte) + **police et taille** du tableau.
+5. **Police partout** : chaque outil qui écrit du texte expose la police —
+   notes, textes, commentaires, checklists, tableaux, titres de sections,
+   colonnes, planches et liens (bouton police de l'inspecteur).
+6. **Favoris de polices** : épinglez vos familles (♥ dans le popover) puis
+   filtrez la liste avec le bouton **Favoris** — mémorisé pour tous les
+   moodboards.
+7. **Dossier des caches global** : le dossier choisi dans les Préférences
+   s'applique à **tous vos moodboards**, avec un **autosave par projet**
+   (plus jamais écrasé par un autre) ; ouvrir un projet restaure sa version
+   non enregistrée si elle est plus récente.
+8. **Nom du projet ↔ nom du fichier** : « Enregistrer sous… » prend le nom
+   saisi en barre supérieure et le fichier renommé met à jour le projet.
+9. **Panneau Projet** : les éléments masqués avec l'œil restent **listés**
+   (bouton œil pour réactiver, « Tout révéler »).
+10. **Notes stables** : le redimensionnement par le bas ne replie plus la
+    carte (hauteur minimum lisible) et la taille choisie n'est plus écrasée
+    par la hauteur automatique.
 
 #### Nouveautés v1.6.1 — planches : création sans entrée, retour par le nom, carte compacte
 

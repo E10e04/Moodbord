@@ -146,15 +146,28 @@
   }
 
   /* Étend une liste d'ids avec les descendants des conteneurs dont le type
-     est dans expandTypes, puis retire les ids déjà couverts par un ancêtre. */
+     est dans expandTypes (dédupliqués).
+     *
+     * v1.8 — CORRECTIF DÉPLACEMENT DES GROUPES : l'ancien filtre « retirer
+     * les ids couverts par un ancêtre présent dans le set » privait la
+     * fermeture de sélection des ENFANTS d'un groupe sélectionné (ils sont,
+     * par définition, des descendants d'un ancêtre présent dans le set) :
+     * glisser un groupe ne déplaçait que l'élément groupe (invisible —
+     * sa carte est dessinée par ses enfants), la suppression laissait des
+     * orphelins, le copier-coller perdait le contenu. Les enfants d'un
+     * conteneur sélectionné sont le PAYLOAD du geste, jamais une redondance :
+     * le filtre est supprimé, seule la déduplication (une entrée par id)
+     * subsiste. */
   function expandIds(ids, expandTypes) {
     var set = {};
     var order = [];
     for (var i = 0; i < ids.length; i++) {
       var e = el(ids[i]);
       if (!e) continue;
-      set[e.id] = true;
-      order.push(e.id);
+      if (!set[e.id]) {
+        set[e.id] = true;
+        order.push(e.id);
+      }
       if (expandTypes[e.type]) {
         var desc = descendantsOf(e.id);
         for (var d = 0; d < desc.length; d++) {
@@ -165,21 +178,7 @@
         }
       }
     }
-    // retire les éléments couverts par un ancêtre présent dans le set
-    var out = [];
-    for (var o = 0; o < order.length; o++) {
-      var id = order[o];
-      var chain = ancestorsOf(id);
-      var covered = false;
-      for (var c = 0; c < chain.length; c++) {
-        if (set[chain[c].id]) {
-          covered = true;
-          break;
-        }
-      }
-      if (!covered) out.push(id);
-    }
-    return out;
+    return order;
   }
 
   /* Fermeture de la sélection pour drag / copie (les conteneurs

@@ -103,7 +103,9 @@
 <div id="layer-dialogs"></div>
 <div id="layer-toasts" aria-live="polite"></div>
 <div id="drag-ghost" hidden></div>
-<input type="file" id="file-import" multiple accept="image/*" hidden>
+<input type="file" id="file-import" multiple hidden>
+<!-- v1.8 : plus de filtre accept — tout s'importe (images, documents,
+     moodboards → planche liée) -->
 
 <!-- ===== Bootstrap CEP ===== -->
 <script src="js/lib/CSInterface.js"></script>
@@ -122,6 +124,7 @@
 <script src="js/core/factory.js"></script>
 <script src="js/core/boards.js"></script>
 <script src="js/core/fonts.js"></script>
+<script src="js/core/richtext.js"></script>
 <script src="js/core/storage.js"></script>
 <script src="js/core/updater.js"></script>
 <script src="js/core/demo.js"></script>
@@ -141,6 +144,7 @@
 <script src="js/ui/library.js"></script>
 <script src="js/ui/controls.js"></script>
 <script src="js/ui/inspector.js"></script>
+<script src="js/ui/richbar.js"></script>
 <script src="js/ui/contextbar.js"></script>
 <script src="js/ui/contextmenu.js"></script>
 

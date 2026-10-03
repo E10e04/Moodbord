@@ -34,7 +34,7 @@
     { id: 'palette', icon: 'palette', label: 'Palette', key: 'A', hint: 'Cliquer pour créer une palette' },
     { id: 'typography', icon: 'typography', label: 'Typographie', key: 'Y', hint: 'Cliquer pour créer une carte typo' },
     { sep: true },
-    { id: 'import', icon: 'import', label: 'Importer', hint: 'Importer des images depuis le disque' }
+    { id: 'import', icon: 'import', label: 'Importer', hint: 'Double-clic : explorateur · glisser sur le canvas : carte d’import (tout importer, même les moodboards)' }
   ];
 
   function init() {
@@ -110,6 +110,16 @@
     btn.addEventListener('click', function () {
       MB.store.setTool(t.id);
     });
+
+    /* v1.8 — double-clic sur l'outil Importer : ouvre DIRECTEMENT
+     * l'explorateur / le Finder (sans passer par le canvas). */
+    if (t.id === 'import') {
+      btn.addEventListener('dblclick', function (e) {
+        e.preventDefault();
+        MB.interact.openImportPicker(null);
+        MB.store.setTool('select');
+      });
+    }
   }
 
   function refresh() {

@@ -56,13 +56,13 @@
       case 'section':
         t = '<rect x="' + el.x + '" y="' + el.y + '" width="' + el.w + '" height="' + el.h +
           '" rx="16" fill="' + d.color + '" stroke="#3A3A3A" stroke-width="1"/>' +
-          multiLineText(el.x + 16, el.y + 26, d.title, 'font-family="Georgia" font-size="15" fill="#A8A8A8"', 20);
+          multiLineText(el.x + 16, el.y + 26, d.title, 'font-family="' + esc(d.titleFont || 'Georgia') + '" font-size="' + (d.titleSize || 15) + '" fill="#A8A8A8"', 20);
         break;
 
       case 'column':
         t = '<rect x="' + el.x + '" y="' + el.y + '" width="' + el.w + '" height="' + el.h +
           '" rx="14" fill="' + d.color + '" stroke="#3A3A3A" stroke-width="1"/>' +
-          multiLineText(el.x + 14, el.y + 24, d.title, 'font-family="Georgia" font-size="14" fill="#A8A8A8"', 18);
+          multiLineText(el.x + 14, el.y + 24, d.title, 'font-family="' + esc(d.titleFont || 'Georgia') + '" font-size="' + (d.titleSize || 14) + '" fill="#A8A8A8"', 18);
         break;
 
       case 'image': {
@@ -107,10 +107,11 @@
 
       case 'comment': {
         var ink2 = '#F5F5F5';
+        var cmFont = d.fontFamily || 'Georgia';
         t = '<rect x="' + el.x + '" y="' + el.y + '" width="' + el.w + '" height="' + el.h +
           '" rx="10" fill="#2C2C2C" stroke="' + d.color + '" stroke-width="2"' + rotAttr() + '/>' +
-          multiLineText(el.x + 12, el.y + 20, d.author, 'font-family="Georgia" font-size="11" font-weight="700" fill="' + d.color + '"', 14) +
-          multiLineText(el.x + 12, el.y + 38, d.text, 'font-family="Georgia" font-size="13" fill="' + ink2 + '"', 17);
+          multiLineText(el.x + 12, el.y + 20, d.author, 'font-family="' + esc(cmFont) + '" font-size="11" font-weight="700" fill="' + d.color + '"', 14) +
+          multiLineText(el.x + 12, el.y + 38, d.text, 'font-family="' + esc(cmFont) + '" font-size="' + (d.fontSize || 13) + '" fill="' + ink2 + '"', 17);
         break;
       }
 
@@ -151,7 +152,7 @@
       case 'file':
         t = '<rect x="' + el.x + '" y="' + el.y + '" width="' + el.w + '" height="' + el.h +
           '" rx="10" fill="#252525" stroke="#3A3A3A"/>' +
-          multiLineText(el.x + 58, el.y + 30, el.type === 'link' ? d.title : d.name, 'font-family="Georgia" font-size="13" fill="#F5F5F5"', 16) +
+          multiLineText(el.x + 58, el.y + 30, el.type === 'link' ? d.title : d.name, 'font-family="' + esc(d.titleFont || 'Georgia') + '" font-size="13" fill="#F5F5F5"', 16) +
           multiLineText(el.x + 58, el.y + 50, el.type === 'link' ? d.domain : (d.kind || ''), 'font-family="Georgia" font-size="11" fill="#A8A8A8"', 14) +
           '<rect x="' + (el.x + 10) + '" y="' + (el.y + 17) + '" width="36" height="36" rx="8" fill="#3A3A3A"/>';
         break;
@@ -190,8 +191,9 @@
       }
 
       case 'checklist': {
+        var ckFont = d.fontFamily || 'Georgia';
         t = '<rect x="' + el.x + '" y="' + el.y + '" width="' + el.w + '" height="' + el.h + '" rx="10" fill="#252525"/>' +
-          multiLineText(el.x + 14, el.y + 24, d.title, 'font-family="Georgia" font-size="14" font-weight="700" fill="#F5F5F5"', 18);
+          multiLineText(el.x + 14, el.y + 24, d.title, 'font-family="' + esc(ckFont) + '" font-size="14" font-weight="700" fill="#F5F5F5"', 18);
         var ry = el.y + 46;
         for (var k = 0; k < d.items.length; k++) {
           var it = d.items[k];
@@ -199,7 +201,7 @@
           if (it.done) {
             t += '<path d="M' + (el.x + 18) + ' ' + (ry + 8) + ' l3 3 l5 -6" stroke="#fff" stroke-width="2" fill="none"/>';
           }
-          t += multiLineText(el.x + 42, ry + 12, it.text, 'font-family="Georgia" font-size="13" fill="' + (it.done ? '#A8A8A8' : '#F5F5F5') + '"' + (it.done ? ' text-decoration="line-through"' : ''), 16);
+          t += multiLineText(el.x + 42, ry + 12, it.text, 'font-family="' + esc(ckFont) + '" font-size="' + (d.fontSize || 13) + '" fill="' + (it.done ? '#A8A8A8' : '#F5F5F5') + '"' + (it.done ? ' text-decoration="line-through"' : ''), 16);
           ry += 38;
         }
         break;
@@ -208,15 +210,36 @@
       case 'table': {
         var colW = el.w / d.cols;
         var rowH = el.h / d.rows;
+        var tbFont = d.fontFamily || 'Georgia';
+        var tbSize = d.fontSize || 12;
         for (var r = 0; r < d.rows; r++) {
           for (var c2 = 0; c2 < d.cols; c2++) {
             var v = (d.cells[r] && d.cells[r][c2]) || '';
             var head = d.header && r === 0;
+            /* v1.8 — mêmes règles de résolution que le canvas : ligne >
+             * en-tête > colonne > fond général. */
+            var bg;
+            if (d.rowBgs && d.rowBgs[r]) bg = d.rowBgs[r];
+            else if (head && d.headBg) bg = d.headBg;
+            else if (d.colBgs && d.colBgs[c2]) bg = d.colBgs[c2];
+            else bg = d.cellBg || '#252525';
+            var fg = head ? (d.headColor || '#F5F5F5') : d.textColor || '#F5F5F5';
             t += '<rect x="' + (el.x + c2 * colW) + '" y="' + (el.y + r * rowH) + '" width="' + colW + '" height="' + rowH +
-              '" fill="' + (head ? '#3A3A3A' : '#252525') + '" stroke="#1E1E1E"/>';
-            t += multiLineText(el.x + c2 * colW + 8, el.y + r * rowH + rowH / 2 + 4, v, 'font-family="Georgia" font-size="12" fill="#F5F5F5"', 15);
+              '" fill="' + bg + '" stroke="#1E1E1E"/>';
+            t += multiLineText(el.x + c2 * colW + 8, el.y + r * rowH + rowH / 2 + 4, v, 'font-family="' + esc(tbFont) + '" font-size="' + tbSize + '" fill="' + fg + '"' + (head ? ' font-weight="700"' : ''), 15);
           }
         }
+        break;
+      }
+
+      /* v1.8 — carte d'import : station de dépôt (mêmes pointillés). */
+      case 'import': {
+        var cxI = el.x + el.w / 2;
+        var cyI = el.y + el.h / 2;
+        t = '<rect x="' + el.x + '" y="' + el.y + '" width="' + el.w + '" height="' + el.h +
+          '" rx="12" fill="rgba(30,30,30,0.45)" stroke="#4A4A4A" stroke-width="1.5" stroke-dasharray="7 5"/>' +
+          '<text x="' + cxI + '" y="' + (cyI - 10) + '" text-anchor="middle" font-family="Georgia" font-size="26" fill="#9A9A9A">\u2193</text>' +
+          multiLineText(cxI, cyI + 14, d.title || 'Importer des médias', 'font-family="Georgia" font-size="13" font-weight="700" fill="#F5F5F5" text-anchor="middle"', 16);
         break;
       }
 
@@ -242,10 +265,11 @@
         var bCount = d && d.doc && Array.isArray(d.doc.elements) ? d.doc.elements.length : 0;
         var footH = 34; /* hauteur de la barre du bas à l'échelle du SVG */
         var bodyCy = el.y + Math.max(18, (el.h - footH) / 2);
+        var bdFont = d.titleFont || 'Georgia';
         t =
           '<rect x="' + el.x + '" y="' + el.y + '" width="' + el.w + '" height="' + el.h +
           '" rx="12" fill="#232323" stroke="#3A3A3A" stroke-width="1.5"' + rotAttr() + '/>' +
-          multiLineText(el.x + el.w / 2, bodyCy, d.title || 'Planche', 'font-family="Georgia" font-size="16" font-weight="700" fill="#F5F5F5" text-anchor="middle"', 19) +
+          multiLineText(el.x + el.w / 2, bodyCy, d.title || 'Planche', 'font-family="' + esc(bdFont) + '" font-size="16" font-weight="700" fill="#F5F5F5" text-anchor="middle"', 19) +
           '<line x1="' + (el.x + 1) + '" y1="' + (el.y + el.h - footH) + '" x2="' + (el.x + el.w - 1) + '" y2="' + (el.y + el.h - footH) + '" stroke="#2E2E2E" stroke-width="1"/>' +
           multiLineText(el.x + 12, el.y + el.h - 12, bCount + ' élément' + (bCount > 1 ? 's' : ''), 'font-family="Georgia" font-size="11" fill="#B4B4B4"', 14) +
           '<text x="' + (el.x + el.w - 28) + '" y="' + (el.y + el.h - 13) + '" font-family="Georgia" font-size="16" font-weight="700" fill="#4C8DFF">\u2192</text>';

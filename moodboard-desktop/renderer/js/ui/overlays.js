@@ -265,6 +265,13 @@
           ? 'Dossier personnalisé — les autosaves et fichiers temporaires y sont écrits.'
           : 'Dossier par défaut' + (def ? ' — ' + U.escapeHtml(def) : '') + '.') +
         '</div>' +
+        /* v1.8 — explicite : le choix est GLOBAL (tous les moodboards,
+         * application comme extension) et chaque projet enregistré y
+         * garde son propre autosave. */
+        '<div class="prefs-sub prefs-sub--all">' +
+        'Ce choix s‘applique à <strong>tous vos moodboards</strong> — application et extension. ' +
+        'Chaque projet enregistré y conserve son propre autosave (jamais écrasé par un autre).' +
+        '</div>' +
         '<div class="prefs-actions">' +
         '<button type="button" class="btn btn-primary btn--xs" data-act="pick"' +
         (canFs ? '' : ' disabled') + '>Choisir un dossier…</button>' +
