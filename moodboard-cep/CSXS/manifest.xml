@@ -3,9 +3,9 @@
                    Version="10.0"
                    ExtensionBundleId="com.moodboard.cep"
                    ExtensionBundleName="Moodboard"
-                   ExtensionBundleVersion="1.8.0">
+                   ExtensionBundleVersion="1.9.0">
   <ExtensionList>
-    <Extension Id="com.moodboard.cep.panel" Version="1.8.0"/>
+    <Extension Id="com.moodboard.cep.panel" Version="1.9.0"/>
   </ExtensionList>
   <ExecutionEnvironment>
     <HostList>
@@ -24,11 +24,15 @@
         <Resources>
           <MainPath>./client/index.html</MainPath>
           <ScriptPath>./client/js/adobe/host.script.jsx</ScriptPath>
+          <!-- v1.9 — aperçu des liens : lecture de og:image sur les sites
+               visités par le designer (le panneau ne charge que du contenu
+               local ; usage CEP standard). -->
           <CEFCommandLine>
             <Parameter>--allow-file-access</Parameter>
             <Parameter>--allow-file-access-from-files</Parameter>
             <Parameter>--enable-nodejs</Parameter>
             <Parameter>--mixed-context</Parameter>
+            <Parameter>--disable-web-security</Parameter>
           </CEFCommandLine>
         </Resources>
         <Lifecycle>

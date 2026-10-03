@@ -20,7 +20,7 @@
  * ========================================================================= */
 'use strict';
 
-const { app, BrowserWindow, Menu, ipcMain, dialog, shell, session } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, dialog, shell, session, WebContentsView } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const https = require('https');
@@ -446,6 +446,67 @@ ipcMain.handle('shell:openUrl', async (_e, url) => {
 ipcMain.on('app:quit', () => {
   if (win && !win.isDestroyed()) win.__forceClose = true;
   app.quit();
+});
+
+/* ------------------------------------------------- v1.9 — aperçu de lien
+ * Capture STATIQUE d'une page web pour les cartes de lien : la page
+ * est chargée dans une WebContentsView hors écran (vrai Chromium, avec
+ * son rendu réel), on attend l'affichage, puis capturePage() → PNG
+ * redimensionné (480 px de large) → data URL. Repli si le site refuse :
+ * og:image (même mécanique de repli côté renderer ensuite).
+ * Jamais animé : c'est une image figée au moment de la capture. */
+ipcMain.handle('link:preview', async (_e, url) => {
+  if (typeof url !== 'string' || !/^https?:\/\/[^\s]+$/i.test(url)) return { err: 1 };
+  if (!win || win.isDestroyed() || !win.contentView) return { err: 1 };
+
+  let view = null;
+  const cleanup = () => {
+    try {
+      if (view) {
+        win.contentView.removeChildView(view);
+        if (!view.webContents.isDestroyed()) view.webContents.close();
+      }
+    } catch (err) { /* déjà détruite */ }
+  };
+
+  try {
+    view = new WebContentsView({
+      webPreferences: {
+        offscreen: true,
+        sandbox: true,
+        nodeIntegration: false,
+        contextIsolation: true,
+        webSecurity: true
+      }
+    });
+    win.contentView.addChildView(view);
+    view.setBounds({ x: 0, y: 0, width: 1024, height: 640 });
+    view.setBackgroundColor('#FFFFFF');
+
+    const loaded = new Promise((resolve) => {
+      view.webContents.once('did-stop-loading', () => resolve(true));
+      view.webContents.once('did-fail-load', (_ev, code) => resolve(code === -3));
+      setTimeout(() => resolve(false), 12000);
+    });
+    view.webContents.loadURL(url).catch(() => {});
+    await loaded;
+    /* Laisser les images/réseaux finir de se peindre. */
+    await new Promise((r) => setTimeout(r, 1800));
+    if (!win || win.isDestroyed()) return { err: 1 };
+
+    const image = await view.webContents.capturePage();
+    if (image && !image.isEmpty()) {
+      const resized = image.resize({ width: 480 });
+      const dataUrl = resized.toDataURL();
+      cleanup();
+      if (dataUrl && dataUrl.length > 200) return { err: 0, dataUrl };
+    }
+    cleanup();
+    return { err: 1 };
+  } catch (err) {
+    cleanup();
+    return { err: 1 };
+  }
 });
 
 /* Télécharge `url` (release GitHub — redirections suivies) dans `dir` ;

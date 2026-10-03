@@ -64,6 +64,10 @@
     file: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M15 2v5h5"/>',
     check: '<path d="m5 12 5 5L20 7"/>',
     external: '<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
+    /* v1.9 — flèche d'ouverture des liens : version moderne minimaliste
+     * (diagonale fine, seule, style iOS/macOS) remplace l'ancienne
+     * icône « external » encadrée. */
+    arrowUpRight: '<path d="M7 17 17 7"/><path d="M8 7h9v9"/>',
     bold: '<path d="M7 4h6a3.5 3.5 0 1 1 0 7H7z"/><path d="M7 11h7a3.5 3.5 0 1 1 0 7H7z"/>',
     italic: '<path d="M19 4h-9"/><path d="M14 20H5"/><path d="M15 4 9 20"/>',
     underline: '<path d="M6 4v6a6 6 0 0 0 12 0V4"/><path d="M4 20h16"/>',

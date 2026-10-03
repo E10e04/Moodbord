@@ -7,6 +7,11 @@
   var MB = (window.MB = window.MB || {});
   var U = MB.util;
 
+  /* v1.9 — menu contextuel localisé. */
+  function T(k, v) {
+    return MB.i18n ? MB.i18n.t(k, v) : k;
+  }
+
   var menuEl = null;
 
   function close() {
@@ -83,85 +88,85 @@
         MB.app.deleteSelection();
       }, { kbd: '⌫' }));
       if (titleEditable(resolved)) {
-        menuEl.appendChild(item('Renommer', function () {
+        menuEl.appendChild(item(T('home.menuOpen') === 'Open' ? 'Rename' : 'Renommer', function () {
           MB.interact.startEditing(resolved, resolved.type === 'color' || resolved.type === 'palette' || resolved.type === 'typography' ? 'name' : 'title');
         }));
       }
       if (resolved.type === 'board') {
-        menuEl.appendChild(item('Ouvrir la planche', function () {
+        menuEl.appendChild(item(MB.i18n && MB.i18n.lang() === 'en' ? 'Open board' : 'Ouvrir la planche', function () {
           if (MB.boards) MB.boards.enter(resolved);
         }));
       }
       if (MB.store.selectedIds().length >= 2) {
-        menuEl.appendChild(item('Grouper', function () {
+        menuEl.appendChild(item(T('menu.group'), function () {
           MB.store.groupSelection();
         }, { kbd: '⌘G' }));
       }
       if (selectionHasGroup()) {
-        menuEl.appendChild(item('Dissocier', function () {
+        menuEl.appendChild(item(T('menu.ungroup'), function () {
           MB.store.ungroupSelection();
         }, { kbd: '⇧⌘G' }));
       }
       menuEl.appendChild(sep());
-      menuEl.appendChild(item(resolved.locked ? 'Déverrouiller' : 'Verrouiller', function () {
+      menuEl.appendChild(item(resolved.locked ? (MB.i18n && MB.i18n.lang() === 'en' ? 'Unlock' : 'Déverrouiller') : T('menu.lock'), function () {
         MB.app.toggleLock();
       }));
-      menuEl.appendChild(item('Masquer', function () {
+      menuEl.appendChild(item(T('menu.hide'), function () {
         MB.app.toggleHide(true);
       }));
       menuEl.appendChild(sep());
-      menuEl.appendChild(item('Premier plan', function () {
+      menuEl.appendChild(item(T('menu.front'), function () {
         MB.app.reorderSelection('front');
       }));
-      menuEl.appendChild(item('Avancer', function () {
+      menuEl.appendChild(item(T('menu.forward'), function () {
         MB.app.reorderSelection('forward');
       }));
-      menuEl.appendChild(item('Reculer', function () {
+      menuEl.appendChild(item(T('menu.backward'), function () {
         MB.app.reorderSelection('backward');
       }));
-      menuEl.appendChild(item('Arrière-plan', function () {
+      menuEl.appendChild(item(T('menu.back'), function () {
         MB.app.reorderSelection('back');
       }));
       if (resolved.type === 'image' && MB.cep.available()) {
         menuEl.appendChild(sep());
-        menuEl.appendChild(item('Placer dans Illustrator…', function () {
+        menuEl.appendChild(item(T('menu.cep.place'), function () {
           MB.cep.placeSelectedImage();
         }));
       }
       if ((resolved.type === 'color' || resolved.type === 'palette') && MB.cep.available()) {
-        menuEl.appendChild(item('Envoyer les couleurs vers Illustrator…', function () {
+        menuEl.appendChild(item(T('menu.cep.send'), function () {
           MB.cep.sendColorsToIllustrator();
         }));
       }
     } else {
-      menuEl.appendChild(item('Créer une note', function () {
+      menuEl.appendChild(item((MB.i18n && MB.i18n.lang() === 'en' ? 'New note' : 'Créer une note'), function () {
         MB.interact.createAt('note', canvasPt);
       }));
-      menuEl.appendChild(item('Créer un texte', function () {
+      menuEl.appendChild(item((MB.i18n && MB.i18n.lang() === 'en' ? 'New text' : 'Créer un texte'), function () {
         MB.interact.createAt('text', canvasPt);
       }));
-      menuEl.appendChild(item('Créer une couleur', function () {
+      menuEl.appendChild(item((MB.i18n && MB.i18n.lang() === 'en' ? 'New color' : 'Créer une couleur'), function () {
         MB.interact.createAt('color', canvasPt);
       }));
-      menuEl.appendChild(item('Créer une section', function () {
+      menuEl.appendChild(item((MB.i18n && MB.i18n.lang() === 'en' ? 'New section' : 'Créer une section'), function () {
         MB.interact.createAt('section', canvasPt);
       }));
-      menuEl.appendChild(item('Créer une planche liée', function () {
+      menuEl.appendChild(item((MB.i18n && MB.i18n.lang() === 'en' ? 'New linked board' : 'Créer une planche liée'), function () {
         MB.interact.createAt('board', canvasPt);
       }, { kbd: 'E' }));
       menuEl.appendChild(sep());
       var canPaste = !!(MB.store.s().clipboard && MB.store.s().clipboard.length);
-      menuEl.appendChild(item('Coller', function () {
+      menuEl.appendChild(item(T('menu.paste'), function () {
         MB.store.pasteClipboard(canvasPt);
       }, { kbd: '⌘V', disabled: !canPaste }));
       menuEl.appendChild(sep());
-      menuEl.appendChild(item('Zoom avant', function () {
+      menuEl.appendChild(item(T('menu.zoomIn'), function () {
         MB.camera.setZoom(MB.store.s().camera.zoom * 1.25);
       }, { kbd: '+' }));
-      menuEl.appendChild(item('Zoom arrière', function () {
+      menuEl.appendChild(item(T('menu.zoomOut'), function () {
         MB.camera.setZoom(MB.store.s().camera.zoom / 1.25);
       }, { kbd: '−' }));
-      menuEl.appendChild(item('Ajuster à l’écran', function () {
+      menuEl.appendChild(item(T('menu.fit'), function () {
         MB.camera.fit(null);
       }));
       if (hasSelection()) {

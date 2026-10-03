@@ -24,6 +24,11 @@
   var MB = (window.MB = window.MB || {});
   var U = MB.util;
 
+  /* v1.9 — écran d'accueil localisé. */
+  function T(k, v) {
+    return MB.i18n ? MB.i18n.t(k, v) : k;
+  }
+
   var root = null;
   var gridEl = null;
   var emptyEl = null;
@@ -186,9 +191,9 @@
         '" alt="" draggable="false">'
       : '<span class="home-card-ph" aria-hidden="true">' + MB.icons.get('layers', 26) + '</span>';
     var meta = inTrash
-      ? (it.trashedAt ? 'retiré ' + relDate(it.trashedAt) : '')
+      ? (it.trashedAt ? T('home.trashed', { d: relDate(it.trashedAt) }) : '')
       : (it.savedAt ? relDate(it.savedAt) : '') +
-        (typeof it.count === 'number' ? ' · ' + it.count + ' élément' + (it.count > 1 ? 's' : '') : '');
+        (typeof it.count === 'number' ? ' · ' + it.count + ' ' + T('home.element') + (it.count > 1 ? 's' : '') : '');
     return (
       '<div class="home-card' + (extra || '') + '" data-path="' +
       U.escapeHtml(it.path || '') + '" title="' + U.escapeHtml(it.path || '') + '" role="button" tabindex="0" ' +
@@ -218,10 +223,10 @@
       MB.icons.get('refresh', 30) + '</div>' +
       '<div class="home-card-info">' +
       '<span class="home-card-icn" aria-hidden="true">' + MB.icons.get('refresh', 14) + '</span>' +
-      '<span class="home-card-name">Reprendre la session</span>' +
+      '<span class="home-card-name">' + T('home.session') + '</span>' +
       '</div>' +
       '<div class="home-card-meta">' + U.escapeHtml(doc.name || 'Sans titre') +
-      ' · ' + n + ' élément' + (n > 1 ? 's' : '') + ' · non enregistré</div>' +
+      ' · ' + n + ' ' + T('home.element') + (n > 1 ? 's' : '') + ' · ' + T('home.sessionSub') + '</div>' +
       '</div>'
     );
   }
@@ -230,17 +235,17 @@
     var icon = view === 'trash' ? 'trash' : view === 'fav' ? 'star' : 'layers';
     var main, sub;
     if (query) {
-      main = 'Aucun résultat pour « ' + U.escapeHtml(query) + ' »';
-      sub = 'Essayez un autre nom de moodboard.';
+      main = T('home.noResults', { q: U.escapeHtml(query) });
+      sub = T('home.noResultsSub');
     } else if (view === 'fav') {
-      main = 'Aucun favori pour l‘instant.';
-      sub = 'Épinglez vos moodboards fréquents depuis le menu ⋯ d‘une carte.';
+      main = T('home.noFav');
+      sub = T('home.noFavSub');
     } else if (view === 'trash') {
-      main = 'La corbeille est vide.';
-      sub = 'Les projets retirés de la liste restent restaurables ici.';
+      main = T('home.noTrash');
+      sub = T('home.noTrashSub');
     } else {
-      main = 'Aucun moodboard récent pour l‘instant.';
-      sub = 'Créez-en un avec « Nouveau moodboard » ou ouvrez un fichier existant.';
+      main = T('home.noRecent');
+      sub = T('home.noRecentSub');
     }
     return (
       '<div class="home-empty-icn" aria-hidden="true">' + MB.icons.get(icon, 26) + '</div>' +
@@ -250,9 +255,9 @@
   }
 
   function viewLabels() {
-    if (view === 'fav') return { title: 'Favoris', unit: 'favori' };
-    if (view === 'trash') return { title: 'Corbeille', unit: 'entrée' };
-    return { title: 'Fichiers récents', unit: 'fichier' };
+    if (view === 'fav') return { title: T('home.favorites'), unit: T('home.favorite') };
+    if (view === 'trash') return { title: T('home.trash'), unit: T('home.entry') };
+    return { title: T('home.recents'), unit: T('home.file') };
   }
 
   function render() {
@@ -452,12 +457,12 @@
     var path = node.getAttribute('data-path') || '';
     if (view === 'trash') {
       openMenu(anchor, [
-        { label: 'Restaurer dans les récents', icon: 'undo', action: function () {
+        { label: T('home.menuRestore'), icon: 'undo', action: function () {
             actOnEntry(path, 'restore');
             MB.ui.toast('Entrée restaurée', 'success');
           } },
         '-',
-        { label: 'Supprimer de la corbeille', icon: 'trash', danger: true, action: function () {
+        { label: T('home.menuDelete'), icon: 'trash', danger: true, action: function () {
             actOnEntry(path, 'delete');
             MB.ui.toast('Entrée supprimée de la liste', 'success');
           } }
@@ -467,7 +472,7 @@
     var favNow = !!node.querySelector('.home-card-fav');
     var items = [
       {
-        label: 'Ouvrir',
+        label: T('home.menuOpen'),
         icon: 'folder',
         action: function () {
           if (previewMode) openDemoFromHome();
@@ -477,7 +482,7 @@
     ];
     if (!previewMode && MB.desktop && MB.desktop.canReveal && MB.storage.isDesktop()) {
       items.push({
-        label: 'Afficher dans le dossier',
+        label: T('home.menuReveal'),
         icon: 'externalBox',
         action: function () {
           MB.desktop.reveal(path).then(function (r) {
@@ -488,7 +493,7 @@
     }
     items.push('-');
     items.push({
-      label: favNow ? 'Retirer des favoris' : 'Ajouter aux favoris',
+      label: favNow ? T('home.menuUnfav') : T('home.menuFav'),
       icon: 'star',
       action: function () {
         actOnEntry(path, 'fav');
@@ -496,7 +501,7 @@
       }
     });
     items.push({
-      label: 'Retirer de la liste',
+      label: T('home.menuTrash'),
       icon: 'trash',
       action: function () {
         actOnEntry(path, 'trash');
@@ -575,13 +580,13 @@
 
   function helpMenu(anchor) {
     openMenu(anchor, [
-      { label: 'Raccourcis clavier', icon: 'keyboard', action: function () {
+      { label: T('menu.shortcuts'), icon: 'keyboard', action: function () {
           MB.ui.shortcutsDialog();
         } },
-      { label: 'Diagnostics…', icon: 'info', action: function () {
+      { label: T('menu.diagnostics'), icon: 'info', action: function () {
           MB.ui.diagnosticsDialog();
         } },
-      { label: 'À propos de Moodboard', icon: 'help', action: function () {
+      { label: T('menu.about'), icon: 'help', action: function () {
           MB.ui.aboutDialog();
         } }
     ]);
@@ -607,26 +612,26 @@
       '</div>' +
       '<div class="home-side-group">' +
       '<button class="home-side-item home-side-item--accent" type="button" aria-current="page">' +
-      '<span class="hs-icn" aria-hidden="true">' + MB.icons.get('home', 17) + '</span><span>Accueil</span></button>' +
+      '<span class="hs-icn" aria-hidden="true">' + MB.icons.get('home', 17) + '</span><span>' + (T('menu.view') === 'View' ? 'Home' : 'Accueil') + '</span></button>' +
       '<button class="home-side-item js-home-new" type="button">' +
-      '<span class="hs-icn" aria-hidden="true">' + MB.icons.get('plus', 17) + '</span><span>Nouveau</span></button>' +
+      '<span class="hs-icn" aria-hidden="true">' + MB.icons.get('plus', 17) + '</span><span>' + (MB.i18n && MB.i18n.lang() === 'en' ? 'New' : 'Nouveau') + '</span></button>' +
       '<button class="home-side-item js-home-open" type="button">' +
-      '<span class="hs-icn" aria-hidden="true">' + MB.icons.get('folder', 17) + '</span><span>Ouvrir</span></button>' +
+      '<span class="hs-icn" aria-hidden="true">' + MB.icons.get('folder', 17) + '</span><span>' + (MB.i18n && MB.i18n.lang() === 'en' ? 'Open' : 'Ouvrir') + '</span></button>' +
       '<button class="home-side-item js-home-import" type="button">' +
-      '<span class="hs-icn" aria-hidden="true">' + MB.icons.get('upload', 17) + '</span><span>Importer</span></button>' +
+      '<span class="hs-icn" aria-hidden="true">' + MB.icons.get('upload', 17) + '</span><span>' + T('home.import') + '</span></button>' +
       '</div>' +
       '<div class="home-side-sep" role="separator"></div>' +
       '<div class="home-side-group">' +
       '<button class="home-side-item js-home-view" data-view="recents" type="button">' +
-      '<span class="hs-icn" aria-hidden="true">' + MB.icons.get('clock', 17) + '</span><span>Récents</span></button>' +
+      '<span class="hs-icn" aria-hidden="true">' + MB.icons.get('clock', 17) + '</span><span>' + (MB.i18n && MB.i18n.lang() === 'en' ? 'Recent' : 'Récents') + '</span></button>' +
       '<button class="home-side-item js-home-view" data-view="fav" type="button">' +
-      '<span class="hs-icn" aria-hidden="true">' + MB.icons.get('star', 17) + '</span><span>Favoris</span></button>' +
+      '<span class="hs-icn" aria-hidden="true">' + MB.icons.get('star', 17) + '</span><span>' + T('home.favorites') + '</span></button>' +
       '<button class="home-side-item js-home-view" data-view="trash" type="button">' +
-      '<span class="hs-icn" aria-hidden="true">' + MB.icons.get('trash', 17) + '</span><span>Corbeille</span></button>' +
+      '<span class="hs-icn" aria-hidden="true">' + MB.icons.get('trash', 17) + '</span><span>' + T('home.trash') + '</span></button>' +
       '</div>' +
       '<div class="home-side-foot">' +
       '<button class="home-side-item js-home-help" type="button">' +
-      '<span class="hs-icn" aria-hidden="true">' + MB.icons.get('help', 17) + '</span><span>Aide</span></button>' +
+      '<span class="hs-icn" aria-hidden="true">' + MB.icons.get('help', 17) + '</span><span>' + T('home.help') + '</span></button>' +
       '</div>' +
       '</nav>' +
       /* ---- zone principale ---- */
@@ -637,27 +642,27 @@
       '<img class="home-app-mark" src="assets/logo.png" alt="" width="46" height="46" draggable="false">' +
       '<div class="home-head-txt">' +
       '<h1 class="home-title">Moodboard</h1>' +
-      '<p class="home-tagline">Café des idées — votre table de travail spatiale</p>' +
+      '<p class="home-tagline">' + (MB.i18n && MB.i18n.lang() === 'en' ? 'Idea café — your spatial worktable' : 'Café des idées — votre table de travail spatiale') + '</p>' +
       '</div>' +
       '</div>' +
       '<div class="home-head-tools">' +
       '<label class="home-search">' +
       '<span class="hs-icn" aria-hidden="true">' + MB.icons.get('search', 15) + '</span>' +
-      '<input id="home-search" type="search" placeholder="Rechercher un moodboard…" ' +
-      'aria-label="Rechercher un moodboard" autocomplete="off" spellcheck="false">' +
+      '<input id="home-search" type="search" placeholder="' + T('home.search') + '" ' +
+      'aria-label="' + T('home.search') + '" autocomplete="off" spellcheck="false">' +
       '</label>' +
       '</div>' +
       '</header>' +
       '<div class="home-actions">' +
       '<button class="home-btn home-btn--primary" id="home-new" type="button">' +
-      MB.icons.get('plus', 15) + '<span>Nouveau moodboard</span></button>' +
+      MB.icons.get('plus', 15) + '<span>' + T('home.newBoard') + '</span></button>' +
       '<button class="home-btn" id="home-open" type="button">' +
-      MB.icons.get('folder', 15) + '<span>Ouvrir…</span></button>' +
+      MB.icons.get('folder', 15) + '<span>' + T('menu.open') + '</span></button>' +
       '<button class="home-btn" id="home-demo" type="button">' +
-      MB.icons.get('sparkle', 15) + '<span>Charger la démonstration</span></button>' +
+      MB.icons.get('sparkle', 15) + '<span>' + (MB.i18n && MB.i18n.lang() === 'en' ? 'Load demo board' : 'Charger la démonstration') + '</span></button>' +
       '</div>' +
       '<div class="home-recents-head">' +
-      '<span class="home-sub" id="home-section-title">Fichiers récents</span>' +
+      '<span class="home-sub" id="home-section-title">' + T('home.recents') + '</span>' +
       '<span class="home-count" id="home-count"></span>' +
       '</div>' +
       '<div class="home-grid" id="home-grid"></div>' +

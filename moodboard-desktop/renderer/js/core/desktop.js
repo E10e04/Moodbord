@@ -162,6 +162,15 @@
     canQuit: !!(active && typeof api.quit === 'function'),
     quit: function () {
       if (active && typeof api.quit === 'function') api.quit();
+    },
+    /* v1.9 — APERÇU STATIQUE DES LIENS : capture d'écran de la page par
+     * le processus principal (WebContentsView hors écran) → data URL. */
+    canLinkPreview: !!(active && typeof api.linkPreview === 'function'),
+    linkPreview: function (url) {
+      if (!active || typeof api.linkPreview !== 'function') {
+        return Promise.resolve({ err: 1 });
+      }
+      return api.linkPreview(url);
     }
   };
 })();

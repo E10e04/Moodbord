@@ -11,6 +11,11 @@
   function boot() {
     if (MB.desktop) MB.desktop.init(); // classe body + titre + menus natifs (inerte hors application)
     MB.storage.init();
+    /* v1.9 — langue : la préférence vit dans prefs.json (partagé
+     * application ↔ extension quand ils partagent le dossier de
+     * données) ; « auto » suit la langue du système. Résolue AVANT la
+     * construction des menus/panneaux. */
+    if (MB.i18n) MB.i18n.init();
     if (MB.boards) MB.boards.init(); // v1.6 — planches liées
     if (MB.fonts) MB.fonts.init(); // v1.6 — polices système + police par défaut
     if (MB.diaglog) MB.diaglog.init(); // journal fichier + capture d'erreurs
@@ -25,6 +30,7 @@
     MB.ui.contextbar.init();
     MB.ui.contextmenu.init();
     if (MB.ui.home) MB.ui.home.init(); // v1.3 — écran d'accueil (bureau uniquement, inerte ailleurs)
+    applyStaticI18n(); // v1.9 — textes statiques localisés
     if (MB.updater) {
       MB.updater.init(); // v1.7 — mises à jour GitHub (pastille version)
       MB.updater.startupCheck(); // vérification à chaque démarrage (si connecté)
@@ -35,6 +41,55 @@
     bindStatusbar();
     firstRun();
     statusCounts();
+  }
+
+  /* ------------------------------------------------ langue (v1.9)
+   * Textes statiques de index.html : traduits au démarrage selon la
+   * langue résolue (système par défaut, préférence sinon). */
+  function applyStaticI18n() {
+    if (!MB.i18n) return;
+    var t = MB.i18n.t;
+    var q = function (sel) {
+      return document.querySelector(sel);
+    };
+    var libTitle = q('#library .panel-title');
+    if (libTitle) libTitle.textContent = t('panel.library');
+    var inspTitle = q('#inspector .panel-title');
+    if (inspTitle) inspTitle.textContent = t('insp.title');
+    var libClose = document.getElementById('btn-library-close');
+    if (libClose) {
+      libClose.setAttribute('data-tip', t('panel.collapse'));
+      libClose.setAttribute('aria-label', t('panel.collapse'));
+    }
+    var inspClose = document.getElementById('btn-inspector-close');
+    if (inspClose) {
+      inspClose.setAttribute('data-tip', t('panel.collapse'));
+      inspClose.setAttribute('aria-label', t('panel.collapse'));
+    }
+    var libAria = document.getElementById('library');
+    if (libAria) libAria.setAttribute('aria-label', t('panel.library'));
+    var inspAria = document.getElementById('inspector');
+    if (inspAria) inspAria.setAttribute('aria-label', t('panel.inspector'));
+    var saveLabel = document.getElementById('save-label');
+    if (saveLabel && saveLabel.textContent === 'Enregistré') {
+      saveLabel.textContent = t('save.saved');
+    }
+    var hint = document.getElementById('sb-hint');
+    if (hint && hint.textContent.indexOf('Sélection —') === 0) {
+      hint.textContent = t('status.selectHint');
+    }
+    var kbdBtn = document.getElementById('sb-kbd');
+    if (kbdBtn) kbdBtn.setAttribute('data-tip', t('status.shortcuts'));
+    var empty = document.getElementById('empty-hint');
+    if (empty) {
+      var strong = empty.querySelector('p strong');
+      var ps = empty.querySelectorAll('p');
+      if (strong) strong.textContent = t('empty.title');
+      if (ps[1]) ps[1].innerHTML = t('empty.body');
+      if (ps[2]) ps[2].textContent = t('empty.kbd');
+    }
+    var toolRail = document.getElementById('toolrail');
+    if (toolRail) toolRail.setAttribute('aria-label', MB.i18n.lang() === 'en' ? 'Creation tools' : 'Outils de création');
   }
 
   /* ------------------------------------------------ premier lancement */

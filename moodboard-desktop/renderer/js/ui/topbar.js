@@ -23,153 +23,158 @@
     return { sep: true };
   }
 
+  /* v1.9 — menus localisés (MB.i18n.t). */
+  function T(k) {
+    return MB.i18n ? MB.i18n.t(k) : k;
+  }
+
   function buildMenus() {
     return [
       {
-        title: 'Fichier',
+        title: T('menu.file'),
         items: [
-          m('Nouveau moodboard', function () {
+          m(T('menu.new'), function () {
             MB.app.newBoard();
           }, ''),
-          m('Ouvrir…', function () {
+          m(T('menu.open'), function () {
             MB.storage.open();
           }, '⌘O'),
-          m('Enregistrer', function () {
+          m(T('menu.save'), function () {
             MB.storage.save();
           }, '⌘S'),
-          m('Enregistrer sous…', function () {
+          m(T('menu.saveas'), function () {
             MB.storage.saveAs();
           }, '⇧⌘S'),
           sep(),
-          m('Importer des images…', function () {
+          m(T('menu.import'), function () {
             MB.interact.openImportPicker(null);
           }, ''),
-          m('Charger le tableau de démonstration', function () {
+          m(T('menu.demo'), function () {
             MB.app.loadDemo(true);
           }, ''),
           sep(),
-          m('Exporter le PNG…', function () {
+          m(T('menu.exportPng'), function () {
             MB.exporter.exportPng(null);
           }, ''),
-          m('Exporter le SVG…', function () {
+          m(T('menu.exportSvg'), function () {
             MB.exporter.exportSvg(null);
           }, ''),
-          m('Exporter la sélection en SVG…', function () {
+          m(T('menu.exportSel'), function () {
             MB.exporter.exportSvg(MB.store.selected());
           }, ''),
           sep(),
           /* v1.7 — dossier des fichiers temporaires et autosaves. */
-          m('Préférences…', function () {
+          m(T('menu.prefs'), function () {
             MB.ui.preferencesDialog();
           }, '⌘,')
         ]
       },
       {
-        title: 'Édition',
+        title: T('menu.edit'),
         items: [
-          m('Annuler', function () {
+          m(T('menu.undo'), function () {
             var label = MB.hist.undo();
-            if (!label) MB.ui.toast('Rien à annuler', 'info');
+            if (!label) MB.ui.toast(T('toast.nothingUndo'), 'info');
           }, '⌘Z', {
             check: function () {
               return MB.hist.canUndo();
             }
           }),
-          m('Rétablir', function () {
+          m(T('menu.redo'), function () {
             var label = MB.hist.redo();
-            if (!label) MB.ui.toast('Rien à rétablir', 'info');
+            if (!label) MB.ui.toast(T('toast.nothingRedo'), 'info');
           }, '⇧⌘Z', {
             check: function () {
               return MB.hist.canRedo();
             }
           }),
           sep(),
-          m('Couper', function () {
+          m(T('menu.cut'), function () {
             MB.store.cutSelection();
           }, '⌘X'),
-          m('Copier', function () {
+          m(T('menu.copy'), function () {
             MB.store.copySelection();
-            if (MB.store.selectedIds().length) MB.ui.toast('Copié', 'success');
+            if (MB.store.selectedIds().length) MB.ui.toast(T('toast.copied'), 'success');
           }, '⌘C'),
-          m('Coller', function () {
+          m(T('menu.paste'), function () {
             MB.store.pasteClipboard();
           }, '⌘V'),
-          m('Dupliquer', function () {
+          m(T('menu.duplicate'), function () {
             MB.store.duplicateSelection();
           }, '⌘D'),
-          m('Supprimer', function () {
+          m(T('menu.delete'), function () {
             MB.store.deleteSelection();
           }, '⌫'),
           sep(),
-          m('Tout sélectionner', function () {
+          m(T('menu.selectAll'), function () {
             MB.store.selectAll();
           }, '⌘A'),
-          m('Désélectionner', function () {
+          m(T('menu.deselect'), function () {
             MB.store.clearSelection();
           }, 'Échap')
         ]
       },
       {
-        title: 'Objet',
+        title: T('menu.object'),
         items: [
-          m('Grouper', function () {
+          m(T('menu.group'), function () {
             MB.store.groupSelection();
           }, '⌘G'),
-          m('Dissocier', function () {
+          m(T('menu.ungroup'), function () {
             MB.store.ungroupSelection();
           }, '⇧⌘G'),
           sep(),
-          m('Verrouiller / déverrouiller', function () {
+          m(T('menu.lock'), function () {
             MB.app.toggleLock();
           }, ''),
-          m('Masquer', function () {
+          m(T('menu.hide'), function () {
             MB.app.toggleHide(true);
           }, ''),
-          m('Révéler tout', function () {
+          m(T('menu.revealAll'), function () {
             MB.app.revealAll();
           }, ''),
           sep(),
-          m('Premier plan', function () {
+          m(T('menu.front'), function () {
             MB.app.reorderSelection('front');
           }, ''),
-          m('Avancer', function () {
+          m(T('menu.forward'), function () {
             MB.app.reorderSelection('forward');
           }, ''),
-          m('Reculer', function () {
+          m(T('menu.backward'), function () {
             MB.app.reorderSelection('backward');
           }, ''),
-          m('Arrière-plan', function () {
+          m(T('menu.back'), function () {
             MB.app.reorderSelection('back');
           }, '')
         ]
       },
       {
-        title: 'Affichage',
+        title: T('menu.view'),
         items: [
-          m('Zoom avant', function () {
+          m(T('menu.zoomIn'), function () {
             MB.camera.setZoom(MB.store.s().camera.zoom * 1.25);
           }, '+'),
-          m('Zoom arrière', function () {
+          m(T('menu.zoomOut'), function () {
             MB.camera.setZoom(MB.store.s().camera.zoom / 1.25);
           }, '−'),
-          m('Zoom 100 %', function () {
+          m(T('menu.zoom100'), function () {
             MB.camera.setZoom(1);
           }, '⌘0'),
-          m('Ajuster à l’écran', function () {
+          m(T('menu.fit'), function () {
             MB.camera.fit(null);
           }, '⇧1'),
-          m('Zoom sur la sélection', function () {
+          m(T('menu.zoomSel'), function () {
             MB.camera.fitSelection();
           }, '⇧2'),
           sep(),
-          m('Grille de points', function () {
+          m(T('menu.grid'), function () {
             MB.store.setUI({ grid: !MB.store.s().ui.grid });
           }, 'G', {
             check: function () {
               return MB.store.s().ui.grid;
             }
           }),
-          m('Aimantage intelligent', function () {
+          m(T('menu.snap'), function () {
             MB.store.setUI({ snap: !MB.store.s().ui.snap });
           }, '', {
             check: function () {
@@ -177,14 +182,14 @@
             }
           }),
           sep(),
-          m('Bibliothèque', function () {
+          m(T('menu.library'), function () {
             MB.app.togglePanel('library');
           }, '', {
             check: function () {
               return MB.store.s().ui.libraryOpen;
             }
           }),
-          m('Inspecteur', function () {
+          m(T('menu.inspector'), function () {
             MB.app.togglePanel('inspector');
           }, '', {
             check: function () {
@@ -194,33 +199,33 @@
         ]
       },
       {
-        title: 'Illustrateur',
+        title: T('menu.illustrator'),
         items: [
-          m('Importer la palette du document…', function () {
+          m(T('menu.cep.swatches'), function () {
             MB.cep.importDocSwatches();
           }, ''),
-          m('Envoyer les couleurs sélectionnées…', function () {
+          m(T('menu.cep.send'), function () {
             MB.cep.sendColorsToIllustrator();
           }, ''),
-          m('Placer l’image sélectionnée…', function () {
+          m(T('menu.cep.place'), function () {
             MB.cep.placeSelectedImage();
           }, ''),
           sep(),
-          m('Informations du document…', function () {
+          m(T('menu.cep.docinfo'), function () {
             MB.cep.showDocInfo();
           }, '')
         ]
       },
       {
-        title: 'Aide',
+        title: T('menu.help'),
         items: [
-          m('Raccourcis clavier', function () {
+          m(T('menu.shortcuts'), function () {
             MB.ui.shortcutsDialog();
           }, '?'),
-          m('Diagnostics…', function () {
+          m(T('menu.diagnostics'), function () {
             MB.ui.diagnosticsDialog();
           }, ''),
-          m('À propos', function () {
+          m(T('menu.about'), function () {
             MB.ui.aboutDialog();
           }, '')
         ]
@@ -277,6 +282,10 @@
     // v1.3 — retour à l'écran d'accueil (application de bureau uniquement) :
     // visible seulement quand le pont Electron est actif.
     var btnHome = document.getElementById('btn-home');
+    if (btnHome) {
+      btnHome.setAttribute('data-tip', T('app.home'));
+      btnHome.setAttribute('aria-label', T('app.home'));
+    }
     if (btnHome && MB.storage.isDesktop()) {
       btnHome.innerHTML = MB.icons.get('home', 16);
       btnHome.hidden = false;
@@ -458,8 +467,8 @@
     if (!dot) return;
     dot.className = 'save-dot save-dot--' + st;
     label.textContent =
-      st === 'saved' ? 'Enregistré' :
-      st === 'saving' ? 'Enregistrement…' : 'Modifié';
+      st === 'saved' ? T('save.saved') :
+      st === 'saving' ? T('save.saving') : T('save.dirty');
   }
 
   function refreshZoom() {

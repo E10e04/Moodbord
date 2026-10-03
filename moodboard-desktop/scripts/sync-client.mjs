@@ -29,6 +29,8 @@ cpSync(src, dest, { recursive: true, dereference: true });
  * n'existe). v1.7 : connect-src autorise l'API GitHub pour la
  * vérification des mises à jour (le téléchargement des installateurs
  * vit dans le processus principal, hors CSP du renderer).
+ * v1.9 : img-src autorise https: pour les aperçus de liens (og:image /
+ * favicon chargées en <img> — la capture d'écran, elle, est une data URL).
  * La balise est REMPLACÉE si une version antérieure est déjà présente. */
 const indexPath = path.join(dest, 'index.html');
 let html = readFileSync(indexPath, 'utf8');
@@ -37,7 +39,7 @@ const csp =
   "default-src 'none'; " +
   "script-src 'self'; " +
   "style-src 'self' 'unsafe-inline'; " +
-  "img-src 'self' data: blob:; " +
+  "img-src 'self' data: blob: https:; " +
   "font-src 'self' data:; " +
   'connect-src &#39;self&#39; https://api.github.com https://github.com https://raw.githubusercontent.com https://objects.githubusercontent.com; ' +
   'base-uri &#39;none&#39;; form-action &#39;none&#39;' +

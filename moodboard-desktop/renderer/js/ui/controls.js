@@ -340,11 +340,16 @@
     });
   }
 
+  /* v1.9 — libellé fixe « Police » (l'ancien rendu affichait la source
+   * de la fonction current() — « function () { … } » — au lieu du nom).
+   * La police en cours reste indiquée dans l'info-bulle. */
   function fontButton(current, onPick) {
     var b = U.el('button', 'ctx-btn ctx-font-btn');
     b.type = 'button';
-    b.setAttribute('data-tip', 'Police (recherche + polices du système, ★ = par défaut)');
-    b.innerHTML = '<span style="font-family:\'' + U.escapeHtml(current) + '\'">' + U.escapeHtml(current) + '</span>' + MB.icons.get('chevronDown', 12);
+    var cur = typeof current === 'function' ? current() : current;
+    b.setAttribute('data-tip', 'Police' + (cur ? ' — ' + cur : ''));
+    b.setAttribute('aria-label', 'Police');
+    b.innerHTML = '<span class="font-btn-label">Police</span>' + MB.icons.get('chevronDown', 12);
     b.addEventListener('click', function () {
       fontPopover(b, current, onPick);
     });

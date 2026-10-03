@@ -224,23 +224,57 @@
 
   /* -------------------------------------------------------------- LINK */
 
+  /* v1.9 — carte de lien repensée :
+   *  - COULEUR de la carte modifiable (data.bg) ;
+   *  - APERÇU STATIQUE (data.preview) : capture d'écran (application) ou
+   *    og:image / favicon (extension, web) — jamais animé ;
+   *  - flèche d'ouverture moderne (icône arrowUpRight). */
   function renderLink(el) {
     var d = el.data;
     var letter = (d.title || d.domain || '?').trim().charAt(0).toUpperCase();
     var tf = d.titleFont ? ' style="font-family:\'' + U.escapeHtml(d.titleFont) + '\'"' : '';
+    var bg = d.bg && d.bg !== 'transparent' ? ' style="background:' + U.escapeHtml(d.bg) + '"' : '';
+    /* Fond coloré : l'encre s'adapte pour rester lisible (le domaine
+     * garde une teinte atténuée de la même encre). */
+    var ink = bg ? U.readableOn(d.bg) : '';
+    var metaStyle = ink ? ' style="color:' + ink + ';opacity:.72"' : '';
+    var prev = d.preview || '';
+    var isIcon = !!prev && (d.previewKind === 'icon' || /s2\/favicons/.test(prev));
+    var shot = '';
+    var tile = '<div class="mb-link-tile">' + esc(letter) + '</div>';
+    if (prev) {
+      if (isIcon) {
+        /* favicon : à la place de la tuite lettre (carte compacte). */
+        tile =
+          '<div class="mb-link-tile mb-link-tile--icon">' +
+          '<img src="' + esc(prev) + '" alt="" draggable="false" ' +
+          'onerror="this.parentNode.textContent=\'' + esc(letter) + '\'">' +
+          '</div>';
+      } else {
+        /* capture / og:image : bandeau pleine largeur au-dessus. */
+        shot =
+          '<div class="mb-link-shot" aria-hidden="true">' +
+          '<img src="' + esc(prev) + '" alt="" draggable="false" ' +
+          'onerror="this.parentNode.style.display=\'none\'">' +
+          '</div>';
+      }
+    }
     /* v1.3 — la carte ne porte plus data-act="open" : un clic simple
      * sélectionne/déplace le lien comme n'importe quel élément ; SEULE
      * la flèche dédiée (bouton .mb-link-open) ouvre le navigateur. */
     return (
-      '<div class="mb-link-card">' +
-      '<div class="mb-link-tile">' + esc(letter) + '</div>' +
+      '<div class="mb-link-card' + (shot ? ' has-shot' : '') + '"' + bg + '>' +
+      shot +
+      '<div class="mb-link-row"' + (ink ? ' style="color:' + ink + '"' : '') + '>' +
+      tile +
       '<div class="mb-link-meta">' +
       '<div class="mb-link-title mb-editable" data-field="title"' + tf + '>' + esc(d.title) + '</div>' +
-      '<div class="mb-link-domain">' + esc(d.domain) + '</div>' +
+      '<div class="mb-link-domain"' + metaStyle + '>' + esc(d.domain) + '</div>' +
+      '</div>' +
       '</div>' +
       '<button class="mb-link-open" type="button" data-act="open" data-url="' + esc(d.url) +
       '" title="Ouvrir le lien dans le navigateur" aria-label="Ouvrir le lien dans le navigateur">' +
-      MB.icons.get('external', 13) +
+      MB.icons.get('arrowUpRight', 14) +
       '</button>' +
       '</div>'
     );
@@ -305,6 +339,19 @@
 
   /* ------------------------------------------------------------- SHAPE */
 
+  /* v1.9 — triangle = polygone régulier à N branches (3 par défaut) :
+   * 3 = triangle, 4 = losange, 5 = pentagone, 6 = hexagone… 12 = étoile
+   * d'angles denses. Les sommets sont répartis sur le cercle inscrit. */
+  function polygonPoints(sides) {
+    var n = Math.max(3, Math.min(24, parseInt(sides, 10) || 3));
+    var pts = [];
+    for (var i = 0; i < n; i++) {
+      var a = -Math.PI / 2 + (2 * Math.PI * i) / n;
+      pts.push((50 + 48 * Math.cos(a)).toFixed(2) + ',' + (50 + 48 * Math.sin(a)).toFixed(2));
+    }
+    return pts.join(' ');
+  }
+
   function renderShape(el) {
     var d = el.data;
     var stroke = d.stroke !== 'none' ? ' stroke="' + d.stroke + '" stroke-width="' + d.strokeWidth + '"' : '';
@@ -312,7 +359,7 @@
     if (d.shape === 'ellipse') {
       body = '<ellipse cx="50%" cy="50%" rx="49%" ry="49%" fill="' + d.fill + '"' + stroke + '/>';
     } else if (d.shape === 'triangle') {
-      body = '<polygon points="50,3 97,95 3,95" fill="' + d.fill + '"' + stroke + '/>';
+      body = '<polygon points="' + polygonPoints(d.sides) + '" fill="' + d.fill + '"' + stroke + '/>';
     } else {
       body =
         '<rect x="' + (d.strokeWidth / 2 || 0) + '" y="' + (d.strokeWidth / 2 || 0) +
@@ -473,6 +520,21 @@
 
   /* Autodimensionnement après montage. */
   function afterMount(view, el) {
+    /* v1.9 — LIEN : capture automatique de l'aperçu statique (une seule
+     * tentative par élément et par URL — le garde vit sur l'élément
+     * pour survivre aux re-rendus). */
+    if (el.type === 'link' && MB.linkPreview && !el.locked) {
+      if (!el.data.preview && el._pvUrl !== el.data.url) {
+        el._pvUrl = el.data.url;
+        setTimeout(function () {
+          var live = MB.store.el(el.id);
+          if (live && live.type === 'link' && live.data.url === el.data.url) {
+            MB.linkPreview.applyToElement(live);
+          }
+        }, 250);
+      }
+    }
+
     if (el.type === 'image' && !el._sized && el.data.src) {
       var img = view.node.querySelector('img');
       if (img) {
@@ -572,6 +634,8 @@
       if (!fn) return '<div class="mb-unknown">' + esc(el.type) + '</div>';
       return fn(el);
     },
-    afterMount: afterMount
+    afterMount: afterMount,
+    /* v1.9 — réutilisé par l'export SVG (polygones réguliers). */
+    polygonPoints: polygonPoints
   };
 })();

@@ -883,7 +883,11 @@
 
   function onPointerDown(e) {
     // Chrome flottante de l'application : aucun geste canvas ici.
-    if (e.target.closest('#contextbar, .ctx-pop, .edge-tab')) return;
+    // v1.9 — #richbar inclus : un appui sur un bouton de mise en forme
+    // ne doit JAMAIS valider l'édition en cours (bug v1.8 : le clic
+    // remontait au wrap → commitEditing() → la barre disparaissait et
+    // la sélection de texte était perdue avant l'action du bouton).
+    if (e.target.closest('#contextbar, #richbar, .ctx-pop, .edge-tab')) return;
 
     // Pan prioritaire (§12/§13) : bouton milieu, Espace maintenu ou outil Main.
     // Placé AVANT les filtres [data-act] / poignées / crop — l'intention de
@@ -1358,15 +1362,21 @@
           w: rect.w / cam.zoom,
           h: rect.h / cam.zoom
         };
+        /* v1.9 — l'outil Forme dessine la forme CHOISIE (sélecteur du
+         * bouton d'outil / du point de dépôt), pas toujours un rectangle. */
+        var shapePatch =
+          g.type === 'shape' && MB.ui.toolbar && MB.ui.toolbar.shapeExtra
+            ? MB.ui.toolbar.shapeExtra
+            : function (x) { return x; };
         if (canvasRect.w >= 28 && canvasRect.h >= 28) {
           var point = { x: canvasRect.x + canvasRect.w / 2, y: canvasRect.y + canvasRect.h / 2 };
-          createAt(g.type, point, { x: canvasRect.x, y: canvasRect.y, w: canvasRect.w, h: canvasRect.h });
+          createAt(g.type, point, shapePatch({ x: canvasRect.x, y: canvasRect.y, w: canvasRect.w, h: canvasRect.h }));
         } else {
           var startCanvas = Camera.toCanvas(
             g.startScreen.x + wrapEl().getBoundingClientRect().left,
             g.startScreen.y + wrapEl().getBoundingClientRect().top
           );
-          createAt(g.type, startCanvas);
+          createAt(g.type, startCanvas, shapePatch({}));
         }
         break;
       }
@@ -1525,7 +1535,7 @@
   /* ==================================================== divers events */
 
   function onDblClick(e) {
-    if (e.target.closest('#contextbar, .ctx-pop, #empty-hint')) return;
+    if (e.target.closest('#contextbar, #richbar, .ctx-pop, #empty-hint')) return;
 
     /* v1.8 — carte d’import : le double-clic ouvre l’explorateur
      * (Finder / Explorateur Windows) et les fichiers choisis atterrissent
@@ -1678,7 +1688,7 @@
   }
 
   function onContextMenu(e) {
-    if (e.target.closest('#contextbar, .ctx-pop, #empty-hint')) return;
+    if (e.target.closest('#contextbar, #richbar, .ctx-pop, #empty-hint')) return;
     e.preventDefault();
     var hitDom = e.target.closest ? e.target.closest('.mb-el') : null;
     var hitEl = hitDom ? Store.el(hitDom.dataset.id) : null;

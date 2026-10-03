@@ -342,6 +342,24 @@
     }
 
     if (el.type === 'shape') {
+      /* v1.9 — type de forme au survol de la sélection (le triangle est
+       * un polygone dont les branches se règlent dans le panneau Projet). */
+      var gshT = addGroup();
+      gshT.appendChild(C.seg(
+        [
+          { id: 'rect', icon: 'square', label: 'Rectangle' },
+          { id: 'ellipse', icon: 'circle', label: 'Cercle' },
+          { id: 'triangle', icon: 'triangle', label: 'Triangle' }
+        ],
+        function () {
+          return d.shape || 'rect';
+        },
+        function (v) {
+          C.applyDataTo([el], 'Type de forme', { shape: v });
+          MB.board.renderContent(el.id);
+          refresh();
+        }
+      ));
       var gsh = addGroup();
       gsh.appendChild(C.colorButton(function () {
         return d.fill;
@@ -360,6 +378,14 @@
           return d.radius;
         }, function (v) {
           C.applyDataTo([el], 'Arrondi', { radius: U.clamp(v, 0, 100) });
+          MB.board.renderContent(el.id);
+        }));
+      }
+      if (d.shape === 'triangle') {
+        gsh.appendChild(C.sizeControl(function () {
+          return d.sides || 3;
+        }, function (v) {
+          C.applyDataTo([el], 'Branches', { sides: U.clamp(Math.round(v), 3, 24) });
           MB.board.renderContent(el.id);
         }));
       }

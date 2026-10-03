@@ -43,6 +43,10 @@ contextBridge.exposeInMainWorld('mbDesktop', {
   openUrl: (url) => ipcRenderer.invoke('shell:openUrl', url),
   quit: () => ipcRenderer.send('app:quit'),
 
+  /* ----- v1.9 : aperçu statique des liens ----- */
+  /* Capture d'écran de la page (WebContentsView hors écran) → data URL. */
+  linkPreview: (url) => ipcRenderer.invoke('link:preview', url),
+
   /* ----- divers ----- */
   info: () => ipcRenderer.invoke('desktop:info'),
   onMenu: (cb) => ipcRenderer.on('menu-action', (_e, action) => cb(action))

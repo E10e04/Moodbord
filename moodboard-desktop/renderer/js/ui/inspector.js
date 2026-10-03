@@ -9,15 +9,19 @@
   var U = MB.util;
   var C = null; // controls
 
+  /* v1.9 — libellés localisés (panneau Projet). */
+  function T(k, v) {
+    return MB.i18n ? MB.i18n.t(k, v) : k;
+  }
+
   function refresh() {
     C = MB.ui.controls;
     var body = document.getElementById('insp-body');
     var title = document.getElementById('insp-title');
     var st = MB.store.s();
     var sel = MB.store.selected();
-
     if (!sel.length) {
-      title.textContent = 'Projet';
+      title.textContent = T('insp.project');
       body.innerHTML = '';
       body.appendChild(projectSection());
       return;
@@ -25,7 +29,7 @@
 
     if (sel.length === 1) {
       var el = sel[0];
-      title.textContent = capitalize(el.type);
+      title.textContent = typeTitle(el.type);
       body.innerHTML = '';
       body.appendChild(objectSection(el));
       var typeSec = typeSection(el);
@@ -34,13 +38,23 @@
       return;
     }
 
-    title.textContent = 'Sélection (' + sel.length + ')';
+    title.textContent = T('insp.selection', { n: sel.length });
     body.innerHTML = '';
     body.appendChild(multiSection(sel));
     body.appendChild(actionsSection(sel));
   }
 
-  function capitalize(s) {
+  /* v1.9 — libellé de type localisé + capitalisé (panneau Projet). */
+  function typeTitle(type) {
+    var key = {
+      text: 'insp.text', note: 'insp.note', comment: 'insp.comment', image: 'insp.image',
+      color: 'insp.color', palette: 'insp.palette', typography: 'insp.typography',
+      link: 'insp.link', file: 'insp.image', line: 'insp.line', shape: 'insp.shape',
+      section: 'insp.section', column: 'insp.column', table: 'insp.table',
+      checklist: 'insp.checklist', sketch: 'insp.sketch', board: 'insp.board',
+      group: 'type.group', import: 'insp.import'
+    }[type];
+    var s = key && MB.i18n ? MB.i18n.t(key) : type;
     return s.charAt(0).toUpperCase() + s.slice(1);
   }
 
@@ -54,7 +68,7 @@
 
   function projectSection() {
     var st = MB.store.s();
-    var s = section('Document');
+    var s = section(T('insp.document'));
     var counts = {};
     st.elements.forEach(function (e) {
       counts[e.type] = (counts[e.type] || 0) + 1;
@@ -110,7 +124,7 @@
       return e.hidden;
     });
     if (!hidden.length) return U.el('div');
-    var s = section('Masqués (' + hidden.length + ')');
+    var s = section(T('insp.hidden', { n: hidden.length }));
     var list = U.el('div', 'hidden-list');
     hidden.forEach(function (e) {
       var row = U.el('div', 'hidden-row');
@@ -135,7 +149,7 @@
   /* ------------------------------------------------------- objet */
 
   function objectSection(el) {
-    var s = section('Objet');
+    var s = section(T('insp.object'));
 
     var geo = U.el('div', 'field-grid');
     geo.appendChild(C.numberRow('X', function () {
@@ -216,10 +230,10 @@
     var s = null;
 
     if (el.type === 'text') {
-      s = section('Texte');
+      s = section(T('insp.text'));
       s.appendChild(textControls(el));
     } else if (el.type === 'note') {
-      s = section('Note');
+      s = section(T('insp.note'));
       var rowN = U.el('div', 'btn-row');
       rowN.appendChild(C.fontButton(function () {
         return d.fontFamily || 'Georgia';
@@ -265,7 +279,7 @@
       var hintRich = U.el('div', 'insp-hint', 'Double-cliquez la note : la barre au-dessus met en forme la sélection (gras, italique, soulignage, surlignage, listes, police).');
       s.appendChild(hintRich);
     } else if (el.type === 'comment') {
-      s = section('Commentaire');
+      s = section(T('insp.comment'));
       var rowCm = U.el('div', 'btn-row');
       rowCm.appendChild(C.fontButton(function () {
         return d.fontFamily || 'Georgia';
@@ -289,7 +303,7 @@
       }, 'Couleur'));
       s.appendChild(row2);
     } else if (el.type === 'image') {
-      s = section('Image');
+      s = section(T('insp.image'));
       var rowI = U.el('div', 'btn-row');
       rowI.appendChild(C.opacityControl(function () {
         return d.opacity;
@@ -374,7 +388,7 @@
       }));
       s.appendChild(rowI3);
     } else if (el.type === 'line') {
-      s = section('Ligne');
+      s = section(T('insp.line'));
       var rowL = U.el('div', 'btn-row');
       rowL.appendChild(C.colorButton(function () {
         return d.color;
@@ -434,7 +448,7 @@
       rowL4.appendChild(labelBtn);
       s.appendChild(rowL4);
     } else if (el.type === 'color') {
-      s = section('Couleur');
+      s = section(T('insp.color'));
       var rowC = U.el('div', 'btn-row');
       rowC.appendChild(C.colorButton(function () {
         return d.hex;
@@ -452,7 +466,7 @@
       }));
       s.appendChild(rowC);
     } else if (el.type === 'palette') {
-      s = section('Palette');
+      s = section(T('insp.palette'));
       var addBtn = C.textButton('+ Ajouter une couleur', function () {
         C.colorPopover(addBtn, '#4C8DFF', function (hex) {
           var colors = d.colors.concat([{ hex: hex, name: 'Nouvelle' }]);
@@ -492,7 +506,7 @@
         s.appendChild(row);
       });
     } else if (el.type === 'typography') {
-      s = section('Typographie');
+      s = section(T('insp.typography'));
       var rowT = U.el('div', 'btn-row');
       rowT.appendChild(C.fontButton(function () {
         return d.fontFamily;
@@ -502,7 +516,7 @@
       }));
       s.appendChild(rowT);
     } else if (el.type === 'link') {
-      s = section('Lien');
+      s = section(T('insp.link'));
       var urlInput = U.el('input', 'input');
       urlInput.value = d.url;
       urlInput.placeholder = 'https://…';
@@ -512,8 +526,12 @@
         C.applyDataTo([el], 'Modifier le lien', {
           url: url,
           title: U.titleFromUrl(url),
-          domain: U.domainOf(url)
+          domain: U.domainOf(url),
+          /* v1.9 — nouvelle adresse : l'ancien aperçu ne correspond plus. */
+          preview: ''
         });
+        delete el._pvUrl;
+        if (MB.linkPreview) MB.linkPreview.applyToElement(el);
       });
       s.appendChild(urlInput);
       /* v1.6 — presse-papiers explicite : selon l'hôte (Illustrator
@@ -545,6 +563,41 @@
         else window.open(d.url, '_blank');
       }));
       s.appendChild(rowU);
+      /* v1.9 — couleur de la carte : fond modifiable + retour au style
+       * par défaut (le texte reste clair, la lisibilité est préservée
+       * par un léger voile en CSS). */
+      var rowBg = U.el('div', 'btn-row');
+      rowBg.appendChild(C.colorButton(function () {
+        return d.bg && d.bg !== 'transparent' ? d.bg : '#252525';
+      }, function (hex) {
+        C.applyDataTo([el], 'Couleur de la carte', { bg: hex });
+        MB.board.renderContent(el.id);
+      }, 'Couleur de la carte'));
+      rowBg.appendChild(C.textButton('Défaut', function () {
+        C.applyDataTo([el], 'Couleur de la carte', { bg: '' });
+        MB.board.renderContent(el.id);
+      }, 'Rétablir le fond par défaut de la carte'));
+      s.appendChild(rowBg);
+      /* v1.9 — aperçu statique : capturer / retirer l'image figée du
+       * site visé (capture d'écran dans l'application, og:image sinon). */
+      var rowPv = U.el('div', 'btn-row');
+      rowPv.appendChild(C.textButton(d.preview ? 'Actualiser l’aperçu' : 'Capturer l’aperçu', function () {
+        MB.ui.toast('Capture de l’aperçu…', 'info');
+        MB.linkPreview.applyToElement(el).then(function (img) {
+          if (img) MB.ui.toast('Aperçu mis à jour', 'success');
+          else MB.ui.toast('Aucun aperçu disponible pour ce lien.', 'info');
+          MB.ui.inspector.refresh();
+        });
+      }, 'Aperçu statique (non animé) du site'));
+      if (d.preview) {
+        rowPv.appendChild(C.textButton('Retirer', function () {
+          C.applyDataTo([el], 'Retirer l’aperçu', { preview: '' });
+          delete el._pvUrl;
+          MB.board.renderContent(el.id);
+          MB.ui.inspector.refresh();
+        }, 'Supprimer l’image d’aperçu'));
+      }
+      s.appendChild(rowPv);
       /* v1.8 — police du titre du lien. */
       var rowLkF = U.el('div', 'btn-row');
       rowLkF.appendChild(C.fontButton(function () {
@@ -555,7 +608,7 @@
       }));
       s.appendChild(rowLkF);
     } else if (el.type === 'board') {
-      s = section('Planche liée');
+      s = section(T('insp.board'));
       var bCount = d && d.doc && Array.isArray(d.doc.elements) ? d.doc.elements.length : 0;
       var rowB0 = U.el('div', 'insp-row');
       rowB0.appendChild(U.el('span', 'insp-kv', 'Contenu'));
@@ -590,7 +643,60 @@
         '<br>Le contenu de la planche est enregistré DANS le fichier du moodboard racine.';
       s.appendChild(rowB2);
     } else if (el.type === 'shape') {
-      s = section('Forme');
+      s = section(T('insp.shape'));
+      /* v1.9 — type de forme : Rectangle / Cercle / Triangle (choisi à
+       * la création par le sélecteur de l'outil, modifiable ici). */
+      var rowSh = U.el('div', 'btn-row');
+      rowSh.appendChild(C.seg(
+        [
+          { id: 'rect', icon: 'square', label: 'Rectangle' },
+          { id: 'ellipse', icon: 'circle', label: 'Cercle' },
+          { id: 'triangle', icon: 'triangle', label: 'Triangle' }
+        ],
+        function () {
+          return d.shape || 'rect';
+        },
+        function (v) {
+          C.applyDataTo([el], 'Type de forme', { shape: v });
+          MB.board.renderContent(el.id);
+          refresh();
+        }
+      ));
+      s.appendChild(rowSh);
+      /* v1.9 — TRIANGLE = polygone régulier : nombre de branches
+       * (3 = triangle, 4 = losange, 5 = pentagone, 6 = hexagone…). */
+      if (d.shape === 'triangle') {
+        var rowBr = U.el('div', 'field');
+        rowBr.appendChild(U.el('label', 'field-label', 'Branches (côtés du polygone)'));
+        var brWrap = U.el('div', 'branch-stepper');
+        [3, 4, 5, 6, 8, 12].forEach(function (n) {
+          var b = U.el('button', 'branch-btn' + ((d.sides || 3) === n ? ' is-active' : ''), String(n));
+          b.type = 'button';
+          b.setAttribute('data-tip', n + ' branches');
+          b.addEventListener('click', function () {
+            C.applyDataTo([el], 'Branches', { sides: n });
+            MB.board.renderContent(el.id);
+            refresh();
+          });
+          brWrap.appendChild(b);
+        });
+        var brCustom = U.el('input', 'input branch-input');
+        brCustom.type = 'number';
+        brCustom.min = '3';
+        brCustom.max = '24';
+        brCustom.value = String(d.sides || 3);
+        brCustom.setAttribute('aria-label', 'Nombre de branches');
+        brCustom.addEventListener('change', function () {
+          var v = parseInt(brCustom.value, 10);
+          if (isNaN(v)) return;
+          C.applyDataTo([el], 'Branches', { sides: U.clamp(v, 3, 24) });
+          MB.board.renderContent(el.id);
+          refresh();
+        });
+        brWrap.appendChild(brCustom);
+        rowBr.appendChild(brWrap);
+        s.appendChild(rowBr);
+      }
       var rowS = U.el('div', 'btn-row');
       rowS.appendChild(C.colorButton(function () {
         return d.fill;
@@ -621,7 +727,7 @@
       }
       s.appendChild(rowS2);
     } else if (el.type === 'section' || el.type === 'column') {
-      s = section(el.type === 'section' ? 'Section' : 'Colonne');
+      s = section(el.type === 'section' ? T('insp.section') : T('insp.column'));
       var rowSec = U.el('div', 'btn-row');
       rowSec.appendChild(C.colorButton(function () {
         return d.color;
@@ -659,7 +765,7 @@
         s.appendChild(rowSec2);
       }
     } else if (el.type === 'import') {
-      s = section('Import');
+      s = section(T('insp.import'));
       var rowIm = U.el('div', 'btn-row');
       rowIm.appendChild(C.textButton('Choisir des fichiers…', function () {
         MB.interact.openImportPicker({ x: el.x + el.w / 2, y: el.y + el.h / 2 });
@@ -671,7 +777,7 @@
         ' — un <strong>.moodboard</strong> importé devient une planche liée (nom + nombre d’éléments).';
       s.appendChild(hintIm);
     } else if (el.type === 'table') {
-      s = section('Tableau');
+      s = section(T('insp.table'));
       var rowTb = U.el('div', 'btn-row');
       rowTb.appendChild(C.textButton('+ Ligne', function () {
         var cells = d.cells.map(function (r) {
@@ -817,7 +923,7 @@
       }));
       s.appendChild(rowTbF);
     } else if (el.type === 'checklist') {
-      s = section('Checklist');
+      s = section(T('insp.checklist'));
       var rowCk = U.el('div', 'btn-row');
       rowCk.appendChild(C.textButton('+ Tâche', function () {
         var node = document.querySelector('.mb-el[data-id="' + el.id + '"] .mb-check-add');
@@ -849,7 +955,7 @@
       }));
       s.appendChild(rowCkF);
     } else if (el.type === 'sketch') {
-      s = section('Croquis');
+      s = section(T('insp.sketch'));
       var rowSk = U.el('div', 'btn-row');
       rowSk.appendChild(C.colorButton(function () {
         return d.color;
@@ -954,7 +1060,7 @@
   /* ------------------------------------------------------- multi */
 
   function multiSection(els) {
-    var s = section('Alignement & distribution');
+    var s = section(T('insp.alignment'));
 
     var row1 = U.el('div', 'btn-row');
     [
@@ -981,7 +1087,7 @@
       return e.type === 'image';
     });
     if (images.length >= 2) {
-      var s2 = section('Disposition automatique');
+      var s2 = section(T('insp.autoLayout'));
       var row3 = U.el('div', 'btn-row');
       row3.appendChild(C.textButton('Grille', function () {
         MB.app.autoArrange(images, 'grid');
@@ -1016,7 +1122,7 @@
   /* ------------------------------------------------------- actions */
 
   function actionsSection(els) {
-    var s = section('Actions');
+    var s = section(T('insp.actions'));
     var row = U.el('div', 'btn-row');
     row.appendChild(C.iconButton('copy', 'Dupliquer (⌘D)', function () {
       MB.store.duplicateSelection();
