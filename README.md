@@ -6,7 +6,7 @@
 
 Moodboard rassemble moodboards de marque, références, palettes, typographies
 et annotations dans un espace libre — avec caméra découplée (zoom focalisé
-sur le curseur, pan Espace+glisser), **17 types d'éléments**, undo/redo
+sur le curseur, pan Espace+glisser), **18 types d'éléments**, undo/redo
 transactionnel et autosave.
 
 Le projet existe sous **deux formes** qui partagent exactement le même moteur
@@ -173,9 +173,10 @@ npm run dist:mac               # → dist/Moodboard-1.4.0-x64.dmg + arm64.dmg (s
 
 - **Canvas infini** : zoom molette focalisé curseur, pan (Espace+glisser,
   bouton milieu, outil Main `H`), Ajuster à l'écran `⇧1`.
-- **17 types d'éléments** : image, texte, note, commentaire, couleur, palette,
+- **18 types d'éléments** : image, texte, note, commentaire, couleur, palette,
   typographie, lien, fichier, ligne attachable (flèches), forme, section
-  conteneur, colonne, tableau, checklist, croquis à main levée + groupes.
+  conteneur, colonne, tableau, checklist, croquis à main levée, carte
+  assignées (composant personnes) + groupes.
 - **Sélection & transformation** : marquee, multi-sélection ⇧clic, resize à
   ratio préservé, rotation (⇧ = 15°), aimantage intelligent avec guides.
 - **Flux** : undo/redo transactionnel (80 entrées), presse-papiers, `⌘/Ctrl+D`,
@@ -194,7 +195,7 @@ npm run dist:mac               # → dist/Moodboard-1.4.0-x64.dmg + arm64.dmg (s
 
 ## 🧪 Vérifications effectuées
 
-- **Web/CEP — 384/384 tests E2E navigateur** (9 suites : v1.8.0, v1.6.1, v1.6.0, v1.5.0 ×2 phases, v1.4.0 ×2 phases, v1.3.0, v1.2.0, events, v1.0.2) + **114/114 assertions de stockage** (83 v1.4-1.7 + 31 v1.8 : slots par projet, noms synchronisés) : drags au 1/100 de pixel,
+- **Web/CEP — 486/486 tests E2E navigateur** (9 suites : v1.8.0, v1.6.1, v1.6.0, v1.5.0 ×2 phases, v1.4.0 ×2 phases, v1.3.0, v1.2.0, events, v1.0.2) + **114/114 assertions de stockage** (83 v1.4-1.7 + 31 v1.8 : slots par projet, noms synchronisés) : drags au 1/100 de pixel,
   simulation CEP sans Pointer Events, survie blur/pointercancel, undo exact.
 - **Bureau — 10/10 tests E2E** sous Electron headless (Xvfb) : déplacement
   d'élément delta monde exact, autosave persisté sur disque via IPC, CSP
@@ -217,6 +218,39 @@ npm run dist:mac               # → dist/Moodboard-1.4.0-x64.dmg + arm64.dmg (s
    placeholder générés par IA.
 
 ## 📜 Changelog
+
+### v1.11.0 — images système, bibliothèque persistante, composant Assignees
+
+1. **Images ouvertes au reste du système** : clic droit sur une image →
+   **Copier l'image** (bitmap PNG dans le presse-papiers du système,
+   collable partout), **Enregistrer l'image…** (dialogue natif dans
+   l'extension et l'application), **Ajouter à la bibliothèque**. Sur le
+   canvas : **Coller une image** depuis le presse-papiers, et ⌘V d'une
+   image copiée ailleurs (navigateur, capture d'écran) atterrit sur la
+   planche.
+2. **Bibliothèque Médias persistante** : les images ajoutées survivent
+   aux projets et aux sessions (`library.json` dans le dossier de
+   données, partagé application/extension). Suppression au survol de
+   chaque vignette ; les images de démo (non supprimables) sont
+   marquées.
+3. **Barre de mise en forme des en-têtes** : le **titre des colonnes et
+   des sections** s'édite avec la barre flottante — gras, italique,
+   souligné, surlignage, **nouveau bouton couleur du texte** (disponible
+   aussi pour les notes) et police de la sélection ; la mise en forme
+   vit dans le document (sanitisée), l'export reste correct.
+4. **Outil Palette redessiné** : carte portrait en **bandes verticales**
+   pleine surface, code **hex en pied de bande** dans l'encre lisible,
+   bandeau de nom, survol qui élargit la bande ; hauteur indépendante du
+   nombre de couleurs ; export SVG au nouveau design.
+5. **Croquis & ligne en direct, fidélisés** : l'épaisseur du tracé
+   temporaire suit exactement le zoom et la **flèche de fin** se dessine
+   pendant le geste.
+6. **Composant Assignees** (porté de [Bencho](https://bencho.dev), MIT —
+   commentaires d'origine conservés dans
+   [`assignees.js`](moodboard-cep/client/js/ui/assignees.js)) :
+   nouvelle carte **« Assignées »** (outil U) — une **pastille qui se
+   remplit de visages** à mesure qu'on assigne les personnes, et la
+   liste qui les choisit (avatars inclus, 4 personnes de la distribution).
 
 ### v1.10.0 — cartes de lien relookées, mini-canvas, cadenas cliquable
 

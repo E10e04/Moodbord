@@ -34,8 +34,8 @@ Point d'honnêteté : **Adobe recommande UXP pour tout nouveau développement d'
 ### Canvas spatial
 - Canvas infini avec **caméra découplée** : zoom focalisé sur le curseur (molette), zoom 100 % / ajuster à l'écran / zoom sur la sélection, pan (Espace + glisser, bouton milieu, outil Main `H`).
 
-### Objets — 16 types éditables + groupes
-Texte, note, commentaire, image, couleur, palette, typographie, lien, fichier, **ligne attachable** (avec flèches, raccordable aux autres éléments), forme, **section conteneur**, colonne, tableau, checklist, croquis (tracé à main levée) — plus le **groupe** (`⌘/Ctrl + G`) comme conteneur logique.
+### Objets — 17 types éditables + groupes
+Texte, note, commentaire, image, couleur, palette, typographie, lien, fichier, **ligne attachable** (avec flèches, raccordable aux autres éléments), forme, **section conteneur**, colonne, tableau, checklist, croquis (tracé à main levée), **carte assignées** (composant personnes) — plus le **groupe** (`⌘/Ctrl + G`) comme conteneur logique.
 
 ### Sélection et transformation
 - Sélection multiple, **marquee** (lasso sur zone vide), `Maj + clic` pour ajouter/retirer.
@@ -191,7 +191,7 @@ Dézipper l'archive **à la racine** du dossier extensions, de sorte que `CSXS/`
 > 5. relancer Illustrator.
 >
 > **Vérifiez la version installée** : le badge en bas à droite de la barre d'état
-> du panneau doit afficher **v1.10.0**. S'il affiche autre chose, l'ancienne
+> du panneau doit afficher **v1.11.0**. S'il affiche autre chose, l'ancienne
 > installation est encore active.
 
 ### 3. Activer le PlayerDebugMode
@@ -267,6 +267,43 @@ Si un jour les **drags ne répondent plus alors que le zoom molette fonctionne**
 `MB.interact.diag()` retourne le nombre d'événements **réellement livrés** par le moteur de chaque famille (`pointerdown`, `mousedown`, `pointermove`, `mousemove`, `blur`, `pointercancel`…) ainsi que l'état de la machine à gestes (`gesture`, `spaceDown`, `tool`). Depuis la v1.0.1, la couche d'interaction est **adaptive** : elle branche à la fois les Pointer Events et les événements souris, et bascule automatiquement sur la souris si le moteur CEP hôte ne livre pas les Pointer Events (cas observé selon les versions d'Illustrator).
 
 Depuis la **v1.0.2**, les gestes **survivent** aux événements `blur` / `pointercancel` parasites que certains hôtes CEP émettent au milieu d'un drag (symptôme typique : « le zoom marche mais rien ne se déplace ») : le geste continue s'il reçoit encore des événements, et n'est annulé proprement (avec rollback) que si plus rien n'arrive pendant 600 ms.
+
+#### Nouveautés v1.11.0 — images système, bibliothèque persistante, Assignees
+
+1. **Croquis & ligne — tracé temps réel fidélisé** : l'épaisseur du
+   trait temporaire suit **exactement le zoom** (autant de pixels écran
+   que l'élément créé) et la **flèche de fin** de la ligne se dessine
+   pendant le geste.
+2. **Images ouvertes au reste du système** : clic droit sur une image →
+   **Copier l'image** (bitmap PNG dans le presse-papiers — collable
+   dans Photoshop, Discord, Mail…), **Enregistrer l'image…** (dialogue
+   natif dans l'extension et l'application, téléchargement dans le
+   navigateur), **Ajouter à la bibliothèque**. Sur le canvas :
+   **Coller une image** depuis le presse-papiers du système — et le
+   collage (⌘V / Ctrl+V) d'une image copiée ailleurs atterrit
+   directement sur la planche.
+3. **Bibliothèque Médias persistante** : les images ajoutées
+   (importées, déposées, ou depuis le canvas) **survivent aux projets
+   et aux sessions** — fichier `library.json` du dossier de données,
+   partagé par l'application et l'extension. Chaque vignette porte son
+   **bouton de suppression** au survol ; les images de démonstration
+   (non supprimables) sont marquées « démo ».
+4. **Barre de mise en forme des en-têtes** : le **titre des colonnes
+   et des sections** s'édite avec la barre flottante — gras, italique,
+   souligné, surlignage, **couleur du texte** (nouveau bouton « A »
+   dans la barre, disponible aussi pour les notes) et police de la
+   sélection. La mise en forme vit dans le document (sanitisée) et
+   l'export reste correct.
+5. **Outil Palette redessiné** : carte **portrait en bandes
+   verticales** pleine surface — une bande par couleur (le survol
+   l'élargit), **code hex en pied de bande** dans l'encre lisible,
+   bandeau de nom au-dessus. La hauteur ne dépend plus du nombre de
+   couleurs ; l'export SVG suit le nouveau design.
+6. **Composant Assignees** (porté de [Bencho](https://bencho.dev),
+   MIT) : nouvelle carte **« Assignées »** (outil U) — une **pastille
+   qui se remplit de visages** à mesure qu'on assigne les personnes,
+   et la liste qui les choisit. Les commentaires d'origine du
+   composant sont conservés dans `client/js/ui/assignees.js`.
 
 #### Nouveautés v1.10.0 — cartes de lien relookées, mini-canvas, cadenas
 

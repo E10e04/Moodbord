@@ -71,7 +71,7 @@
         fontSize: 15
       }, id(1)),
 
-      E(5, 'palette', 1080, 140, 216, 46 + 5 * 36, {
+      E(5, 'palette', 1080, 140, 200, 300, {
         name: 'Old Copper',
         colors: [
           { hex: '#7A522E', name: 'Old Copper' },

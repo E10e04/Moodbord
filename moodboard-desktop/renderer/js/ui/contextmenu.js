@@ -127,6 +127,23 @@
       menuEl.appendChild(item(T('menu.back'), function () {
         MB.app.reorderSelection('back');
       }));
+      if (resolved.type === 'image') {
+        /* v1.11 — images ouvertes au reste du système : copier le
+         * BITMAP dans le presse-papiers, enregistrer le fichier sur
+         * disque, et l'ajouter à la bibliothèque persistante. */
+        menuEl.appendChild(sep());
+        menuEl.appendChild(item(T('menu.img.copy'), function () {
+          MB.imaging.copyImage(resolved);
+        }));
+        menuEl.appendChild(item(T('menu.img.save'), function () {
+          MB.imaging.downloadImage(resolved);
+        }));
+        menuEl.appendChild(item(T('menu.img.library'), function () {
+          if (MB.ui.library && MB.ui.library.addFromElement) {
+            MB.ui.library.addFromElement(resolved);
+          }
+        }));
+      }
       if (resolved.type === 'image' && MB.cep.available()) {
         menuEl.appendChild(sep());
         menuEl.appendChild(item(T('menu.cep.place'), function () {
@@ -159,6 +176,14 @@
       menuEl.appendChild(item(T('menu.paste'), function () {
         MB.store.pasteClipboard(canvasPt);
       }, { kbd: '⌘V', disabled: !canPaste }));
+      /* v1.11 — coller une image DU SYSTÈME (capture d'écran, autre
+       * application) : lecture bitmap du presse-papiers. */
+      menuEl.appendChild(item(T('menu.img.paste'), function () {
+        MB.imaging.readClipboardImage().then(function (dataUrl) {
+          if (dataUrl) MB.imaging.pasteImageAt(dataUrl, canvasPt);
+          else MB.ui.toast('Aucune image dans le presse-papiers.', 'info');
+        });
+      }));
       menuEl.appendChild(sep());
       menuEl.appendChild(item(T('menu.zoomIn'), function () {
         MB.camera.setZoom(MB.store.s().camera.zoom * 1.25);

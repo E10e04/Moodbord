@@ -52,7 +52,7 @@
       link: 'insp.link', file: 'insp.image', line: 'insp.line', shape: 'insp.shape',
       section: 'insp.section', column: 'insp.column', table: 'insp.table',
       checklist: 'insp.checklist', sketch: 'insp.sketch', board: 'insp.board',
-      group: 'type.group', import: 'insp.import'
+      group: 'type.group', import: 'insp.import', assignees: 'insp.assignees'
     }[type];
     var s = key && MB.i18n ? MB.i18n.t(key) : type;
     return s.charAt(0).toUpperCase() + s.slice(1);
@@ -471,7 +471,6 @@
         C.colorPopover(addBtn, '#4C8DFF', function (hex) {
           var colors = d.colors.concat([{ hex: hex, name: 'Nouvelle' }]);
           C.applyDataTo([el], 'Ajouter une couleur', { colors: colors });
-          el.h = 46 + colors.length * 36;
           MB.board.renderContent(el.id);
           refresh();
         });
@@ -498,7 +497,6 @@
             return i !== idx;
           });
           C.applyDataTo([el], 'Retirer une couleur', { colors: colors });
-          el.h = 46 + colors.length * 36;
           MB.board.renderContent(el.id);
           refresh();
         });
@@ -515,6 +513,34 @@
         MB.board.renderContent(el.id);
       }));
       s.appendChild(rowT);
+    } else if (el.type === 'assignees') {
+      /* v1.11 — carte Assignees : le panneau Projet donne le même
+       * choix que la carte (la pastille reste le contrôle principal,
+       * cette liste rend l'affectation lisible sans l'ouvrir). */
+      s = section(T('insp.assignees'));
+      var cast = MB.ui.assignees ? MB.ui.assignees.CAST : [];
+      var picked = Array.isArray(d.picked) ? d.picked : [];
+      cast.forEach(function (p) {
+        var on = picked.indexOf(p.id) >= 0;
+        var row = U.el('div', 'insp-swatch-row');
+        var dot = U.el('span', 'insp-swatch-dot');
+        dot.style.backgroundImage = 'url("' + (MB.ui.assignees.AVATARS[p.id] || '') + '")';
+        dot.style.backgroundSize = 'cover';
+        row.appendChild(dot);
+        row.appendChild(U.el('span', 'insp-kv insp-kv--val', U.escapeHtml(p.name)));
+        row.appendChild(C.iconButton(on ? 'check' : 'x', on ? 'Retirer' : 'Ajouter', function () {
+          var live = MB.store.el(el.id);
+          if (!live) return;
+          var cur = Array.isArray(live.data.picked) ? live.data.picked.slice() : [];
+          var at = cur.indexOf(p.id);
+          if (at >= 0) cur.splice(at, 1);
+          else cur.push(p.id);
+          C.applyDataTo([live], 'Assigner', { picked: cur });
+          MB.board.renderContent(live.id);
+          refresh();
+        }));
+        s.appendChild(row);
+      });
     } else if (el.type === 'link') {
       s = section(T('insp.link'));
       var urlInput = U.el('input', 'input');

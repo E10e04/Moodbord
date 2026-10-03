@@ -31,7 +31,7 @@
   var CLICK_CREATE = {
     text: 1, note: 1, color: 1, palette: 1, typography: 1,
     link: 1, checklist: 1, comment: 1, table: 1, image: 1, import: 1,
-    board: 1
+    board: 1, assignees: 1
   };
   var RECT_CREATE = { section: 1, column: 1, shape: 1 };
 
@@ -41,7 +41,7 @@
     link: 'lien', file: 'fichier', line: 'ligne', shape: 'forme',
     section: 'section', column: 'colonne', table: 'tableau',
     checklist: 'checklist', sketch: 'croquis', board: 'planche',
-    group: 'groupe', import: 'carte d’import'
+    group: 'groupe', import: 'carte d’import', assignees: 'assignées'
   };
 
   function wrapEl() {
@@ -392,8 +392,15 @@
    * HTML (gras, italique, souligné, surlignage, listes à puces, police
    * par sélection) — voir core/richtext.js et ui/richbar.js. Les autres
    * champs (titres, noms, tâches, cellules) restent en texte brut. */
+  /* v1.11 — le TITRE d'une colonne / section est un champ RICHE :
+   * la barre de mise en forme flottante (couleur, gras, italique,
+   * souligné, police…) s'applique à l'en-tête. Le HTML vit dans
+   * data.titleHtml (sanitisé), data.title reste le texte (recherche,
+   * export, repli). */
   function isRichField(el, field) {
-    return field === 'text' && !!el && (el.type === 'note' || el.type === 'text');
+    if (field === 'text' && !!el && (el.type === 'note' || el.type === 'text')) return true;
+    if (field === 'title' && !!el && (el.type === 'section' || el.type === 'column')) return true;
+    return false;
   }
 
   /* Le collage dans un champ riche insère du TEXTE BRUT : le HTML
@@ -424,11 +431,15 @@
     if (Store.s().ui.editingId) commitEditing();
     var node = editableNode(el, field);
     if (!node) return;
-    Store.setUI({ editingId: el.id });
     var rich = isRichField(el, field);
+    /* v1.11 — le nœud est PRÉPARÉ avant setUI : l'événement « ui »
+     * déclenche la barre de mise en forme, qui lit le champ en cours
+     * (le nœud .is-editing doit déjà exister pour qu'elle sache si
+     * c'est un corps ou un TITRE d'en-tête). */
     node.setAttribute('contenteditable', rich ? 'true' : 'plaintext-only');
     if (rich) bindPlainPaste(node);
     node.classList.add('is-editing');
+    Store.setUI({ editingId: el.id });
     editingOriginal = field === 'name' ? el.data.name : el.data[field];
     if (rich) {
       editingOriginalHtml = MB.rich ? MB.rich.sanitize(node.innerHTML) : null;
@@ -477,12 +488,21 @@
       if (rich) {
         /* v1.8 — le corps riche est sanitisé puis conservé dans
          * data.html ; data.text (recherche, export, repli) reste la
-         * version texte. */
-        el.data.html = MB.rich ? MB.rich.sanitize(node.innerHTML) : '';
-        if (!el.data.html) delete el.data.html;
+         * version texte.
+         * v1.11 — le TITRE riche des colonnes/sections vit dans
+         * data.titleHtml (jamais dans data.html, réservé aux corps). */
+        var html = MB.rich ? MB.rich.sanitize(node.innerHTML) : '';
+        if (field === 'title') el.data.titleHtml = html;
+        else el.data.html = html;
+        if (field === 'title' ? !el.data.titleHtml : !el.data.html) {
+          if (field === 'title') delete el.data.titleHtml;
+          else delete el.data.html;
+        }
       }
       var now = field === 'name' ? el.data.name : el.data[field];
-      var nowHtml = rich ? (el.data.html !== undefined ? el.data.html : '') : null;
+      var nowHtml = rich
+        ? (field === 'title' ? (el.data.titleHtml || '') : (el.data.html || ''))
+        : null;
       if (now !== editingOriginal || (rich && nowHtml !== editingOriginalHtml)) {
         Store.nextRev(el);
         MB.storage.markDirty();
@@ -776,7 +796,10 @@
     file: { w: 120, h: 56 },
     board: { w: 140, h: 88 },
     /* v1.10 — carte d'attente de l'outil Image. */
-    image: { w: 140, h: 110 }
+    image: { w: 140, h: 110 },
+    /* v1.11 — carte Assignees : la pastille seule tient dans ~180×56,
+     * la boîte réserve la place de la liste ouverte. */
+    assignees: { w: 180, h: 56 }
   };
 
   function minSizeFor(el) {
@@ -1165,6 +1188,7 @@
       case 'line-create': {
         g.cur = canvasPoint(e);
         drawTempLine(g.start, g.cur);
+        disarmOrphan(); /* le trait vit : l'annulation orpheline est levée */
         break;
       }
 
@@ -1175,6 +1199,7 @@
           g.points.push(p4);
           drawTempSketch(g.points);
         }
+        disarmOrphan();
         break;
       }
 
@@ -1258,19 +1283,37 @@
   }
 
   /* v1.10 — tracés temporaires FIDÈLES : ce que l'utilisateur voit
-   * pendant le geste est exactement l'élément qui sera créé (couleur
-   * et épaisseur réelles de l'outil, trait plein, arrondis) — le tracé
-   * se dessine à mesure du mouvement. */
+   * pendant le geste est exactement l'élément qui sera créé — le tracé
+   * se dessine à mesure du mouvement.
+   * v1.11 — fidélité TOTALE : l'épaisseur suit l'échelle du zoom (le
+   * trait temporaire et l'élément créé ont le MÊME nombre de pixels
+   * écran — l'ancienne version dessinait 2 px fixes, trop épais à 30 %
+   * et trop fin à 300 %), et la ligne montre SA FLÈCHE de fin pendant
+   * le geste (l'élément créé en porte une par défaut). */
+  function tempArrow(x, y, tx, ty, color, zoom) {
+    var ang = Math.atan2(y - ty, x - tx);
+    var size = (6 + 2 * 1.6) * zoom; /* même formule que renderLine */
+    var a1 = ang + 0.42;
+    var a2 = ang - 0.42;
+    return (
+      '<polygon points="' + x + ',' + y + ' ' +
+      (x - Math.cos(a1) * size) + ',' + (y - Math.sin(a1) * size) + ' ' +
+      (x - Math.cos(a2) * size) + ',' + (y - Math.sin(a2) * size) +
+      '" fill="' + color + '" stroke="none"/>'
+    );
+  }
+
   function drawTempLine(a, b) {
     var cam = Store.s().camera;
     var x1 = a.x * cam.zoom + cam.x;
     var y1 = a.y * cam.zoom + cam.y;
     var x2 = b.x * cam.zoom + cam.x;
     var y2 = b.y * cam.zoom + cam.y;
-    var svg = document.getElementById('guides');
-    svg.innerHTML =
+    var w = (2 * cam.zoom).toFixed(2); /* épaisseur réelle de l'outil */
+    document.getElementById('guides').innerHTML =
       '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 +
-      '" stroke="#4C8DFF" stroke-width="2" stroke-linecap="round"/>';
+      '" stroke="#4C8DFF" stroke-width="' + w + '" stroke-linecap="round"/>' +
+      tempArrow(x2, y2, x1, y1, '#4C8DFF', cam.zoom);
   }
 
   function drawTempSketch(points) {
@@ -1279,7 +1322,7 @@
       return (p.x * cam.zoom + cam.x) + ',' + (p.y * cam.zoom + cam.y);
     });
     var svg = document.getElementById('guides');
-    var w = (2.5 * cam.zoom).toFixed(2);
+    var w = (3 * cam.zoom).toFixed(2); /* épaisseur réelle de l'outil */
     svg.innerHTML =
       '<polyline points="' + pts.join(' ') +
       '" fill="none" stroke="#4C8DFF" stroke-width="' + w + '" stroke-linecap="round" stroke-linejoin="round"/>';
@@ -1753,6 +1796,28 @@
     }
     if (act === 'image-pick' && el) {
       pickImageForCard(el);
+      return;
+    }
+
+    /* v1.11 — carte ASSIGNEES (port Bencho) : la pastille bascule la
+     * liste, une rangée bascule la personne. La liste ne se referme
+     * JAMAIS sur un appui extérieur (voir assignees.js — le pourquoi
+     * est documenté là) : seul son propre bouton la referme. */
+    if (act === 'pik-pill' && el) {
+      Store.mutate('Ouvrir la liste', function () {
+        Store.updateElement(el.id, { data: { open: !el.data.open } }, { transaction: true });
+      });
+      return;
+    }
+    if (act === 'pik-row' && el) {
+      var pid = actNode.getAttribute('data-id');
+      var cur = Array.isArray(el.data.picked) ? el.data.picked.slice() : [];
+      var at = cur.indexOf(pid);
+      if (at >= 0) cur.splice(at, 1);
+      else cur.push(pid);
+      Store.mutate('Assigner', function () {
+        Store.updateElement(el.id, { data: { picked: cur } }, { transaction: true });
+      });
       return;
     }
 

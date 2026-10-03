@@ -134,14 +134,26 @@
         break;
 
       case 'palette': {
-        t = multiLineText(el.x + 4, el.y + 18, d.name, 'font-family="Georgia" font-size="13" font-weight="700" fill="#F5F5F5"', 16);
-        var y = el.y + 30;
-        for (var i = 0; i < d.colors.length; i++) {
+        /* v1.11 — NOUVEAU DESIGN : bandeau de nom + bandes verticales
+         * pleine surface, hex en pied de bande dans l'encre lisible
+         * (miroir exact de la carte du canvas). */
+        var nameH = 30;
+        t = '<rect x="' + el.x + '" y="' + el.y + '" width="' + el.w + '" height="' + el.h +
+          '" rx="10" fill="#252525"' + rotAttr() + '/>' +
+          multiLineText(el.x + 12, el.y + 20, d.name, 'font-family="Georgia" font-size="13" font-weight="700" fill="#F5F5F5"', 16);
+        var n = Math.max(1, d.colors.length);
+        var bw = el.w / n;
+        var bandH = el.h - nameH;
+        var clipId = 'pal' + el.id.replace(/[^a-z0-9]/gi, '');
+        t += '<clipPath id="' + clipId + '"><rect x="' + (el.x + 1) + '" y="' + (el.y + nameH) +
+          '" width="' + (el.w - 2) + '" height="' + (bandH - 1) + '" rx="9"/></clipPath>';
+        for (var i = 0; i < n; i++) {
           var c = d.colors[i];
-          t += '<rect x="' + el.x + '" y="' + y + '" width="' + el.w + '" height="26" rx="4" fill="#252525"/>' +
-            '<rect x="' + el.x + '" y="' + y + '" width="26" height="26" rx="4" fill="' + c.hex + '"/>' +
-            multiLineText(el.x + 36, y + 17, c.name + ' — ' + String(c.hex).toUpperCase(), 'font-family="Georgia" font-size="11" fill="#F5F5F5"', 14);
-          y += 36;
+          var bx = el.x + i * bw;
+          t += '<rect x="' + bx + '" y="' + (el.y + nameH) + '" width="' + (bw + 0.5) + '" height="' + bandH +
+            '" fill="' + c.hex + '" clip-path="url(#' + clipId + ')"/>' +
+            multiLineText(bx + bw / 2, el.y + el.h - 10, String(c.hex).toUpperCase(),
+              'font-family="Menlo, monospace" font-size="10" fill="' + U.readableOn(c.hex) + '" text-anchor="middle"', 12);
         }
         break;
       }
@@ -154,6 +166,41 @@
         for (var s = 0; s < d.sizes.length; s++) {
           t += multiLineText(el.x + 14, yy, d.sampleText, 'font-family=\'' + esc(d.fontFamily) + '\' font-size="' + d.sizes[s] + '" fill="#E8E8E8"', d.sizes[s] * 1.3);
           yy += d.sizes[s] * 1.3 + 8;
+        }
+        break;
+      }
+
+      /* v1.11 — carte ASSIGNEES (port Bencho) : pastille + visages en
+       * initiales colorées (les photos sont des fichiers locaux : le SVG
+       * exporté reste autonome) + noms des personnes assignées. */
+      case 'assignees': {
+        var cast2 = MB.ui.assignees ? MB.ui.assignees.CAST : [];
+        var pickedIds = Array.isArray(d.picked) ? d.picked : [];
+        var AV_INK = ['#FF7EB3', '#00D4FF', '#A3E635', '#FB7185'];
+        var pillY = el.y + 10;
+        var pillH = 44;
+        var pillW = Math.min(el.w - 16, 150 + Math.max(0, pickedIds.length - 1) * 18);
+        t = '<rect x="' + el.x + '" y="' + el.y + '" width="' + el.w + '" height="' + el.h +
+          '" rx="12" fill="#252525" stroke="#3A3A3A"' + rotAttr() + '/>' +
+          '<rect x="' + (el.x + 8) + '" y="' + pillY + '" width="' + pillW + '" height="' + pillH +
+          '" rx="22" fill="#2C2C2C"/>';
+        var fx = el.x + 18;
+        var names = [];
+        for (var ai = 0; ai < pickedIds.length && ai < 4; ai++) {
+          var per = MB.ui.assignees ? MB.ui.assignees.personOf(pickedIds[ai]) : null;
+          var initials = per ? per.name.split(' ').map(function (w) { return w.charAt(0); }).join('') : '?';
+          t += '<circle cx="' + (fx + 14) + '" cy="' + (pillY + pillH / 2) + '" r="14" fill="' + AV_INK[ai % 4] + '" stroke="#2C2C2C" stroke-width="2"/>' +
+            multiLineText(fx + 14, pillY + pillH / 2 + 4, initials, 'font-family="Georgia" font-size="11" font-weight="700" fill="#1E1E1E" text-anchor="middle"', 13);
+          if (per) names.push(per.name);
+          fx += 18;
+        }
+        if (!pickedIds.length) {
+          t += multiLineText(el.x + 18, pillY + 27, 'Non assigné', 'font-family="Georgia" font-size="13" fill="#F5F5F5"', 15);
+        }
+        var ny = pillY + pillH + 26;
+        for (var ni = 0; ni < names.length; ni++) {
+          t += multiLineText(el.x + 14, ny, names[ni], 'font-family="Georgia" font-size="12" fill="#F5F5F5"', 15);
+          ny += 17;
         }
         break;
       }
@@ -513,7 +560,7 @@
     var RANK = {
       image: 0, note: 1, link: 2, palette: 3, color: 4, shape: 5,
       typography: 6, checklist: 7, table: 8, board: 9, file: 10,
-      text: 11, comment: 12, sketch: 13
+      text: 11, comment: 12, sketch: 13, assignees: 14
     };
     var best = null;
     var bestScore = -1;

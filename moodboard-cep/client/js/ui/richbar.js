@@ -31,8 +31,65 @@
     if (!id) return null;
     var el = MB.store.el(id);
     if (!el) return null;
-    if (!(el.type === 'note' || el.type === 'text')) return null;
-    return el;
+    /* v1.11 — la barre s'applique AUSSI aux TITRES des colonnes /
+     * sections (champs riches) : couleur et mise en forme de
+     * l'en-tête (demande utilisateur). */
+    if (el.type === 'note' || el.type === 'text') return el;
+    if (el.type === 'section' || el.type === 'column') return el;
+    return null;
+  }
+
+  /* Champ en cours d'édition (le nœud .is-editing porte data-field) :
+   * 'text' pour les corps, 'title' pour les en-têtes. */
+  function editingField(el) {
+    var view = MB.board.viewOf(el.id);
+    var node = view ? view.node.querySelector('[data-field].is-editing') : null;
+    return node ? node.getAttribute('data-field') : null;
+  }
+
+  /* v1.11 — couleurs du TEXTE (bouton « A » de la barre) : palette
+   * complète de l'application + saisie hex. */
+  var TEXT_COLORS = [
+    '#F5F5F5', '#A8A8A8', '#3A3A3A', '#1E1E1E', '#FFFFFF',
+    '#4C8DFF', '#22303B', '#2F4A41', '#7A522E', '#5C2E2E',
+    '#F2A93B', '#D96C3F', '#A63D2F', '#9C4F7C', '#5F7161'
+  ];
+
+  function toggleTextColor(anchor) {
+    var html =
+      '<div class="hl-grid">' +
+      TEXT_COLORS.map(function (hex) {
+        return '<button class="swatch" data-fc="' + hex + '" style="background:' + hex + '" title="' + hex + '" aria-label="Couleur du texte ' + hex + '"></button>';
+      }).join('') +
+      '</div>' +
+      '<div class="pop-row"><input class="input input--hex" id="fc-hex" placeholder="#RRGGBB" aria-label="Code hexadécimal"></div>';
+    MB.ui.popover(anchor, html, {
+      bind: function (p) {
+        p.querySelectorAll('[data-fc]').forEach(function (s) {
+          s.addEventListener('pointerdown', function (e) {
+            e.preventDefault();
+          });
+          s.addEventListener('mousedown', function (e) {
+            e.preventDefault();
+          });
+          s.addEventListener('click', function () {
+            MB.rich.exec('foreColor', s.dataset.fc);
+            MB.ui.closePopover();
+            refreshStates();
+          });
+        });
+        var hex = p.querySelector('#fc-hex');
+        if (hex) {
+          hex.addEventListener('change', function () {
+            var v = U.normalizeHex(hex.value);
+            if (v) {
+              MB.rich.exec('foreColor', v);
+              MB.ui.closePopover();
+            }
+          });
+        }
+      }
+    });
   }
 
   function build() {
@@ -93,12 +150,28 @@
       toggleHighlight(hlBtn);
     });
     g2.appendChild(hlBtn);
-    g2.appendChild(btn('list', 'Liste à puces', function () {
+    /* v1.11 — COULEUR DU TEXTE : le même popover que le surlignage,
+     * mais pour l'encre (foreColor). Visible pour les corps ET les
+     * titres d'en-tête. */
+    var fcBtn = U.el('button', 'ctx-btn rich-btn rich-btn--fc');
+    fcBtn.type = 'button';
+    fcBtn.innerHTML = MB.icons.get('textColor', 15);
+    fcBtn.setAttribute('data-tip', 'Couleur du texte');
+    fcBtn.setAttribute('aria-label', 'Couleur du texte');
+    fcBtn.addEventListener('click', function () {
+      toggleTextColor(fcBtn);
+    });
+    g2.appendChild(fcBtn);
+    var listBtn = btn('list', 'Liste à puces', function () {
       MB.rich.exec('insertUnorderedList');
-    }, 'insertUnorderedList'));
-    g2.appendChild(btn('listOrdered', 'Liste numérotée', function () {
+    }, 'insertUnorderedList');
+    listBtn.classList.add('rich-btn--list');
+    g2.appendChild(listBtn);
+    var listBtn2 = btn('listOrdered', 'Liste numérotée', function () {
       MB.rich.exec('insertOrderedList');
-    }, 'insertOrderedList'));
+    }, 'insertOrderedList');
+    listBtn2.classList.add('rich-btn--list');
+    g2.appendChild(listBtn2);
     bar.appendChild(g2);
 
     bar.appendChild(U.el('div', 'ctx-sep'));
@@ -195,6 +268,12 @@
       currentId = null;
       return;
     }
+    /* v1.11 — MODE TITRE : l'édition d'un en-tête (colonne/section)
+     * cache les boutons de LISTES (une liste dans un titre n'a pas de
+     * sens) — gras, italique, souligné, surlignage, couleur et police
+     * restent. */
+    var isTitle = editingField(el) === 'title';
+    bar.classList.toggle('richbar--title', isTitle);
     if (currentId !== el.id) {
       currentId = el.id;
       refreshStates();

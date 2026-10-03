@@ -135,13 +135,33 @@
     { src: 'assets/demo/demo-packaging.png', name: 'Packaging — démo' }
   ];
 
-  var mediaItems = []; // {src, w, h, name}
+  var mediaItems = []; // {src, w, h, name} — utilisateur (persistée)
+  var demoItems = []; // assets de démonstration (session, non supprimables)
+
+  /* v1.11 — la bibliothèque est PERSISTANTE : readLibrary/writeLibrary
+   * (fichier library.json du dossier de données — partagé par
+   * l'application et l'extension —, repli localStorage en web). Les
+   * images ajoutées survivent donc aux projets et aux sessions. */
+  function persist() {
+    var ok = MB.storage.writeLibrary(mediaItems);
+    if (!ok) {
+      MB.ui.toast('Bibliothèque pleine — les plus anciennes images ont été retirées.', 'info');
+    }
+  }
 
   function seedDemoMedia() {
     DEMO_MEDIA.forEach(function (m) {
       var img = new Image();
       img.onload = function () {
-        addMedia(m.src, img.naturalWidth || 1024, img.naturalHeight || 1024, m.name);
+        demoItems.push({
+          src: m.src,
+          w: img.naturalWidth || 1024,
+          h: img.naturalHeight || 1024,
+          name: m.name,
+          demo: true
+        });
+        var active = document.querySelector('.lib-tab.is-active');
+        if (active && active.dataset.tab === 'media') renderMedia();
       };
       img.onerror = function () {
         /* asset absent (installation partielle) : silencieux */
@@ -282,34 +302,78 @@
     bar.appendChild(btn);
     host.appendChild(bar);
 
-    if (!mediaItems.length) {
+    var all = mediaItems.concat(demoItems);
+    if (!all.length) {
       host.appendChild(U.el(
         'div',
         'lib-note',
-        'Aucun média dans la session.<br>Importez des images ou déposez-les depuis le Finder.'
+        T('lib.mediaEmpty')
       ));
       return;
     }
 
     var grid = U.el('div', 'lib-grid lib-grid--media');
-    mediaItems.forEach(function (m) {
-      var item = U.el('div', 'lib-thumb');
+    all.forEach(function (m) {
+      var item = U.el('div', 'lib-thumb' + (m.demo ? ' lib-thumb--demo' : ''));
       item.style.backgroundImage = 'url("' + m.src + '")';
       item.dataset.tip = m.name;
       item.dataset.ghostHtml = '<span class="ghost-img" style="background-image:url(\'' + m.src + '\')"></span>';
       bindDragItem(item, function () {
         return { src: m.src, naturalW: m.w, naturalH: m.h };
       }, 'image', 'lib:média ' + (m.name || ''));
+      /* v1.11 — SUPPRIMER : chaque image de la bibliothèque (hors
+       * démo) porte son bouton de suppression au survol. */
+      if (!m.demo) {
+        var del = U.el('button', 'lib-thumb-del');
+        del.type = 'button';
+        del.title = T('lib.deleteMedia');
+        del.setAttribute('aria-label', T('lib.deleteMedia'));
+        del.innerHTML = MB.icons.get('x', 11);
+        del.addEventListener('pointerdown', function (e) {
+          e.stopPropagation();
+        });
+        del.addEventListener('mousedown', function (e) {
+          e.stopPropagation();
+        });
+        del.addEventListener('click', function (e) {
+          e.stopPropagation();
+          removeMedia(m.src);
+        });
+        item.appendChild(del);
+      }
       grid.appendChild(item);
     });
     host.appendChild(grid);
   }
 
   function addMedia(src, w, h, name) {
+    /* dédoublonnage par source : ré-ajouter remonte l'image en tête */
+    mediaItems = mediaItems.filter(function (m) {
+      return m.src !== src;
+    });
     mediaItems.unshift({ src: src, w: w, h: h, name: name || 'image' });
     if (mediaItems.length > 60) mediaItems.pop();
+    persist();
     var active = document.querySelector('.lib-tab.is-active');
     if (active && active.dataset.tab === 'media') renderMedia();
+  }
+
+  function removeMedia(src) {
+    mediaItems = mediaItems.filter(function (m) {
+      return m.src !== src;
+    });
+    persist();
+    var active = document.querySelector('.lib-tab.is-active');
+    if (active && active.dataset.tab === 'media') renderMedia();
+    MB.ui.toast('Image retirée de la bibliothèque', 'success');
+  }
+
+  /* v1.11 — depuis le CANVAS : une image posée devient une entrée de
+   * la bibliothèque (menu contextuel « Ajouter à la bibliothèque »). */
+  function addFromElement(el) {
+    if (!el || el.type !== 'image' || !el.data || !el.data.src) return;
+    addMedia(el.data.src, el.data.naturalW || 512, el.data.naturalH || 512, el.data.name || 'image du canvas');
+    MB.ui.toast('Ajoutée à la bibliothèque — réutilisable dans tous vos moodboards', 'success');
   }
 
   function render() {
@@ -374,8 +438,13 @@
       origImport(files, atPoint);
     };
 
+    /* v1.11 — bibliothèque persistante : les images de l'utilisateur
+     * sont relues au démarrage (les assets de démo restent en
+     * session, ils se re-sèment à chaque lancement). */
+    mediaItems = MB.storage.readLibrary();
+
     // Bibliothèque Médias : les assets de démonstration sont chargés
-    // en arrière-plan (addMedia re-rend l’onglet s’il est actif).
+    // en arrière-plan (le rendu suit l'ajout si l'onglet est actif).
     seedDemoMedia();
 
     render();
@@ -385,6 +454,8 @@
   MB.ui.library = {
     init: init,
     addMedia: addMedia,
+    removeMedia: removeMedia,
+    addFromElement: addFromElement,
     render: render
   };
 })();

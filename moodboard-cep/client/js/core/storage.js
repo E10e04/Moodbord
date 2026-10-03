@@ -647,6 +647,69 @@
     writePrefs(patch);
   }
 
+  /* ------------------------------------------------- bibliothèque d'images (v1.11)
+   * Onglet « Médias » PERSISTANT : les images ajoutées à la
+   * bibliothèque survivent aux projets et aux sessions — un fichier
+   * library.json dans le dossier de données (application ET extension
+   * partagent le même pointeur), repli localStorage en mode web. */
+
+  var LIBRARY_FILE = 'library.json';
+  var LIBRARY_MAX = 60;
+
+  function validLibraryItem(x) {
+    return x && typeof x === 'object' &&
+      typeof x.src === 'string' && x.src &&
+      typeof x.name === 'string' &&
+      !isNaN(x.w) && !isNaN(x.h);
+  }
+
+  function readLibrary() {
+    if (isFs()) {
+      var r = readText(dataDir + '/' + LIBRARY_FILE);
+      if (!r.error && r.text) {
+        try {
+          var arr = JSON.parse(r.text);
+          if (Array.isArray(arr)) return arr.filter(validLibraryItem);
+        } catch (e) {
+          /* fichier illisible : repart à vide */
+        }
+      }
+      return [];
+    }
+    try {
+      var raw = localStorage.getItem('mb.library.v1');
+      var a = raw ? JSON.parse(raw) : [];
+      return Array.isArray(a) ? a.filter(validLibraryItem) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /* En CEP/desktop : fichier JSON. En web : localStorage avec repli
+   * anti-quota (on retire les plus anciennes entrées jusqu'à ce que
+   * ça tienne — l'échec reste silencieux mais signalé par false). */
+  function writeLibrary(list) {
+    var clean = (list || []).filter(validLibraryItem).slice(0, LIBRARY_MAX);
+    if (isFs()) {
+      writeText(dataDir + '/' + LIBRARY_FILE, JSON.stringify(clean));
+      return true;
+    }
+    while (clean.length) {
+      try {
+        localStorage.setItem('mb.library.v1', JSON.stringify(clean));
+        return true;
+      } catch (e) {
+        clean.pop(); /* quota : l'image la plus ancienne saute */
+      }
+    }
+    try {
+      localStorage.removeItem('mb.library.v1');
+    } catch (e2) {
+      /* non bloquant */
+    }
+    return false;
+  }
+
   /* ------------------------------------------------- dossier de données (v1.7)
    * Préférence « fichiers temporaires et autosaves » : la valeur vit
    * dans prefs.json DU DOSSIER PAR DÉFAUT (baseDir) — les deux
@@ -1236,6 +1299,8 @@
     markSaved: markSaved,
     prefs: readPrefs,
     setPref: setPref,
+    readLibrary: readLibrary,
+    writeLibrary: writeLibrary,
     save: save,
     saveAs: saveAs,
     saveDialog: saveDialog,

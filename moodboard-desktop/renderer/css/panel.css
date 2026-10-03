@@ -234,8 +234,35 @@ button:focus-visible, input:focus-visible, [contenteditable]:focus-visible {
 .lib-thumb {
   aspect-ratio: 1; border-radius: var(--radius-sm); background-size: cover; background-position: center;
   background-color: var(--panel2); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06); cursor: grab;
+  position: relative;
 }
 .lib-thumb:hover { box-shadow: inset 0 0 0 2px var(--accent); }
+/* v1.11 — bibliothèque persistante : suppression au survol (les
+   images de DÉMO ne portent pas le bouton — elles se re-sèment au
+   lancement). */
+.lib-thumb-del {
+  position: absolute; top: 4px; right: 4px; z-index: 2;
+  display: none;
+  width: 20px; height: 20px;
+  align-items: center; justify-content: center;
+  border: none; border-radius: 999px;
+  background: rgba(30, 30, 30, 0.85);
+  color: var(--text);
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+.lib-thumb-del:hover { background: var(--danger); color: #fff; }
+.lib-thumb:hover .lib-thumb-del { display: inline-flex; }
+.lib-thumb--demo::after {
+  content: 'démo';
+  position: absolute; left: 4px; bottom: 4px;
+  padding: 1px 5px;
+  font-size: 9px; font-weight: 600; letter-spacing: 0.04em;
+  color: var(--text);
+  background: rgba(30, 30, 30, 0.75);
+  border-radius: 4px;
+  pointer-events: none;
+}
 
 /* ---------------------------------------------------------- board */
 
@@ -454,18 +481,51 @@ button:focus-visible, input:focus-visible, [contenteditable]:focus-visible {
 .mb-color-name { font-size: 12.5px; font-weight: 600; outline: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mb-color-hex { font-size: 11px; color: var(--text-dim); font-family: var(--mono); }
 
-/* -- palette */
-.mb-palette-name { font-size: 13px; font-weight: 700; padding: 0 2px 8px; outline: none; }
-.mb-palette-rows { display: flex; flex-direction: column; gap: 6px; }
-.mb-palette-row {
-  display: flex; align-items: center; gap: 9px;
-  background: var(--panel2); border-radius: 6px; padding: 5px 8px;
-  cursor: copy;
+/* -- palette (v1.11 — NOUVEAU DESIGN : bandes verticales pleine surface,
+   bandeau de nom au-dessus, hex en pied de bande dans l'encre lisible) */
+.mb-palette-card {
+  display: flex; flex-direction: column;
+  height: 100%;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+  background: var(--panel2);
 }
-.mb-palette-row:hover { background: var(--elev); }
-.mb-palette-swatch { width: 26px; height: 26px; border-radius: 5px; flex: 0 0 26px; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.09); }
-.mb-palette-cname { font-size: 12px; color: var(--text); }
-.mb-palette-cname em { font-style: normal; color: var(--text-dim); font-family: var(--mono); font-size: 11px; }
+.mb-palette-name {
+  flex: 0 0 30px;
+  display: flex; align-items: center;
+  padding: 0 12px;
+  font-size: 13px; font-weight: 700;
+  color: var(--text);
+  background: var(--panel2);
+  outline: none;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.mb-palette-stripes {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+.mb-palette-band {
+  flex: 1 1 0;
+  min-width: 0;
+  border: 0; padding: 0;
+  position: relative;
+  cursor: copy;
+  font: inherit;
+  display: flex; align-items: flex-end; justify-content: center;
+  transition: flex 140ms cubic-bezier(0.33, 0.55, 0.2, 1);
+}
+.mb-palette-band:hover { flex: 1.35 1 0; }
+.mb-palette-hex {
+  padding: 0 2px 7px;
+  font-family: var(--mono);
+  font-size: 9.5px; font-weight: 600;
+  letter-spacing: 0.02em;
+  opacity: 0.92;
+  white-space: nowrap;
+}
+.mb-palette-band:hover .mb-palette-hex { opacity: 1; }
 
 /* -- typographie */
 .mb-typo-card {
@@ -1600,6 +1660,21 @@ body.mb-desktop-win32 #home-screen .home-main-inner { padding-top: 44px; }
 }
 .richbar .rich-btn svg { display: block; }
 .rich-btn--hl { color: #F7D46A; }
+/* v1.11 — couleur du texte : la barre sous le « A » porte la couleur
+   courante de la sélection quand l'éditeur la connaît (décoration). */
+.rich-btn--fc { color: var(--text); position: relative; }
+.rich-btn--fc::after {
+  content: '';
+  position: absolute; left: 50%; bottom: 2px;
+  width: 13px; height: 2.5px;
+  border-radius: 2px;
+  background: currentColor;
+  transform: translateX(-50%);
+}
+/* v1.11 — MODE TITRE : les listes n'existent pas dans un en-tête —
+   les boutons restants couvrent gras/italique/souligné/barré/
+   surlignage/couleur/police/effacement. */
+#richbar.richbar--title .rich-btn--list { display: none; }
 
 /* Popover surlignage : pastilles de couleurs. */
 .hl-grid {
@@ -1749,3 +1824,313 @@ body.mb-desktop-win32 #home-screen .home-main-inner { padding-top: 44px; }
 /* Préférences : rappel « tous les moodboards » (v1.8). */
 .prefs-sub--all { color: var(--text-dim); }
 .prefs-sub--all strong { color: var(--accent); font-weight: 600; }
+
+/* ══════════════════════════════════════════════════════════════════
+   Assignees — v1.11
+   Port du composant de Bencho (bencho.dev, MIT). Les commentaires
+   d'origine sont conservés : ils disent pourquoi les nombres sont ce
+   qu'ils sont.
+
+   JETONS BENCHO → JETONS DE CE PROJET : le CSS ci-dessous lit
+   --card, --fill-on, --fill-on-rgb, --fill-slab, --font-ui, --ink,
+   --ink-rgb et --pane-edge. Chacun est RÉSOLU À LA RACINE DU
+   COMPOSANT (.pik) vers ce que ce projet utilise déjà pour le même
+   emploi — surface de carte (--panel2), encre (--text/--ink-rgb
+   245,245,255 arrondi à 245,245,245), bord de panneau (--border),
+   police d'interface (--font) — de sorte que rien ne fuit hors du
+   composant et que rien de nouveau ne se définit en global.
+   ══════════════════════════════════════════════════════════════════ */
+
+.pik {
+  /* the tokens of the bench, pointed at this app's own — see the
+     header above. Anything ending -rgb wants three bare numbers. */
+  --card: var(--panel2);
+  --fill-on: var(--text);
+  --fill-on-rgb: 245, 245, 245;
+  --fill-slab: var(--panel2);
+  --font-ui: var(--font);
+  --ink: var(--text);
+  --ink-rgb: 245, 245, 245;
+  --pane-edge: var(--border);
+
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 100%;
+  font-family: var(--font-ui);
+  color: var(--fill-on, var(--ink));
+}
+
+.pik-pill {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 44px;
+  /* tighter on the left, because a face is a filled circle and
+     a word is not: 16 of air beside "Add people" is the same
+     amount of air as 8 beside a picture */
+  padding: 0 12px 0 8px;
+  border: 0;
+  background: var(--fill-slab, var(--card));
+  /* ── NO SHADOW, AND NO HAIRLINE EITHER ────────────────────
+     Both are gone. The ring came back only when Stroke asks
+     for it — it carried a permanent one, which made that
+     switch a control reporting a state it was not producing.
+
+     The drop shadow went with it. Nothing here needs lifting:
+     the pill and the card are the fill's own slab and they sit
+     on the block's grey ground, which separates them on its
+     own. A shadow under a shape that already reads is the
+     component insisting it is floating. */
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+/* [port] ce projet n'a pas d'interrupteur Stroke : la règle ne
+   s'active jamais ici, elle voyage avec le composant. */
+[data-stroke="on"] .pik-pill { box-shadow: 0 0 0 1px var(--pane-edge); }
+
+.pik-pill:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(var(--fill-on-rgb, var(--ink-rgb)), 0.45);
+}
+
+/* ── the rail the faces sit in ──────────────────────────────
+   Its width is the whole animation. The faces are absolute
+   inside it, so none of them moves when another arrives — the
+   rail simply has more room, and the pill is sized by it.
+   Nothing here measures anything. */
+.pik-rail {
+  position: relative;
+  flex: none;
+  height: 28px;
+  transition: width 300ms cubic-bezier(0.33, 0.55, 0.2, 1);
+}
+
+.pik-face {
+  position: absolute;
+  /* both corners pinned: the face is placed by its transform,
+     in the row and in the quad alike, so `left` is an origin
+     rather than a position */
+  top: 0;
+  left: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  overflow: hidden;
+  /* the ring is the CARD's colour, not white: it is the gap
+     between two overlapping faces, so it has to be whatever is
+     behind them or the stack grows a halo in dark mode */
+  box-shadow: 0 0 0 2px var(--fill-slab, var(--card));
+}
+
+.pik-face img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* [port] a face lands, it does not fade in — the framer springs
+   (drop from slightly above, a small turn on it, overshoot on
+   the way to rest) translated to one keyframe. It rides an inner
+   wrapper so it never has to fight the resting transform that
+   places the face in the rail. */
+.pik-face-in {
+  display: block;
+  width: 100%;
+  height: 100%;
+  animation: pik-face-in 260ms cubic-bezier(0.34, 1.42, 0.42, 1);
+}
+@keyframes pik-face-in {
+  0% { transform: translateY(-10px) rotate(-22deg) scale(0.2); opacity: 0; }
+  55% { opacity: 1; }
+  100% { transform: none; opacity: 1; }
+}
+
+/* with no faces the rail collapses to nothing but the pill's gap
+   still sits in front of the word; pull it back so the text is
+   inset 12 from the edge, matching the pill's own right padding */
+.pik-say { margin-left: -6px; color: var(--fill-on, var(--ink)); }
+
+/* ── the chevron IS the hover state ─────────────────────────
+   With the shadow gone the pill had nothing left to answer the
+   cursor with, and a fill appearing behind it would be a second
+   shape arriving on a control whose whole subject is shapes —
+   the palette's refresh button makes the same call. The glyph
+   goes to a stronger ink instead: same thing said, nothing new
+   on screen. */
+.pik-chev {
+  flex: none;
+  display: inline-flex;
+  margin-left: -2px;
+  color: rgba(var(--fill-on-rgb, var(--ink-rgb)), 0.4);
+  transition: rotate 240ms cubic-bezier(0.33, 0.55, 0.2, 1), color 150ms ease;
+}
+.pik-chev svg { display: block; }
+
+.pik-pill:hover .pik-chev { color: rgba(var(--fill-on-rgb, var(--ink-rgb)), 0.75); }
+
+.pik-pill[aria-expanded="true"] .pik-chev { rotate: 180deg; }
+
+/* ── the list ───────────────────────────────────────────────
+   Absolute, so opening it moves nothing. The block reserves
+   the room for it either way — see the note in assignees.js.
+   [port] it unfolds OUT OF the pill (origin 0 0, scale starts
+   high — 0.86 across, 0.72 down — because a scale drags the
+   corner radius with it; the zeta-0.63 bounce is the bezier's
+   overshoot). */
+.pik-card {
+  position: absolute;
+  top: 54px;
+  left: 0;
+  right: 0;
+  z-index: 1;
+  box-sizing: border-box;
+  padding: 6px;
+  background: var(--fill-slab, var(--card));
+  transform-origin: 0 0;
+  animation: pik-card-in 240ms cubic-bezier(0.3, 1.36, 0.36, 1);
+}
+@keyframes pik-card-in {
+  0% { opacity: 0; transform: translateY(-10px) scale(0.86, 0.72); }
+  100% { opacity: 1; transform: none; }
+}
+
+/* [port] same clause as the pill's ring. */
+[data-stroke="on"] .pik-card { box-shadow: 0 0 0 1px var(--pane-edge); }
+
+.pik-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 48px;
+  padding: 0 8px;
+  border: 0;
+  /* the card's corner less its 6px padding — published from
+     the component (assignees.js) so it tracks the Corner value;
+     16 is the value at the default 22 */
+  border-radius: var(--pik-row-r, 16px);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 140ms ease;
+  /* [port] they deal out under the card rather than arriving
+     with it — four rows appearing at once is a panel, four
+     arriving in order is a list being handed to you. 40ms apart
+     is a stagger you feel rather than one you wait through
+     (the delay itself is published inline per row). */
+  animation: pik-row-in 180ms cubic-bezier(0.33, 0.55, 0.2, 1) backwards;
+}
+@keyframes pik-row-in {
+  0% { opacity: 0; transform: translateY(-8px); }
+  100% { opacity: 1; transform: none; }
+}
+
+.pik-row:hover { background: rgba(var(--fill-on-rgb, var(--ink-rgb)), 0.05); }
+
+.pik-row:focus-visible {
+  outline: none;
+  background: rgba(var(--fill-on-rgb, var(--ink-rgb)), 0.07);
+}
+
+.pik-av {
+  flex: none;
+  width: 32px; height: 32px;
+  border-radius: 999px;
+  object-fit: cover;
+  display: block;
+}
+
+.pik-who { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
+
+/* ── the same type as the other two lists ────────────────
+   It was 13.5 at 500 with a touch of negative tracking, which
+   is a LABEL's setting — right for a word that names a control
+   and wrong for a row of people. The selection list and the
+   reorder list both set their names at the regular weight, and
+   they are the same object: a face, a name, a thing to press.
+   Three lists on one bench reading as three different type
+   systems is the fault; matching `.rst-name` is the fix. */
+.pik-name {
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pik-role {
+  font-size: 11.5px;
+  color: rgba(var(--fill-on-rgb, var(--ink-rgb)), 0.45);
+}
+
+/* ── the mark ───────────────────────────────────────────────
+   Drawn at rest as an empty ring and filled when it is on, so
+   the row always shows that it CAN be chosen. A control that
+   only appears once used is one you have to guess at first. */
+.pik-mark {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 18px; height: 18px;
+  /* ── a rounded square, not a disc ────────────────────────
+     One radius for both states, because it is one box: the
+     empty mark and the ticked one are the same square with the
+     fill switched, so the shape cannot disagree with itself
+     between rows. The radius is 0.3 of the side — round enough
+     to belong to the pill and the card above it, square enough
+     that a row of four reads as a column of checkboxes rather
+     than as a second set of avatars beside the real ones.
+
+     18, down from 20. The mark answers the row; it is not the
+     subject of it, and at 20 against a 28px face it was close
+     enough in size to read as the second circle in a pair. Two
+     pixels is enough to put it back behind the name. */
+  border-radius: 5.5px;
+  box-shadow: inset 0 0 0 1.5px rgba(var(--fill-on-rgb, var(--ink-rgb)), 0.22);
+  transition: background 160ms ease, box-shadow 160ms ease;
+}
+
+.pik-row[data-on] .pik-mark {
+  background: var(--fill-on, var(--ink));
+  box-shadow: inset 0 0 0 1.5px var(--fill-on, var(--ink));
+}
+
+.pik-tick {
+  display: grid;
+  place-items: center;
+  color: var(--fill-slab, var(--card));
+  /* [port] the tick arrives (scale 0.4 → 1, the same quick
+     overshoot as its spring). */
+  animation: pik-tick-in 200ms cubic-bezier(0.34, 1.56, 0.44, 1);
+}
+.pik-tick svg { display: block; }
+@keyframes pik-tick-in {
+  0% { transform: scale(0.4); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Inter, not the mono class it carried. A handle is a name,
+   not a code — nothing here needs a fixed advance.
+   11.5, which is .pik-role's. The names in these two lists
+   were matched at 13 already; the second lines were a pixel
+   apart, and one point of difference between two lists of
+   people reads as one of them being set slightly wrong rather
+   than as a distinction anybody meant.
+   and the same INK as .pik-role, by the same route: the fill's
+   own on-colour at 45%, falling back to the page's when no
+   fill is set. An alpha of the row's own ink cannot
+   come apart from it. */
+.rst-at {
+  font-size: 11.5px;
+  letter-spacing: 0;
+  color: rgba(var(--fill-on-rgb, var(--ink-rgb)), 0.45);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pik-rail, .pik-chev { transition-duration: 1ms; }
+  .pik-face-in, .pik-card, .pik-row, .pik-tick { animation-duration: 1ms; }
+}

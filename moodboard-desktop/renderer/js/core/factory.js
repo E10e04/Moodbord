@@ -120,12 +120,28 @@
             { hex: '#2B2B2B', name: 'Charbon' },
             { hex: '#F5F1EA', name: 'Ivoire' }
           ];
-          var pl = base('palette', p, Object.assign({ w: 216, h: 46 + colors.length * 36 }, extra));
+          /* v1.11 — NOUVEAU DESIGN (bandes verticales) : carte portrait
+           * 200×300, les bandes s'adaptent à TOUTE hauteur — plus de
+           * formule h = f(nb de couleurs). */
+          var pl = base('palette', p, Object.assign({ w: 200, h: 300 }, extra));
           pl.data = {
             name: (extra && extra.name) || 'Palette',
             colors: colors
           };
           return pl;
+        }
+
+        case 'assignees': {
+          /* v1.11 — composant Assignees (Bencho, MIT — porté en vanilla) :
+           * pastille qui se remplit de visages + liste de personnes.
+           * La boîte réserve la place de la liste OUVERTE (264×268) —
+           * voir ui/assignees.js. */
+          var asg = base('assignees', p, Object.assign({ w: 264, h: 268 }, extra));
+          asg.data = {
+            picked: (extra && Array.isArray(extra.picked)) ? extra.picked.slice() : ['kai', 'mara'],
+            open: true
+          };
+          return asg;
         }
 
         case 'typography': {
@@ -212,7 +228,8 @@
         case 'section': {
           var sc = base('section', p, Object.assign({ w: 560, h: 440 }, extra));
           sc.data = {
-            title: 'Section',
+            /* v1.11 — titre honoré à la création (comme la colonne). */
+            title: (extra && extra.title) || 'Section',
             /* v1.10 — couleur du CORPS + couleur de L'EN-TÊTE (vide =
              * pas de bandeau) + mise en forme du titre. */
             color: (extra && extra.color) || '#2C2C2C',
@@ -231,7 +248,9 @@
         case 'column': {
           var co = base('column', p, Object.assign({ w: 250, h: 400 }, extra));
           co.data = {
-            title: 'Colonne',
+            /* v1.11 — le titre passé à la création est enfin honoré
+             * (il l'était pour la typographie, pas pour les conteneurs). */
+            title: (extra && extra.title) || 'Colonne',
             /* v1.10 — mini-canvas vertical : corps + en-tête séparés. */
             color: (extra && extra.color) || '#2A2A2A',
             headColor: (extra && extra.headColor) || '',

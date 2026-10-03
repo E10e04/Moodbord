@@ -161,20 +161,31 @@
 
   /* ---------------------------------------------------------- PALETTE */
 
+  /* v1.11 — NOUVEAU DESIGN : carte portrait en BANDES VERTICALES
+   * pleine surface (une par couleur, hauteur égale, flexibilité
+   * totale au redimensionnement), code HEX en pied de bande dans
+   * l'encre lisible (blanc/noir selon la luminance), bandeau de nom
+   * sombre au-dessus. Un clic sur une bande copie le HEX (comportement
+   * historique conservé) ; le nom reste éditable au double-clic. */
   function renderPalette(el) {
     var d = el.data;
-    var rows = '';
+    var bands = '';
     for (var i = 0; i < d.colors.length; i++) {
       var c = d.colors[i];
-      rows +=
-        '<div class="mb-palette-row" data-act="copy" data-hex="' + esc(c.hex) + '">' +
-        '<span class="mb-palette-swatch" style="background:' + esc(c.hex) + '"></span>' +
-        '<span class="mb-palette-cname">' + esc(c.name) + ' · <em>' + esc(String(c.hex).toUpperCase()) + '</em></span>' +
-        '</div>';
+      var ink = U.readableOn(c.hex);
+      bands +=
+        '<button type="button" class="mb-palette-band" data-act="copy" data-hex="' + esc(c.hex) + '"' +
+        ' style="background:' + esc(c.hex) + ';color:' + ink + '"' +
+        ' title="' + esc(c.name) + ' · ' + esc(String(c.hex).toUpperCase()) + '"' +
+        ' aria-label="' + esc(c.name) + ' — copier ' + esc(String(c.hex).toUpperCase()) + '">' +
+        '<span class="mb-palette-hex">' + esc(String(c.hex).toUpperCase()) + '</span>' +
+        '</button>';
     }
     return (
+      '<div class="mb-palette-card">' +
       '<div class="mb-palette-name mb-editable" data-field="name">' + esc(d.name) + '</div>' +
-      '<div class="mb-palette-rows">' + rows + '</div>'
+      '<div class="mb-palette-stripes">' + bands + '</div>' +
+      '</div>'
     );
   }
 
@@ -402,6 +413,16 @@
     return st;
   }
 
+  /* v1.11 — titre RICHE : data.titleHtml (sanitisé, issu de la barre
+   * de mise en forme) sinon repli texte brut — même mécanique que les
+   * corps de notes (richOrPlain). */
+  function richOrPlainTitle(d) {
+    if (d && typeof d.titleHtml === 'string' && d.titleHtml) {
+      return MB.rich ? MB.rich.sanitize(d.titleHtml) : d.titleHtml;
+    }
+    return esc(d.title || '');
+  }
+
   function renderSection(el) {
     var d = el.data;
     var headBg = d.headColor && d.headColor !== 'transparent'
@@ -411,7 +432,7 @@
       '<div class="mb-section-box" style="background:' + d.color + '">' +
       (d.showTitle !== false
         ? '<div class="mb-section-head"' + headBg + '>' +
-          '<div class="mb-section-title mb-editable" data-field="title" style="' + titleStyleOf(d) + '">' + esc(d.title) + '</div>' +
+          '<div class="mb-section-title mb-editable mb-rich" data-field="title" style="' + titleStyleOf(d) + '">' + richOrPlainTitle(d) + '</div>' +
           '</div>'
         : '') +
       '<div class="mb-section-body"></div>' +
@@ -427,7 +448,7 @@
     return (
       '<div class="mb-column-box" style="background:' + d.color + '">' +
       '<div class="mb-column-head"' + headBg + '>' +
-      '<div class="mb-column-title mb-editable" data-field="title" style="' + titleStyleOf(d) + '">' + esc(d.title) + '</div>' +
+      '<div class="mb-column-title mb-editable mb-rich" data-field="title" style="' + titleStyleOf(d) + '">' + richOrPlainTitle(d) + '</div>' +
       '</div>' +
       '<div class="mb-column-body"></div>' +
       '</div>'
@@ -546,6 +567,16 @@
     return '<div class="mb-group-box"></div>';
   }
 
+  /* ------------------------------------------------------- ASSIGNEES */
+
+  /* v1.11 — carte Assignees (port Bencho) : la pastille + la liste
+   * sont rendues par ui/assignees.js (le composant garde ses
+   * commentaires d'origine — tout le « pourquoi » des nombres y
+   * vit). Ici, seul le branchement du moteur. */
+  function renderAssignees(el) {
+    return MB.ui.assignees ? MB.ui.assignees.render(el) : '';
+  }
+
   /* ---------------------------------------------------------- dispatch */
 
   var RENDERERS = {
@@ -567,7 +598,8 @@
     sketch: renderSketch,
     board: renderBoard,
     group: renderGroup,
-    import: renderImport
+    import: renderImport,
+    assignees: renderAssignees
   };
 
   /* Autodimensionnement après montage. */

@@ -48,6 +48,9 @@
       { id: 'palette', icon: 'palette', key: 'A', tKey: 'tool.palette' },
       { id: 'typography', icon: 'typography', key: 'Y', tKey: 'tool.typography' },
       { sep: true },
+      /* v1.11 — carte Assignees (composant Bencho) : qui travaille
+       * sur ce morceau du moodboard. */
+      { id: 'assignees', icon: 'users', key: 'U', tKey: 'tool.assignees' },
       { id: 'import', icon: 'import', tKey: 'tool.import' }
     ];
   }

@@ -510,6 +510,33 @@
     document.addEventListener('pointerdown', claimKeyboardFocus, true);
     document.addEventListener('mousedown', claimKeyboardFocus, true);
 
+    /* v1.11 — COLLAGE D'IMAGES DU SYSTÈME : l'événement paste transporte
+     * les fichiers bitmap SANS demande de permission (la lecture
+     * explicite navigator.clipboard.read() est plus contrainte). Quand
+     * rien n'est en cours d'édition et que le presse-papiers contient
+     * des images, elles atterrissent au centre de la vue — c'est le
+     * chemin le plus fiable dans le panneau CEP comme dans le navigateur. */
+    document.addEventListener('paste', function (e) {
+      if (MB.interact && MB.interact.isEditing && MB.interact.isEditing()) return;
+      if (document.activeElement) {
+        var t = document.activeElement;
+        if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+      }
+      var dt = e.clipboardData;
+      if (!dt || !dt.items) return;
+      var imgs = [];
+      for (var i = 0; i < dt.items.length; i++) {
+        if (dt.items[i].kind === 'file' && /^image\//.test(dt.items[i].type || '')) {
+          var f = dt.items[i].getAsFile();
+          if (f) imgs.push(f);
+        }
+      }
+      if (imgs.length) {
+        e.preventDefault();
+        MB.interact.importFiles(imgs, null);
+      }
+    });
+
     kbdChip = document.getElementById('sb-kbd');
     if (kbdChip) {
       kbdChip.addEventListener('click', function () {
@@ -729,7 +756,17 @@
         }
         if (k === 'v') {
           e.preventDefault();
-          MB.store.pasteClipboard();
+          /* v1.11 — l'app a SON presse-papiers d'éléments ; quand il est
+           * VIDE, ⌘V tente le presse-papiers SYSTÈME : une image
+           * copiée ailleurs (capture, navigateur, autre application)
+           * atterrit sur le canvas au centre de l'écran. */
+          if (MB.store.s().clipboard && MB.store.s().clipboard.length) {
+            MB.store.pasteClipboard();
+          } else if (MB.imaging) {
+            MB.imaging.readClipboardImage().then(function (dataUrl) {
+              if (dataUrl) MB.imaging.pasteImageAt(dataUrl, null);
+            });
+          }
           return;
         }
         if (k === 'g') {

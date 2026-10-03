@@ -105,7 +105,12 @@
     listOrdered: '<path d="M10 6h11"/><path d="M10 12h11"/><path d="M10 18h11"/><path d="M4 6h1v4"/><path d="M4 10h2"/><path d="M6 17H4c0-1 2-2 2-3s-1-1.5-2-1"/>',
     highlighter: '<path d="m9 11-6 6v3h9l3-3"/><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/>',
     eraser: '<path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/>',
-    fontSize: '<path d="M4 20 8.5 7.5 13 20"/><path d="M5.8 14h5.4"/><path d="M17.5 20v-4"/><circle cx="15.3" cy="16" r="2.2"/><path d="M17.5 14v-2"/>'
+    fontSize: '<path d="M4 20 8.5 7.5 13 20"/><path d="M5.8 14h5.4"/><path d="M17.5 20v-4"/><circle cx="15.3" cy="16" r="2.2"/><path d="M17.5 14v-2"/>',
+    /* v1.11 — couleur du texte (barre de mise en forme) : un « A »
+     * posé sur une barre d'encre, comme les traitements de texte. */
+    textColor: '<path d="M4 20 8.5 7.5 13 20"/><path d="M5.8 14h5.4"/><path d="M16 8h5"/><path d="M18.5 5.5v5"/>',
+    /* v1.11 — composant Assignees : silhouette à deux personnes. */
+    users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'
   };
 
   MB.icons = {
