@@ -145,6 +145,22 @@
       if (s.rot) {
         box.style.transform = 'rotate(' + s.rot + 'deg)';
       }
+      /* v1.10 — CADENAS CLIQUABLE : tout élément verrouillé SÉLECTIONNÉ
+       * porte un cadenas dans son coin supérieur ; le clic dessus le
+       * déverrouille (interactions.js — data-act="unlock"). */
+      if (e.locked) {
+        var unlock = U.el(
+          'button',
+          'lock-badge lock-badge--unlock',
+          MB.icons.get('unlock', 13)
+        );
+        unlock.type = 'button';
+        unlock.setAttribute('data-act', 'unlock');
+        unlock.setAttribute('data-id', e.id);
+        unlock.title = 'Déverrouiller';
+        unlock.setAttribute('aria-label', 'Déverrouiller cet élément');
+        box.appendChild(unlock);
+      }
       overlay.appendChild(box);
     });
 
@@ -191,9 +207,6 @@
       rot.dataset.h = 'rot';
       rot.dataset.id = single ? single.id : '';
       main.appendChild(rot);
-    } else if (single && single.locked) {
-      var badge = U.el('div', 'lock-badge', MB.icons.get('lock', 13));
-      main.appendChild(badge);
     }
 
     overlay.appendChild(main);

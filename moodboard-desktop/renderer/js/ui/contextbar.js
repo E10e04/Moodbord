@@ -314,7 +314,15 @@
         var node = document.querySelector('.mb-el[data-id="' + el.id + '"] .mb-check-add');
         if (node) node.click();
       }));
-      gk.appendChild(C.textButton('Nettoyer', function () {
+      /* v1.10 — couleur de la carte. */
+      gk.appendChild(C.colorButton(function () {
+        return d.color && d.color !== 'transparent' ? d.color : '#252525';
+      }, function (hex) {
+        C.applyDataTo([el], 'Couleur de la carte', { color: hex });
+        MB.board.renderContent(el.id);
+      }, 'Couleur de la carte'));
+      var gk2 = addGroup();
+      gk2.appendChild(C.textButton('Nettoyer', function () {
         var items = d.items.filter(function (it) {
           return !it.done;
         });
@@ -327,13 +335,20 @@
     }
 
     if (el.type === 'section' || el.type === 'column') {
+      /* v1.10 — couleurs SÉPARÉES en-tête / corps + renommage. */
       var gs = addGroup();
+      gs.appendChild(C.colorButton(function () {
+        return d.headColor || '#3A3A3A';
+      }, function (hex) {
+        C.applyDataTo([el], 'Couleur de l’en-tête', { headColor: hex });
+        MB.board.renderContent(el.id);
+      }, 'Couleur de l’en-tête'));
       gs.appendChild(C.colorButton(function () {
         return d.color;
       }, function (hex) {
-        C.applyDataTo([el], 'Fond', { color: hex });
+        C.applyDataTo([el], 'Couleur du corps', { color: hex });
         MB.board.renderContent(el.id);
-      }, 'Fond'));
+      }, 'Couleur du corps'));
       gs.appendChild(C.textButton('Renommer', function () {
         MB.interact.startEditing(el, 'title');
       }));
@@ -393,7 +408,21 @@
       return;
     }
 
-    if (el.type === 'palette' || el.type === 'typography' || el.type === 'link' ||
+    if (el.type === 'typography') {
+      /* v1.10 — police directement dans la barre au-dessus de la
+       * carte sélectionnée (plus besoin du panneau Projet). */
+      var gty = addGroup();
+      gty.appendChild(C.fontButton(function () {
+        return d.fontFamily;
+      }, function (f) {
+        C.applyDataTo([el], 'Police', { fontFamily: f });
+        MB.board.renderContent(el.id);
+      }));
+      addCommonEnd();
+      return;
+    }
+
+    if (el.type === 'palette' || el.type === 'link' ||
         el.type === 'comment' || el.type === 'file' || el.type === 'sketch') {
       addCommonEnd();
     }

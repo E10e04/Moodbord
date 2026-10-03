@@ -140,13 +140,19 @@
 
         case 'link': {
           var url = (extra && extra.url) || 'https://example.com';
-          var lk = base('link', p, Object.assign({ w: 244, h: 74 }, extra));
+          /* v1.10 — carte PORTRAIT (design fourni par l'utilisateur) :
+           * hero blanc avec le LOGO du site, zone d'infos sombre avec
+           * favicon + URL, titre orange souligné, description. */
+          var lk = base('link', p, Object.assign({ w: 244, h: 320 }, extra));
           lk.data = {
             url: url,
             title: (extra && extra.title) || U.titleFromUrl(url),
             domain: U.domainOf(url),
+            /* v1.10 — métadonnées légères (favicon + og:title/desc),
+             * jamais de chargement ni de capture du site. */
+            desc: (extra && extra.desc) || '',
+            site: (extra && extra.site) || '',
             titleFont: (extra && extra.titleFont) || '',
-            /* v1.9 — couleur de la carte + aperçu statique. */
             bg: (extra && extra.bg) || '',
             preview: (extra && extra.preview) || ''
           };
@@ -207,10 +213,17 @@
           var sc = base('section', p, Object.assign({ w: 560, h: 440 }, extra));
           sc.data = {
             title: 'Section',
-            color: '#2C2C2C',
+            /* v1.10 — couleur du CORPS + couleur de L'EN-TÊTE (vide =
+             * pas de bandeau) + mise en forme du titre. */
+            color: (extra && extra.color) || '#2C2C2C',
+            headColor: (extra && extra.headColor) || '',
             showTitle: true,
             titleFont: (extra && extra.titleFont) || '',
-            titleSize: 15
+            titleSize: (extra && extra.titleSize) || 15,
+            /* v1.10 — mise en forme du titre transmise par la création. */
+            titleBold: !!(extra && extra.titleBold),
+            titleItalic: !!(extra && extra.titleItalic),
+            titleColor: (extra && extra.titleColor) || ''
           };
           return sc;
         }
@@ -219,9 +232,15 @@
           var co = base('column', p, Object.assign({ w: 250, h: 400 }, extra));
           co.data = {
             title: 'Colonne',
-            color: '#2A2A2A',
+            /* v1.10 — mini-canvas vertical : corps + en-tête séparés. */
+            color: (extra && extra.color) || '#2A2A2A',
+            headColor: (extra && extra.headColor) || '',
             titleFont: (extra && extra.titleFont) || '',
-            titleSize: 15
+            titleSize: (extra && extra.titleSize) || 15,
+            /* v1.10 — mise en forme du titre transmise par la création. */
+            titleBold: !!(extra && extra.titleBold),
+            titleItalic: !!(extra && extra.titleItalic),
+            titleColor: (extra && extra.titleColor) || ''
           };
           return co;
         }
@@ -266,6 +285,8 @@
           ck.data = {
             title: (extra && extra.title) || 'Checklist',
             items: items,
+            /* v1.10 — couleur de la carte modifiable. */
+            color: (extra && extra.color) || '#252525',
             fontFamily: (extra && extra.fontFamily) || (MB.fonts ? MB.fonts.default() : 'Georgia'),
             fontSize: 13
           };

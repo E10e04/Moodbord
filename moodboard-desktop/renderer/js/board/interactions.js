@@ -62,6 +62,16 @@
     var o = opts || {};
     var el = MB.factory.create(type, point, extra);
     Store.addElements([el], { label: 'Créer ' + typeName(type) });
+    /* v1.10 — création DANS une colonne / section : la carte rejoint
+     * la pile verticale du mini-canvas sous le curseur — en FIN de
+     * pile (le tri par position ne s'applique qu'aux drags, où
+     * l'utilisateur contrôle réellement l'endroit du dépôt). */
+    var host = Store.topmostSectionAt({ x: el.x + el.w / 2, y: el.y + el.h / 2 }, [el.id]);
+    if (host) {
+      el.y = host.y + host.h + 1000; /* tri : toujours en dernier */
+      Store.setParent(el.id, host.id);
+      Store.layoutContainerChildren(host.id);
+    }
     Store.setSelection([el.id]);
     if (!o.keepTool) Store.setTool('select');
     if (type === 'text' || type === 'note' || type === 'comment') {
@@ -75,7 +85,50 @@
     if (type === 'board') {
       startEditing(el, 'title');
     }
+    /* v1.10 — TYPOGRAPHIE : la barre de sélection de police s'ouvre
+     * DIRECTEMENT sur la carte à la création (inutile de passer par
+     * le panneau Projet) — la barre contextuelle la propose aussi
+     * ensuite à chaque sélection. */
+    if (type === 'typography') {
+      setTimeout(function () {
+        openTypographyFontPicker(el.id);
+      }, 60);
+    }
     return el;
+  }
+
+  /* v1.10 — popover de police ancré à la carte typographie. */
+  function openTypographyFontPicker(elId) {
+    var el = Store.el(elId);
+    if (!el || el.type !== 'typography') return;
+    var view = Board.viewOf(elId);
+    if (!view) return;
+    var s = Camera.toScreen(el.x + el.w / 2, el.y);
+    var anchor = document.getElementById('typo-font-anchor');
+    if (!anchor) {
+      anchor = U.el('div');
+      anchor.id = 'typo-font-anchor';
+      anchor.setAttribute('aria-hidden', 'true');
+      document.body.appendChild(anchor);
+    }
+    anchor.style.cssText =
+      'position:fixed;left:' + Math.max(12, s.x - 14) + 'px;top:' + Math.max(12, s.y - 10) + 'px;width:0;height:0;';
+    if (MB.ui.controls && MB.ui.controls.fontPopover) {
+      MB.ui.controls.fontPopover(
+        anchor,
+        function () {
+          return (el && el.data && el.data.fontFamily) || '';
+        },
+        function (f) {
+          var live = Store.el(elId);
+          if (!live) return;
+          MB.store.mutate('Police', function () {
+            Store.updateElement(live.id, { data: { fontFamily: f } }, { transaction: true });
+          });
+          Board.renderContent(live.id);
+        }
+      );
+    }
   }
 
   function openImportPicker(atPoint) {
@@ -419,6 +472,8 @@
       if (field === 'text') el.data.text = text;
       else if (field === 'title') el.data.title = text;
       else if (field === 'name') el.data.name = text;
+      /* v1.10 — description de la carte de lien (éditable sur place). */
+      else if (field === 'desc') el.data.desc = text;
       if (rich) {
         /* v1.8 — le corps riche est sanitisé puis conservé dans
          * data.html ; data.text (recherche, export, repli) reste la
@@ -717,9 +772,11 @@
     checklist: { w: 120, h: 96 },
     table: { w: 120, h: 60 },
     import: { w: 140, h: 110 },
-    link: { w: 120, h: 56 },
+    link: { w: 150, h: 150 },
     file: { w: 120, h: 56 },
-    board: { w: 140, h: 88 }
+    board: { w: 140, h: 88 },
+    /* v1.10 — carte d'attente de l'outil Image. */
+    image: { w: 140, h: 110 }
   };
 
   function minSizeFor(el) {
@@ -1200,6 +1257,10 @@
     return ids;
   }
 
+  /* v1.10 — tracés temporaires FIDÈLES : ce que l'utilisateur voit
+   * pendant le geste est exactement l'élément qui sera créé (couleur
+   * et épaisseur réelles de l'outil, trait plein, arrondis) — le tracé
+   * se dessine à mesure du mouvement. */
   function drawTempLine(a, b) {
     var cam = Store.s().camera;
     var x1 = a.x * cam.zoom + cam.x;
@@ -1209,7 +1270,7 @@
     var svg = document.getElementById('guides');
     svg.innerHTML =
       '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 +
-      '" stroke="#4C8DFF" stroke-width="2" stroke-dasharray="6 4"/>';
+      '" stroke="#4C8DFF" stroke-width="2" stroke-linecap="round"/>';
   }
 
   function drawTempSketch(points) {
@@ -1218,9 +1279,10 @@
       return (p.x * cam.zoom + cam.x) + ',' + (p.y * cam.zoom + cam.y);
     });
     var svg = document.getElementById('guides');
+    var w = (2.5 * cam.zoom).toFixed(2);
     svg.innerHTML =
       '<polyline points="' + pts.join(' ') +
-      '" fill="none" stroke="#4C8DFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>';
+      '" fill="none" stroke="#4C8DFF" stroke-width="' + w + '" stroke-linecap="round" stroke-linejoin="round"/>';
   }
 
   function onPointerUp(e) {
@@ -1279,6 +1341,9 @@
           g.el.data.autoH = false;
           Store.nextRev(g.el);
         }
+        /* v1.10 — enfant d'une colonne / section : la pile verticale
+         * se réorganise après le redimensionnement. */
+        if (g.el && g.el.parentId) Store.relayoutContainersOf([g.el.id]);
         Board.updateViews([g.el.id]);
         break;
       }
@@ -1382,16 +1447,11 @@
       }
 
       case 'create-click': {
-        /* v1.8 — l’outil Importer : un clic sur le canvas crée la CARTE
-         * d’import (icône au centre, dépôt de fichiers, double-clic →
-         * explorateur) ; l’outil Image garde l’ancien comportement
-         * (sélecteur direct). */
-        if (g.tool === 'image') {
-          openImportPicker(g.anchor);
-          Store.setTool('select');
-        } else {
-          createAt(g.tool, g.anchor);
-        }
+        /* v1.10 — l’outil IMAGE crée désormais une CARTE D’ATTENTE
+         * (icône d’import au milieu) : le clic sur la carte ouvre le
+         * sélecteur et l’image choisie la remplit — l’outil Importer
+         * crée lui aussi sa carte (comportement v1.8 inchangé). */
+        createAt(g.tool, g.anchor);
         break;
       }
 
@@ -1516,6 +1576,8 @@
       return true;
     });
     var changed = false;
+    /* v1.10 — conteneurs verticaux à re-empiler après le reparentage. */
+    var touchedColumns = {};
     roots.forEach(function (id) {
       var el = Store.el(id);
       if (!el) return;
@@ -1525,9 +1587,19 @@
       var target = Store.topmostSectionAt(center, g.movedIds);
       var newParent = target ? target.id : null;
       if (newParent !== el.parentId) {
+        if (el.parentId) touchedColumns[el.parentId] = true;
         Store.setParent(id, newParent);
+        if (newParent) touchedColumns[newParent] = true;
+        changed = true;
+      } else if (el.parentId) {
+        /* Déplacé À L'INTÉRIEUR de son conteneur : la pile verticale
+         * se réorganise (le drop au milieu insère à sa place). */
+        touchedColumns[el.parentId] = true;
         changed = true;
       }
+    });
+    Object.keys(touchedColumns).forEach(function (pid) {
+      Store.layoutContainerChildren(pid);
     });
     if (changed) Store.emit('elements');
   }
@@ -1579,7 +1651,13 @@
     if (imgHost) {
       var imgEl = Store.el(imgHost.dataset.id);
       if (imgEl && !imgEl.locked && !Store.s().ui.cropId) {
-        enterCrop(imgEl);
+        /* v1.10 — carte d'attente : le double-clic ouvre le sélecteur
+         * d'image (elle est encore vide — le recadrage viendra après). */
+        if (!imgEl.data.src) {
+          pickImageForCard(imgEl);
+        } else {
+          enterCrop(imgEl);
+        }
       }
       return;
     }
@@ -1652,6 +1730,32 @@
       return;
     }
 
+    /* v1.10 — CADENAS CLIQUABLE : un élément verrouillé sélectionné
+     * porte un cadenas dans son coin supérieur ; le clic dessus le
+     * déverrouille directement. */
+    if (act === 'unlock') {
+      var unlockEl = actNode.getAttribute('data-id');
+      var target = unlockEl ? Store.el(unlockEl) : el;
+      if (target) {
+        Store.mutate('Déverrouiller', function () {
+          Store.updateElement(target.id, { locked: false }, { transaction: true });
+        });
+        MB.ui.toast(typeName(target.type) + ' déverrouillé', 'success');
+      }
+      return;
+    }
+
+    /* v1.10 — zone centrale des cartes d'import et d'image : ouvre
+     * l'explorateur au clic (« Cliquez pour importer un fichier »). */
+    if (act === 'import-pick' && el) {
+      openImportPicker({ x: el.x + el.w / 2, y: el.y + el.h / 2 });
+      return;
+    }
+    if (act === 'image-pick' && el) {
+      pickImageForCard(el);
+      return;
+    }
+
     /* v1.6 — flèche d'ouverture de la carte planche. */
     if (act === 'board-open') {
       var hostB = actNode.closest('.mb-el');
@@ -1668,6 +1772,41 @@
       exitCrop(false);
       return;
     }
+  }
+
+  /* v1.10 — remplit une carte image EN ATTENTE : ouvre le sélecteur
+   * et applique l’image choisie (dimensions, remplissage) à la carte. */
+  function pickImageForCard(el) {
+    var input = document.getElementById('file-import');
+    input.value = '';
+    input.onchange = function () {
+      if (!input.files || !input.files.length) return;
+      var f = input.files[0];
+      readAsDataURL(f)
+        .then(function (dataUrl) {
+          return preloadImage(dataUrl).then(function (info) {
+            var live = Store.el(el.id);
+            if (!live) return;
+            var scale = Math.min(1, 340 / Math.max(info.w, info.h));
+            var w = Math.max(48, Math.round(info.w * scale));
+            var h = Math.max(48, Math.round(info.h * scale));
+            Store.mutate('Choisir une image', function () {
+              Store.updateElement(
+                live.id,
+                { w: w, h: h, data: { src: dataUrl, naturalW: info.w, naturalH: info.h, crop: null } },
+                { transaction: true }
+              );
+            });
+            live._sized = true;
+            Board.renderContent(live.id);
+            MB.board.refreshOverlay();
+          });
+        })
+        .catch(function () {
+          MB.ui.toast('Image illisible — choisissez un fichier image.', 'error');
+        });
+    };
+    input.click();
   }
 
   function copyText(text) {
@@ -1840,6 +1979,10 @@
     importFiles: importFiles,
     startEditing: startEditing,
     commitEditing: commitEditing,
+    /* v1.10 — popover police d'une carte typographie + remplissage
+     * d'une carte image en attente (exposés au harnais E2E). */
+    openTypographyFontPicker: openTypographyFontPicker,
+    pickImageForCard: pickImageForCard,
     isEditing: function () {
       return !!Store.s().ui.editingId || !!editingItem || !!editingCell;
     },

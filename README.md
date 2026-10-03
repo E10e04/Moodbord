@@ -218,6 +218,40 @@ npm run dist:mac               # → dist/Moodboard-1.4.0-x64.dmg + arm64.dmg (s
 
 ## 📜 Changelog
 
+### v1.10.0 — cartes de lien relookées, mini-canvas, cadenas cliquable
+
+1. **Cartes de lien relookées** (design fourni par l'utilisateur) :
+   carte **portrait** — **hero blanc** avec le **LOGO du site**
+   (favicon haute résolution) et le nom du service, zone d'infos
+   sombre (couleur modifiable) : **favicon + URL** gris, **titre
+   orange souligné**, **description** gris clair. **Le site n'est
+   jamais chargé ni capturé** (le favicon vient du service public ;
+   titre/description en lecture légère des métadonnées, best effort
+   et toujours éditables sur place).
+2. **Préférences épurées** : le texte d'explication du dossier de
+   caches (« Ce choix… ») est retiré.
+3. **Indicateur clavier** : **icône de clavier** à côté de la version —
+   **verte** quand les raccourcis sont actifs, **rouge** sinon.
+4. **Typographie** : le **sélecteur de police s'ouvre sur la carte**
+   dès la création ; la barre contextuelle le propose aussi.
+5. **Carte Importer épurée** : icône d'import + « **Cliquez pour
+   importer un fichier** » au milieu (zone centrale cliquable).
+6. **Couleur des checklists** : fond de carte modifiable, encre adaptée.
+7. **Colonnes & sections** : **couleur d'en-tête** + **couleur de
+   corps** séparées, **titre mis en forme** (police, taille, gras,
+   italique, couleur).
+8. **Mini-canvas verticaux** : les cartes **glissées dans une colonne
+   ou une section s'empilent verticalement** (insertion au point de
+   dépôt, re-compactage après suppression, croissance automatique).
+9. **Cadenas cliquable** : cliquer un élément **verrouillé** montre un
+   **cadenas dans son coin supérieur** — le clic le **déverrouille**.
+10. **Miniatures de l'accueil nettes** : **un seul élément
+    représentatif** par projet, rendu plein cadre en 640×400.
+11. **Croquis & ligne en direct** : tracé temporaire **fidèle**
+    (couleur, épaisseur, arrondis réels).
+12. **Outil Image** : carte d'attente (« Cliquez pour choisir une
+    image ») — l'image choisie **remplit la carte**.
+
 ### v1.9.0 — langue de l'interface, liens repensés, sélecteur de formes
 
 1. **Langue de l'interface** (Préférences ▸ Langue) : « Langue du

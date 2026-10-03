@@ -307,10 +307,6 @@
           ? T('prefs.files.custom')
           : T('prefs.files.default', { dir: def })) +
         '</div>' +
-        /* v1.8 — explicite : le choix est GLOBAL (tous les moodboards,
-         * application comme extension) et chaque projet enregistré y
-         * garde son propre autosave. */
-        '<div class="prefs-sub prefs-sub--all">' + T('prefs.allBoards') + '</div>' +
         '<div class="prefs-actions">' +
         '<button type="button" class="btn btn-primary btn--xs" data-act="pick"' +
         (canFs ? '' : ' disabled') + '>' + T('prefs.pick') + '</button>' +

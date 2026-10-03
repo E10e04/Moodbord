@@ -480,61 +480,111 @@ button:focus-visible, input:focus-visible, [contenteditable]:focus-visible {
 .mb-typo-line { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 
 /* -- lien / fichier */
-.mb-link-card, .mb-file-card {
+.mb-file-card {
   width: 100%; height: 100%;
   display: flex; align-items: center; gap: 12px;
   background: var(--panel2); border-radius: 10px; padding: 12px;
   box-shadow: inset 0 0 0 1px var(--border-soft);
   cursor: pointer; text-decoration: none; color: inherit;
 }
-.mb-link-card:hover, .mb-file-card:hover { box-shadow: inset 0 0 0 1px var(--border); }
-.mb-link-tile, .mb-file-icon {
+.mb-file-card:hover { box-shadow: inset 0 0 0 1px var(--border); }
+.mb-file-icon {
   width: 42px; height: 42px; border-radius: 9px; flex: 0 0 42px;
   background: var(--elev); color: var(--text);
   display: flex; align-items: center; justify-content: center;
   font-size: 18px; font-weight: 700;
 }
-.mb-link-meta, .mb-file-meta { min-width: 0; }
-.mb-link-title, .mb-file-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; outline: none; }
-.mb-link-domain, .mb-file-sub { font-size: 11px; color: var(--text-dim); display: flex; align-items: center; gap: 4px; }
-/* v1.9 — carte de lien avec APERÇU STATIQUE : capture/og:image en
- * bandeau pleine largeur, favicon en tuite (carte compacte), fond
- * colorable. */
-.mb-link-card { position: relative; flex-direction: column; align-items: stretch; gap: 0; }
-.mb-link-card.has-shot { padding: 0; overflow: hidden; }
-.mb-link-shot {
-  width: 100%; height: 96px; flex: 0 0 96px;
-  background: #1B1B1B; overflow: hidden; position: relative;
+.mb-file-meta { min-width: 0; }
+.mb-file-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; outline: none; }
+.mb-file-sub { font-size: 11px; color: var(--text-dim); display: flex; align-items: center; gap: 4px; }
+
+/* v1.10 — carte de lien PAYSAGE → PORTRAIT (design fourni par
+ * l'utilisateur, cf. Google Fonts / Gemini) :
+ *  - hero BLANC (≈52 %) : logo du site + nom, centrés ;
+ *  - zone d'infos sombre (couleur de carte) : favicon + URL grise,
+ *    titre orange vif souligné, description gris clair ;
+ *  - AUCUN chargement du site : logo = favicon. */
+.mb-link-card {
+  position: relative;
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column;
+  border-radius: 12px; overflow: hidden;
+  background: #2D2D2D;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  cursor: pointer; text-decoration: none; color: inherit;
 }
-.mb-link-shot img {
-  width: 100%; height: 100%; object-fit: cover; object-position: top;
-  display: block; pointer-events: none;
+.mb-link-card:hover { box-shadow: 0 6px 26px rgba(0, 0, 0, 0.45), inset 0 0 0 1px var(--border); }
+.mb-link-hero {
+  flex: 1 1 auto; min-height: 0;
+  background: #FFFFFF;
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  padding: 14px 16px;
 }
-.mb-link-tile--icon { padding: 0; display: flex; align-items: center; justify-content: center; }
-.mb-link-tile--icon img { width: 28px; height: 28px; border-radius: 6px; display: block; }
-.mb-link-card.has-shot .mb-link-row {
-  display: flex; align-items: center; gap: 10px;
-  padding: 9px 10px 9px 12px; min-height: 30px;
+.mb-link-logo {
+  width: 52px; height: 52px; flex: 0 0 52px;
+  object-fit: contain; border-radius: 9px;
+  display: block;
 }
-.mb-link-row { display: flex; align-items: center; gap: 12px; }
+.mb-link-logo--letter {
+  display: flex; align-items: center; justify-content: center;
+  background: #F1F3F4; color: #3C4043;
+  font-size: 26px; font-weight: 700;
+}
+.mb-link-brand {
+  font-size: 19px; font-weight: 600; color: #3C4043;
+  max-width: 62%;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.mb-link-meta {
+  flex: 0 0 auto;
+  display: flex; flex-direction: column; gap: 7px;
+  padding: 13px 15px 15px;
+}
+.mb-link-url {
+  display: flex; align-items: center; gap: 8px;
+  color: #9CA3AF; font-size: 11.5px;
+  white-space: nowrap; overflow: hidden;
+}
+.mb-link-url span {
+  min-width: 0; overflow: hidden; text-overflow: ellipsis;
+}
+.mb-link-fav { width: 16px; height: 16px; flex: 0 0 16px; border-radius: 3px; display: block; object-fit: contain; }
+.mb-link-fav--dot {
+  border-radius: 50%;
+  background: currentColor; opacity: .55;
+}
+.mb-link-title {
+  font-size: 14.5px; font-weight: 600; line-height: 1.25;
+  text-decoration: underline;
+  outline: none;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.mb-link-desc {
+  font-size: 12px; line-height: 1.5; color: #E5E7EB;
+  outline: none;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 18px;
+}
 /* v1.3 — flèche d'ouverture de lien : SEUL point d'ouverture du
  * navigateur (la carte elle-même ne réagit plus au clic).
  * v1.9 — icône moderne (diagonale fine) sur pastille ronde. */
 .mb-link-open {
-  position: absolute; top: 7px; right: 7px;
-  width: 26px; height: 26px; border-radius: 7px;
+  position: absolute; top: 8px; right: 8px;
+  width: 27px; height: 27px; border-radius: 8px;
   display: flex; align-items: center; justify-content: center;
-  background: var(--elev); color: var(--text-dim);
-  box-shadow: inset 0 0 0 1px var(--border-soft);
-  opacity: .65; cursor: pointer;
+  background: rgba(255, 255, 255, 0.92); color: #3C4043;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.22);
+  opacity: .82; cursor: pointer;
   transition: opacity .12s ease, color .12s ease, box-shadow .12s ease;
 }
 .mb-link-card:hover .mb-link-open { opacity: 1; }
-.mb-link-card.has-shot .mb-link-open {
-  background: rgba(20, 20, 20, 0.72); backdrop-filter: blur(4px);
-  border-radius: 8px;
-}
-.mb-link-open:hover { color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.mb-link-open:hover { color: var(--accent); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); }
 .mb-link-open:active { transform: scale(.92); }
 
 /* -- ligne */
@@ -545,23 +595,47 @@ button:focus-visible, input:focus-visible, [contenteditable]:focus-visible {
 .mb-shape-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 
 /* -- section / colonne */
+/* v1.10 — en-tête et corps SÉPARÉS : couleurs indépendantes + titre
+ * mis en forme (gras, italique, couleur, taille, police). La zone
+ * .mb-*-body accueille la pile verticale des cartes enfants
+ * (mini-canvas — cf. store.layoutContainerChildren). */
 .mb-section-box {
   width: 100%; height: 100%;
+  display: flex; flex-direction: column;
   border-radius: 16px;
   border: 1px dashed var(--border);
   box-shadow: inset 0 0 0 1px rgba(0,0,0,0.18);
+  overflow: hidden;
+}
+.mb-section-head {
+  flex: 0 0 auto;
+  padding: 0;
 }
 .mb-section-title {
-  font-size: 15px; font-weight: 700; color: var(--text-dim);
+  font-size: 15px; font-weight: 400; color: var(--text-dim);
   padding: 14px 18px; outline: none;
 }
+.mb-section-head[style*="background"] .mb-section-title {
+  color: var(--text);
+}
+.mb-section-body { flex: 1 1 auto; min-height: 0; }
 .mb-column-box {
   width: 100%; height: 100%;
+  display: flex; flex-direction: column;
   border-radius: 14px;
   border: 1px solid var(--border);
   box-shadow: inset 0 0 0 1px rgba(0,0,0,0.18);
+  overflow: hidden;
 }
-.mb-column-title { font-size: 13px; font-weight: 700; color: var(--text-dim); padding: 12px 14px; outline: none; }
+.mb-column-head {
+  flex: 0 0 auto;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.mb-column-title { font-size: 13px; font-weight: 400; color: var(--text-dim); padding: 12px 14px; outline: none; }
+.mb-column-head[style*="background"] .mb-column-title {
+  color: var(--text);
+}
+.mb-column-body { flex: 1 1 auto; min-height: 0; }
 
 /* -- tableau */
 .mb-table-grid {
@@ -580,6 +654,8 @@ button:focus-visible, input:focus-visible, [contenteditable]:focus-visible {
 .mb-table-cell--head { background: var(--elev); font-weight: 700; font-size: 12px; }
 
 /* -- checklist */
+/* v1.10 — couleur de carte modifiable : l'encre (titre + tâches)
+ * s'adapte via style inline ; --mb-check-ink alimente les boutons. */
 .mb-check-card {
   width: 100%; height: 100%;
   background: var(--panel2); border-radius: 10px; padding: 12px 12px 8px;
@@ -604,18 +680,19 @@ button:focus-visible, input:focus-visible, [contenteditable]:focus-visible {
   transform: rotate(-45deg) translate(0.5px, -1px);
 }
 .mb-check-text { font-size: 12.5px; line-height: 1.4; outline: none; word-break: break-word; }
-.mb-check-item.is-done .mb-check-text { color: var(--text-dim); text-decoration: line-through; }
+.mb-check-item.is-done .mb-check-text { opacity: .62; text-decoration: line-through; }
 .mb-check-foot { display: flex; gap: 8px; margin-top: 6px; }
 .mb-check-add {
-  border: none; background: none; color: var(--text-faint);
+  border: none; background: none; color: var(--mb-check-ink, var(--text-faint));
   font-size: 12px; cursor: pointer; padding: 3px 0;
 }
 .mb-check-add:hover { color: var(--accent); }
 .mb-check-clear {
-  border: none; background: none; color: var(--warn);
+  border: none; background: none; color: var(--mb-check-ink, var(--warn));
   font-size: 12px; cursor: pointer; padding: 3px 0; margin-left: auto;
+  opacity: .8;
 }
-.mb-check-clear:hover { color: #E3B341; }
+.mb-check-clear:hover { opacity: 1; }
 
 .mb-unknown {
   width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
@@ -674,6 +751,22 @@ button:focus-visible, input:focus-visible, [contenteditable]:focus-visible {
   display: flex; align-items: center; justify-content: center;
   box-shadow: var(--shadow-sm);
 }
+/* v1.10 — CADENAS CLIQUABLE : sur un élément verrouillé sélectionné,
+ * le badge du coin supérieur est un BOUTON qui déverrouille. */
+.lock-badge--unlock {
+  pointer-events: auto;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  color: var(--text);
+  background: var(--elev);
+  transition: color .12s ease, transform .12s ease, box-shadow .12s ease;
+}
+.lock-badge--unlock:hover {
+  color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft), var(--shadow-sm);
+}
+.lock-badge--unlock:active { transform: scale(.9); }
+.lock-badge--unlock svg { pointer-events: none; }
 
 .gesture-badge {
   position: absolute; z-index: 50;
@@ -1050,17 +1143,21 @@ body:focus { outline: none; }
 
 /* Indicateur des raccourcis clavier : dans un panneau CEP, les
    raccourcis ne vivent QUE si le panneau détient le focus clavier
-   (clic dans Illustrator = désactivation attendue). */
+   (clic dans Illustrator = désactivation attendue).
+   v1.10 — ICÔNE SEULE : verte quand actifs, ROUGE sinon (le libellé
+   vit dans l'info-bulle — plus de texte à côté de la version). */
 .sb-kbd {
-  font-size: 10.5px; letter-spacing: 0.02em;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 20px;
   color: var(--text-faint);
-  padding: 1px 7px; border: 1px solid var(--border-soft); border-radius: 4px;
+  padding: 0; border: 1px solid transparent; border-radius: 5px;
   background: transparent; cursor: pointer;
-  user-select: none; white-space: nowrap;
+  user-select: none;
 }
-.sb-kbd:hover { color: var(--text-dim); border-color: var(--border); }
+.sb-kbd svg { display: block; }
+.sb-kbd:hover { color: var(--text-dim); border-color: var(--border-soft); }
 .sb-kbd.is-on { color: var(--ok); border-color: rgba(63, 185, 80, 0.35); }
-.sb-kbd.is-off { color: var(--warn); border-color: rgba(210, 153, 34, 0.4); }
+.sb-kbd.is-off { color: var(--danger); border-color: rgba(229, 83, 75, 0.4); }
 
 /* =========================================================================
  * Mode application autonome (Electron) — cf. core/desktop.js
@@ -1588,16 +1685,17 @@ body.mb-desktop-win32 #home-screen .home-main-inner { padding-top: 44px; }
 .hidden-eye { flex: none; }
 .hidden-eye svg { color: var(--accent); }
 
-/* Carte d'import (outil Importer glissé sur le canvas). */
+/* Carte d'import (outil Importer glissé sur le canvas).
+ * v1.10 — contenu demandé : JUSTE l'icône d'import et « Cliquez pour
+ * importer un fichier » au milieu ; la zone centrale est un BOUTON
+ * (les bords de la carte restent sélectionnables pour la déplacer). */
 .mb-import-card {
   width: 100%; height: 100%;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 8px; padding: 14px;
+  display: flex; align-items: center; justify-content: center;
+  padding: 14px;
   border: 1.5px dashed #4A4A4A;
   border-radius: 12px;
   background: rgba(30, 30, 30, 0.45);
-  text-align: center;
-  cursor: pointer;
   transition: border-color 0.12s ease, background 0.12s ease;
 }
 .mb-import-card:hover { border-color: var(--accent); background: rgba(76, 141, 255, 0.06); }
@@ -1605,10 +1703,48 @@ body.mb-desktop-win32 #home-screen .home-main-inner { padding-top: 44px; }
   border-color: var(--accent);
   background: rgba(76, 141, 255, 0.14);
 }
-.mb-import-icon { color: #9A9A9A; }
+.mb-import-cta {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 10px;
+  width: calc(100% - 44px); height: calc(100% - 44px);
+  border: none; background: none;
+  cursor: pointer;
+  text-align: center;
+  border-radius: 10px;
+  transition: background 0.12s ease;
+}
+.mb-import-cta:hover { background: rgba(76, 141, 255, 0.1); }
+.mb-import-cta:active .mb-import-icon { transform: scale(.92); }
+.mb-import-icon { color: #9A9A9A; transition: transform .12s ease; }
 .mb-import-icon svg { display: block; }
-.mb-import-title { font-size: 13.5px; font-weight: 700; color: var(--text); }
-.mb-import-hint { font-size: 10.5px; color: var(--text-faint); line-height: 1.5; }
+.mb-import-title { font-size: 13.5px; font-weight: 600; color: var(--text); }
+
+/* v1.10 — carte image EN ATTENTE (outil Image) : icône d'import
+ * d'image au milieu + « Cliquez pour choisir une image ». */
+.mb-image-empty-card {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  border: 1.5px dashed #4A4A4A;
+  border-radius: 12px;
+  background: rgba(30, 30, 30, 0.45);
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+.mb-image-empty-card:hover { border-color: var(--accent); background: rgba(76, 141, 255, 0.06); }
+.mb-image-cta {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 10px;
+  width: calc(100% - 44px); height: calc(100% - 44px);
+  border: none; background: none;
+  cursor: pointer;
+  text-align: center;
+  border-radius: 10px;
+  transition: background 0.12s ease;
+}
+.mb-image-cta:hover { background: rgba(76, 141, 255, 0.1); }
+.mb-image-cta:active .mb-image-cta-icon { transform: scale(.92); }
+.mb-image-cta-icon { color: #9A9A9A; transition: transform .12s ease; }
+.mb-image-cta-icon svg { display: block; }
+.mb-image-cta-text { font-size: 13px; font-weight: 600; color: var(--text); }
 
 /* Préférences : rappel « tous les moodboards » (v1.8). */
 .prefs-sub--all { color: var(--text-dim); }

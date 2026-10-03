@@ -1,21 +1,18 @@
 /* =========================================================================
- * linkpreview.js — Aperçu STATIQUE des liens (v1.9).
+ * linkpreview.js — Infos légères des liens (v1.10).
  *
- * Objectif : chaque carte de lien peut afficher une image figée du site
- * visé — jamais une page animée.
+ * Demande utilisateur : « je ne veux pas que le site soit chargé quand
+ * je mets le lien — juste que le LOGO du site soit pris pour la mise
+ * en forme ». Le site n'est donc JAMAIS rendu ni capturé :
  *
- * Stratégie par environnement :
- *  - APPLICATION (Electron) : capture d'écran réelle par le processus
- *    principal (WebContentsView hors écran → PNG → data URL, 480 px de
- *    large) ; repli og:image, puis favicon ;
- *  - EXTENSION CEP : lecture de la page (og:image / twitter:image, dont
- *    l'image est convertie en data URL pour un fichier autonome) ;
- *    repli favicon haute résolution ;
- *  - WEB (aperçu) : essai og:image (limité par CORS) ; repli favicon.
- *
- * La favicon de repli passe par le service public s2.favicons (chargée
- * en <img>, sans CORS) et reste une simple URL — si elle est invisible
- * hors ligne, la carte retombe sur sa tuile lettre.
+ *  - LOGO : favicon haute résolution via le service public s2.favicons
+ *    (une simple balise <img>, pas de CORS, pas de chargement de page) ;
+ *  - TITRE + DESCRIPTION : lecture best-effort des métadonnées HTML
+ *    (og:title / og:description / <title>) — un fetch texte court avec
+ *    garde-fou de 5 s, silencieux s'il échoue (CORS, hors ligne…) :
+ *    la carte reste complète avec ses valeurs éditables ;
+ *  - l'application de bureau n'utilise PLUS de WebContentsView (la
+ *    capture d'écran v1.9 est retirée).
  * ========================================================================= */
 (function () {
   'use strict';
@@ -37,138 +34,134 @@
     }
   }
 
-  /* Extrait l'URL de l'image sociale déclarée par la page. */
-  function extractOgImage(html) {
-    var s = String(html || '');
-    if (!s) return '';
-    var patterns = [
-      /<meta[^>]+property=["']og:image(?::secure_url)?["'][^>]+content=["']([^"']+)["']/i,
-      /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image(?::secure_url)?["']/i,
-      /<meta[^>]+name=["']twitter:image(?::src)?["'][^>]+content=["']([^"']+)["']/i,
-      /<meta[^>]+itemprop=["']image["'][^>]+content=["']([^"']+)["']/i
-    ];
+  /* ---------------------- métadonnées HTML (best effort) ------------- */
+
+  function metaContent(html, patterns) {
     for (var i = 0; i < patterns.length; i++) {
-      var m = s.match(patterns[i]);
-      if (m && m[1]) return m[1].replace(/&amp;/g, '&');
+      var m = String(html || '').match(patterns[i]);
+      if (m && m[1]) return m[1].replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
     }
     return '';
   }
 
-  function fetchAsDataUrl(url) {
-    return fetch(url, { mode: 'cors' })
-      .then(function (r) {
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        return r.blob();
-      })
-      .then(function (b) {
-        if (!b || b.size > 4 * 1024 * 1024) throw new Error('trop volumineux');
-        return new Promise(function (resolve, reject) {
-          var fr = new FileReader();
-          fr.onload = function () {
-            resolve(String(fr.result));
-          };
-          fr.onerror = function () {
-            reject(new Error('lecture impossible'));
-          };
-          fr.readAsDataURL(b);
-        });
-      });
+  function decodeEntities(s) {
+    var t = document.createElement('textarea');
+    t.innerHTML = String(s || '');
+    return t.value;
   }
 
-  /* ------- capture par le processus principal (application) ------- */
-
-  function desktopShot(url) {
-    if (!MB.desktop || !MB.desktop.canLinkPreview) return Promise.resolve('');
-    return MB.desktop.linkPreview(url).then(function (r) {
-      if (r && r.err === 0 && r.dataUrl && r.dataUrl.indexOf('data:image') === 0) return r.dataUrl;
-      return '';
+  /* → Promise<{title, desc, site}> — chaîne jamais rejetée. */
+  function fetchMeta(url) {
+    var u = validUrl(url);
+    if (!u) return Promise.resolve(null);
+    return new Promise(function (resolve) {
+      var done = false;
+      function finish(v) {
+        if (done) return;
+        done = true;
+        resolve(v);
+      }
+      /* Garde-fou : 5 s max — jamais bloquer la carte. */
+      var timer = setTimeout(function () {
+        finish(null);
+      }, 5000);
+      fetch(u, { mode: 'cors' })
+        .then(function (r) {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.text();
+        })
+        .then(function (html) {
+          clearTimeout(timer);
+          var title = metaContent(html, [
+            /<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i,
+            /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:title["']/i,
+            /<meta[^>]+name=["']twitter:title["'][^>]+content=["']([^"']+)["']/i,
+            /<title[^>]*>([^<]+)<\/title>/i
+          ]);
+          var desc = metaContent(html, [
+            /<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["']/i,
+            /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:description["']/i,
+            /<meta[^>]+name=["']description["'][^>]+content=["']([^"']+)["']/i,
+            /<meta[^>]+name=["']twitter:description["'][^>]+content=["']([^"']+)["']/i
+          ]);
+          var site = metaContent(html, [
+            /<meta[^>]+property=["']og:site_name["'][^>]+content=["']([^"']+)["']/i,
+            /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:site_name["']/i
+          ]);
+          finish({
+            title: title ? decodeEntities(title).slice(0, 140) : '',
+            desc: desc ? decodeEntities(desc).slice(0, 220) : '',
+            site: site ? decodeEntities(site).slice(0, 60) : ''
+          });
+        })
+        .catch(function () {
+          clearTimeout(timer);
+          finish(null);
+        });
     });
-  }
-
-  /* -------- og:image (extension CEP + essai web, best effort) -------- */
-
-  function ogImage(url) {
-    return fetch(url, { mode: 'cors' })
-      .then(function (r) {
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        return r.text();
-      })
-      .then(function (html) {
-        var img = extractOgImage(html);
-        if (!img) throw new Error('pas d’og:image');
-        /* Résolution relative (rares sites déclarent « /img/og.jpg »). */
-        if (img.indexOf('//') !== 0 && img.indexOf('http') !== 0) {
-          var origin = '';
-          var m = url.match(/^https?:\/\/[^/]+/i);
-          if (m) origin = m[0];
-          img = origin + (img.charAt(0) === '/' ? '' : '/') + img;
-        }
-        return img;
-      })
-      .then(function (img) {
-        /* Autonomie du fichier : on tente la conversion en data URL ;
-         * sinon l'URL reste affichable directement (balise <img>). */
-        return fetchAsDataUrl(img).catch(function () {
-          return img;
-        });
-      });
   }
 
   /* ------------------------------ API ------------------------------- */
 
-  /* → Promise<dataUrl|url|null> : meilleure prévisualisation disponible. */
-  function capture(url) {
+  /* → Promise<{title, desc, site, favicon}|null> : tout ce dont la carte
+   * a besoin pour sa mise en forme — sans jamais charger le site. */
+  function lookup(url) {
     var u = validUrl(url);
     if (!u) return Promise.resolve(null);
-    var chain =
-      MB.desktop && MB.desktop.active
-        ? desktopShot(u).then(function (shot) {
-            return shot || ogImage(u).catch(function () {
-              return '';
-            });
-          })
-        : ogImage(u).catch(function () {
-            return '';
-          });
-    return chain
-      .then(function (img) {
-        return img || faviconUrl(u) || null;
-      })
-      .catch(function () {
-        return faviconUrl(u) || null;
-      });
+    return fetchMeta(u).then(function (meta) {
+      return {
+        title: meta && meta.title ? meta.title : '',
+        desc: meta && meta.desc ? meta.desc : '',
+        site: meta && meta.site ? meta.site : '',
+        favicon: faviconUrl(u)
+      };
+    });
   }
 
-  /* Capture + application à l'élément (arrière-plan, sans entrée
-   * d'historique : l'aperçu est un enrichissement, pas une action).
-   * autoGrow : la carte s'agrandit pour accueillir l'image UNE fois,
-   * uniquement si l'utilisateur n'a pas déjà redimensionné la carte.
-   * kind : 'icon' (favicon carrée, centrée) | 'shot'/'og' (pleine
-   * largeur, recadrée) — pilote le rendu de la carte. */
+  /* Application à l'élément (arrière-plan, sans entrée d'historique :
+   * l'enrichissement n'est pas une action utilisateur).
+   *  - le favicon (logo) remplit la carte s'il est absent ;
+   *  - les métadonnées ne remplissent que les champs ENCORE VIDES (un
+   *    titre ou une description édités ne sont JAMAIS écrasés). */
   function applyToElement(el) {
     if (!el || !el.data) return Promise.resolve(null);
     var id = el.id;
-    return capture(el.data.url).then(function (img) {
+    return lookup(el.data.url).then(function (info) {
       var live = MB.store.el(id);
       if (!live || live.type !== 'link' || !live.data) return null;
-      if (!img) return null;
-      var isIcon = /s2\/favicons/.test(img);
-      live.data.preview = img;
-      live.data.previewKind = isIcon ? 'icon' : 'shot';
-      /* La carte ne grandit que pour une VRAIE image (capture, og:image)
-       * — une favicon reste dans la tuite, carte compacte. */
-      if (!isIcon && live.h < 110 && !live._shotSized) {
-        live._shotSized = true;
-        live.h = Math.round(Math.max(150, live.w * 0.62));
+      if (!info) {
+        /* Même sans métadonnées : le logo (favicon) reste appliqué. */
+        if (!live.data.preview) {
+          live.data.preview = faviconUrl(live.data.url);
+          if (MB.board) MB.board.renderContent(id);
+          if (MB.storage) MB.storage.markDirty();
+        }
+        return null;
       }
+      var patch = {};
+      if (!live.data.preview && info.favicon) patch.preview = info.favicon;
+      if (!live.data.site && info.site) patch.site = info.site;
+      /* Le titre par défaut (dérivé de l'URL) est remplacé par le vrai
+       * titre de la page ; un titre déjà choisi/édité est respecté. */
+      var defaultTitle = MB.util.titleFromUrl(live.data.url);
+      if ((!live.data.title || live.data.title === defaultTitle) && info.title) {
+        patch.title = info.title;
+      }
+      if (!live.data.desc && info.desc) patch.desc = info.desc;
+      var keys = Object.keys(patch);
+      if (!keys.length) return null;
+      keys.forEach(function (k) {
+        live.data[k] = patch[k];
+      });
       if (MB.board) MB.board.renderContent(id);
       if (MB.storage) MB.storage.markDirty();
-      return img;
+      return info;
     });
   }
 
   MB.linkPreview = {
-    capture: capture,
+    lookup: lookup,
+    fetchMeta: fetchMeta,
     applyToElement: applyToElement,
     faviconUrl: faviconUrl
   };

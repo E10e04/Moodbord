@@ -948,9 +948,11 @@
     writePrefs({ lastDir: dirname(target) });
     rememberRecent(target);
     /* v1.4 — miniature de l'écran d'accueil (best effort, asynchrone :
-     * la carte garde son motif par défaut si la rastérisation échoue). */
+     * la carte garde son motif par défaut si la rastérisation échoue).
+     * v1.10 — rendu 640×400 (16:10) : UN élément héros plein cadre,
+     * haute résolution (netteté sur écrans Retina). */
     if (MB.exporter && typeof MB.exporter.thumbnail === 'function') {
-      MB.exporter.thumbnail(480, 320, function (dataUrl) {
+      MB.exporter.thumbnail(640, 400, function (dataUrl) {
         if (dataUrl) setRecentThumb(target, dataUrl);
       });
     }

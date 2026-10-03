@@ -83,6 +83,21 @@
 
   function renderImage(el) {
     var d = el.data;
+    /* v1.10 — carte IMAGE EN ATTENTE : l'outil Image posé sur le
+     * canvas (glissé ou cliqué) crée d'abord une carte vide avec
+     * l'icône d'import au milieu — le clic dessus ouvre le sélecteur
+     * et l'image choisie remplit la carte. */
+    if (!d.src) {
+      var cta = MB.i18n ? MB.i18n.t('image.cta') : 'Cliquez pour choisir une image';
+      return (
+        '<div class="mb-image-empty-card">' +
+        '<button class="mb-image-cta" type="button" data-act="image-pick" title="' + esc(cta) + '" aria-label="' + esc(cta) + '">' +
+        '<span class="mb-image-cta-icon">' + MB.icons.get('image', 36) + '</span>' +
+        '<span class="mb-image-cta-text">' + esc(cta) + '</span>' +
+        '</button>' +
+        '</div>'
+      );
+    }
     var crop = d.crop;
     var wPct = 100;
     var hPct = 100;
@@ -210,67 +225,65 @@
   /* ------------------------------------------------------ IMPORT (v1.8) */
 
   function renderImport(el) {
-    /* Carte d'import : double-clic → explorateur, glisser-déposer de
-     * fichiers dessus → import sur place (images, fichiers, moodboards). */
-    var d = el.data || {};
+    /* v1.10 — contenu demandé par l'utilisateur : JUSTE l'icône
+     * d'import de média et le texte « Cliquez pour importer un
+     * fichier » au milieu de la carte (la zone centrale est un
+     * bouton ; les bords restent la poignée de sélection/drag).
+     * Double-clic et glisser-déposer de fichiers continuent de
+     * fonctionner sur la carte entière. */
+    var cta = MB.i18n ? MB.i18n.t('import.cta') : 'Cliquez pour importer un fichier';
+    void el;
     return (
       '<div class="mb-import-card">' +
-      '<div class="mb-import-icon">' + MB.icons.get('import', 34) + '</div>' +
-      '<div class="mb-import-title">' + esc(d.title || 'Importer des médias') + '</div>' +
-      '<div class="mb-import-hint">Double-clic : explorateur · déposez des fichiers ici<br>images, documents, moodboards (.moodboard → planche liée)</div>' +
+      '<button class="mb-import-cta" type="button" data-act="import-pick" title="' + esc(cta) + '" aria-label="' + esc(cta) + '">' +
+      '<span class="mb-import-icon">' + MB.icons.get('import', 38) + '</span>' +
+      '<span class="mb-import-title">' + esc(cta) + '</span>' +
+      '</button>' +
       '</div>'
     );
   }
 
   /* -------------------------------------------------------------- LINK */
 
-  /* v1.9 — carte de lien repensée :
-   *  - COULEUR de la carte modifiable (data.bg) ;
-   *  - APERÇU STATIQUE (data.preview) : capture d'écran (application) ou
-   *    og:image / favicon (extension, web) — jamais animé ;
-   *  - flèche d'ouverture moderne (icône arrowUpRight). */
+  /* v1.10 — carte de lien RELOOKÉE d'après le design fourni :
+   *  - section HAUTE blanche : LOGO du site (favicon haute
+   *    résolution) + nom du site, centrés ;
+   *  - section BASSE sombre (couleur de carte modifiable) : favicon
+   *    16 px + URL en gris, TITRE orange vif souligné semibold,
+   *    description gris clair ;
+   *  - AUCUN chargement ni capture du site : le logo est le favicon
+   *    (service public), titre/description viennent des métadonnées
+   *    HTML si accessibles (best effort) et restent éditables.
+   * La flèche d'ouverture moderne (v1.9) est conservée. */
   function renderLink(el) {
     var d = el.data;
     var letter = (d.title || d.domain || '?').trim().charAt(0).toUpperCase();
-    var tf = d.titleFont ? ' style="font-family:\'' + U.escapeHtml(d.titleFont) + '\'"' : '';
-    var bg = d.bg && d.bg !== 'transparent' ? ' style="background:' + U.escapeHtml(d.bg) + '"' : '';
-    /* Fond coloré : l'encre s'adapte pour rester lisible (le domaine
-     * garde une teinte atténuée de la même encre). */
-    var ink = bg ? U.readableOn(d.bg) : '';
-    var metaStyle = ink ? ' style="color:' + ink + ';opacity:.72"' : '';
-    var prev = d.preview || '';
-    var isIcon = !!prev && (d.previewKind === 'icon' || /s2\/favicons/.test(prev));
-    var shot = '';
-    var tile = '<div class="mb-link-tile">' + esc(letter) + '</div>';
-    if (prev) {
-      if (isIcon) {
-        /* favicon : à la place de la tuite lettre (carte compacte). */
-        tile =
-          '<div class="mb-link-tile mb-link-tile--icon">' +
-          '<img src="' + esc(prev) + '" alt="" draggable="false" ' +
-          'onerror="this.parentNode.textContent=\'' + esc(letter) + '\'">' +
-          '</div>';
-      } else {
-        /* capture / og:image : bandeau pleine largeur au-dessus. */
-        shot =
-          '<div class="mb-link-shot" aria-hidden="true">' +
-          '<img src="' + esc(prev) + '" alt="" draggable="false" ' +
-          'onerror="this.parentNode.style.display=\'none\'">' +
-          '</div>';
-      }
-    }
-    /* v1.3 — la carte ne porte plus data-act="open" : un clic simple
-     * sélectionne/déplace le lien comme n'importe quel élément ; SEULE
-     * la flèche dédiée (bouton .mb-link-open) ouvre le navigateur. */
+    var metaBg = d.bg && d.bg !== 'transparent' ? d.bg : '#2D2D2D';
+    var logo = d.preview || (MB.linkPreview ? MB.linkPreview.faviconUrl(d.url) : '');
+    var logoHtml = logo
+      ? '<img class="mb-link-logo" src="' + esc(logo) + '" alt="" draggable="false"' +
+        ' onerror="this.style.display=\'none\'">'
+      : '<span class="mb-link-logo mb-link-logo--letter" aria-hidden="true">' + esc(letter) + '</span>';
+    var fav = logo
+      ? '<img class="mb-link-fav" src="' + esc(logo) + '" alt="" draggable="false">'
+      : '<span class="mb-link-fav mb-link-fav--dot" aria-hidden="true"></span>';
+    var site = d.site || d.domain || '';
+    /* Fond personnalisé clair : le titre passe à un orange foncé
+     * lisible (sinon orange vif sur fond sombre, comme l'image). */
+    var titleColor = U.readableOn(metaBg) === '#1E1E1E' ? '#B4530A' : '#F97316';
+    /* UN SEUL attribut style : couleur + police éventuelle du titre. */
+    var titleStyle = 'color:' + titleColor + ';';
+    if (d.titleFont) titleStyle += "font-family:'" + U.escapeHtml(d.titleFont) + "';";
     return (
-      '<div class="mb-link-card' + (shot ? ' has-shot' : '') + '"' + bg + '>' +
-      shot +
-      '<div class="mb-link-row"' + (ink ? ' style="color:' + ink + '"' : '') + '>' +
-      tile +
-      '<div class="mb-link-meta">' +
-      '<div class="mb-link-title mb-editable" data-field="title"' + tf + '>' + esc(d.title) + '</div>' +
-      '<div class="mb-link-domain"' + metaStyle + '>' + esc(d.domain) + '</div>' +
+      '<div class="mb-link-card">' +
+      '<div class="mb-link-hero">' +
+      logoHtml +
+      '<div class="mb-link-brand">' + esc(site) + '</div>' +
       '</div>' +
+      '<div class="mb-link-meta" style="background:' + U.escapeHtml(metaBg) + '">' +
+      '<div class="mb-link-url">' + fav + '<span>' + esc(d.url) + '</span></div>' +
+      '<div class="mb-link-title mb-editable" data-field="title" style="' + titleStyle + '">' + esc(d.title) + '</div>' +
+      '<div class="mb-link-desc mb-editable" data-field="desc">' + esc(d.desc) + '</div>' +
       '</div>' +
       '<button class="mb-link-open" type="button" data-act="open" data-url="' + esc(d.url) +
       '" title="Ouvrir le lien dans le navigateur" aria-label="Ouvrir le lien dans le navigateur">' +
@@ -374,24 +387,49 @@
 
   /* -------------------------------------------------- SECTION / COLUMN */
 
+  /* v1.10 — en-tête et corps séparés : couleur d'EN-TÊTE et couleur
+   * de CORPS indépendantes + mise en forme du titre (police, taille,
+   * gras, italique, couleur). Les colonnes et sections sont des
+   * mini-canvas : les cartes enfants s'y empilent verticalement
+   * (cf. store.layoutContainerChildren). */
+  function titleStyleOf(d) {
+    var st =
+      'font-size:' + (d.titleSize || 15) + 'px;' +
+      'font-weight:' + (d.titleBold ? '700' : '400') + ';' +
+      'font-style:' + (d.titleItalic ? 'italic' : 'normal') + ';';
+    if (d.titleFont) st += "font-family:'" + U.escapeHtml(d.titleFont) + "';";
+    if (d.titleColor) st += 'color:' + U.escapeHtml(d.titleColor) + ';';
+    return st;
+  }
+
   function renderSection(el) {
     var d = el.data;
-    var tf = d.titleFont ? ' style="font-family:\'' + U.escapeHtml(d.titleFont) + '\';font-size:' + (d.titleSize || 15) + 'px"' : '';
+    var headBg = d.headColor && d.headColor !== 'transparent'
+      ? ' style="background:' + U.escapeHtml(d.headColor) + '"'
+      : '';
     return (
       '<div class="mb-section-box" style="background:' + d.color + '">' +
       (d.showTitle !== false
-        ? '<div class="mb-section-title mb-editable" data-field="title"' + tf + '>' + esc(d.title) + '</div>'
+        ? '<div class="mb-section-head"' + headBg + '>' +
+          '<div class="mb-section-title mb-editable" data-field="title" style="' + titleStyleOf(d) + '">' + esc(d.title) + '</div>' +
+          '</div>'
         : '') +
+      '<div class="mb-section-body"></div>' +
       '</div>'
     );
   }
 
   function renderColumn(el) {
     var d = el.data;
-    var tf = d.titleFont ? ' style="font-family:\'' + U.escapeHtml(d.titleFont) + '\';font-size:' + (d.titleSize || 15) + 'px"' : '';
+    var headBg = d.headColor && d.headColor !== 'transparent'
+      ? ' style="background:' + U.escapeHtml(d.headColor) + '"'
+      : '';
     return (
       '<div class="mb-column-box" style="background:' + d.color + '">' +
-      '<div class="mb-column-title mb-editable" data-field="title"' + tf + '>' + esc(d.title) + '</div>' +
+      '<div class="mb-column-head"' + headBg + '>' +
+      '<div class="mb-column-title mb-editable" data-field="title" style="' + titleStyleOf(d) + '">' + esc(d.title) + '</div>' +
+      '</div>' +
+      '<div class="mb-column-body"></div>' +
       '</div>'
     );
   }
@@ -441,10 +479,17 @@
     var d = el.data;
     var doneCount = 0;
     var rows = '';
-    var fStyle = d.fontFamily
-      ? ' style="font-family:\'' + U.escapeHtml(d.fontFamily) + '\'"'
-      : '';
+    /* v1.10 — couleur de carte : l'encre s'adapte (titre + tâches).
+     * UN SEUL attribut style par élément (police + taille + encre). */
+    var cardBg = d.color && d.color !== 'transparent' ? d.color : '';
+    var ink = cardBg ? U.readableOn(cardBg) : '';
     var fSize = d.fontSize ? 'font-size:' + d.fontSize + 'px;' : '';
+    var fStyleTitle = fSize;
+    if (d.fontFamily) fStyleTitle += "font-family:'" + U.escapeHtml(d.fontFamily) + "';";
+    if (ink) fStyleTitle += 'color:' + ink + ';';
+    var fStyleItem = '';
+    if (d.fontFamily) fStyleItem += "font-family:'" + U.escapeHtml(d.fontFamily) + "';";
+    if (ink) fStyleItem += 'color:' + ink + ';';
     for (var i = 0; i < d.items.length; i++) {
       var it = d.items[i];
       if (it.done) doneCount++;
@@ -452,7 +497,8 @@
         '<div class="mb-check-item' + (it.done ? ' is-done' : '') + '">' +
         '<button class="mb-check-box" data-act="toggle" data-item="' + it.id + '" role="checkbox" ' +
         'aria-checked="' + (it.done ? 'true' : 'false') + '" aria-label="Terminer"></button>' +
-        '<span class="mb-check-text mb-editable" data-field="item" data-item="' + it.id + '"' + fStyle + '>' + esc(it.text) + '</span>' +
+        '<span class="mb-check-text mb-editable" data-field="item" data-item="' + it.id + '"' +
+        (fStyleItem ? ' style="' + fStyleItem + '"' : '') + '>' + esc(it.text) + '</span>' +
         '</div>';
     }
     var footer =
@@ -463,8 +509,14 @@
         : '') +
       '</div>';
     return (
-      '<div class="mb-check-card"' + (fSize ? ' style="' + fSize + '"' : '') + '>' +
-      '<div class="mb-check-title mb-editable" data-field="title"' + fStyle + '>' + esc(d.title) + '</div>' +
+      '<div class="mb-check-card"' +
+      (fSize || cardBg
+        ? ' style="' + fSize + (cardBg ? 'background:' + U.escapeHtml(cardBg) + ';' : '') +
+          (ink ? '--mb-check-ink:' + ink + ';' : '') + '"'
+        : '') +
+      '>' +
+      '<div class="mb-check-title mb-editable" data-field="title"' +
+      (fStyleTitle ? ' style="' + fStyleTitle + '"' : '') + '>' + esc(d.title) + '</div>' +
       '<div class="mb-check-list">' + rows + '</div>' +
       footer +
       '</div>'
@@ -520,11 +572,13 @@
 
   /* Autodimensionnement après montage. */
   function afterMount(view, el) {
-    /* v1.9 — LIEN : capture automatique de l'aperçu statique (une seule
-     * tentative par élément et par URL — le garde vit sur l'élément
-     * pour survivre aux re-rendus). */
+    /* v1.10 — LIEN : enrichissement léger en arrière-plan — favicon
+     * (logo) + métadonnées og:title / og:description si la page est
+     * accessible. JAMAIS de chargement ni de capture du site : la
+     * carte est complète dès la pose (titre du lien, domaine, URL) et
+     * les infos ne font que s'améliorer (une tentative par URL). */
     if (el.type === 'link' && MB.linkPreview && !el.locked) {
-      if (!el.data.preview && el._pvUrl !== el.data.url) {
+      if ((!el.data.preview || !el.data.site) && el._pvUrl !== el.data.url) {
         el._pvUrl = el.data.url;
         setTimeout(function () {
           var live = MB.store.el(el.id);

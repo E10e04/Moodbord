@@ -191,7 +191,7 @@ Dézipper l'archive **à la racine** du dossier extensions, de sorte que `CSXS/`
 > 5. relancer Illustrator.
 >
 > **Vérifiez la version installée** : le badge en bas à droite de la barre d'état
-> du panneau doit afficher **v1.9.0**. S'il affiche autre chose, l'ancienne
+> du panneau doit afficher **v1.10.0**. S'il affiche autre chose, l'ancienne
 > installation est encore active.
 
 ### 3. Activer le PlayerDebugMode
@@ -267,6 +267,53 @@ Si un jour les **drags ne répondent plus alors que le zoom molette fonctionne**
 `MB.interact.diag()` retourne le nombre d'événements **réellement livrés** par le moteur de chaque famille (`pointerdown`, `mousedown`, `pointermove`, `mousemove`, `blur`, `pointercancel`…) ainsi que l'état de la machine à gestes (`gesture`, `spaceDown`, `tool`). Depuis la v1.0.1, la couche d'interaction est **adaptive** : elle branche à la fois les Pointer Events et les événements souris, et bascule automatiquement sur la souris si le moteur CEP hôte ne livre pas les Pointer Events (cas observé selon les versions d'Illustrator).
 
 Depuis la **v1.0.2**, les gestes **survivent** aux événements `blur` / `pointercancel` parasites que certains hôtes CEP émettent au milieu d'un drag (symptôme typique : « le zoom marche mais rien ne se déplace ») : le geste continue s'il reçoit encore des événements, et n'est annulé proprement (avec rollback) que si plus rien n'arrive pendant 600 ms.
+
+#### Nouveautés v1.10.0 — cartes de lien relookées, mini-canvas, cadenas
+
+1. **Cartes de lien relookées** (design fourni par l'utilisateur) :
+   carte **portrait** — **hero blanc** portant le **LOGO du site**
+   (favicon haute résolution) et le nom du service, zone d'infos sombre
+   (couleur de carte modifiable) avec **favicon + URL** gris, **titre
+   orange souligné** et **description** gris clair. **Le site n'est
+   jamais chargé ni capturé** : le logo vient du favicon, le
+   titre/description des métadonnées HTML en lecture légère (best
+   effort, toujours éditables sur place). Titre et description de la
+   carte sont **éditables au double-clic**.
+2. **Préférences épurées** : le texte d'explication du dossier de
+   caches (« Ce choix s'applique à tous vos moodboards… ») est retiré.
+3. **Indicateur clavier** : à côté de la version, une **icône de
+   clavier** — **verte** quand les raccourcis sont actifs, **rouge**
+   quand ils ne le sont pas (plus de texte « raccourcis actifs »).
+4. **Typographie** : le **sélecteur de police s'ouvre directement sur
+   la carte** à la création (plus besoin de passer par le panneau
+   Projet) ; la barre contextuelle le propose aussi à chaque sélection.
+5. **Carte Importer épurée** : juste l'icône d'import de média et
+   « **Cliquez pour importer un fichier** » au milieu — la zone
+   centrale est un bouton (les bords déplacent la carte, le
+   double-clic et le glisser-déposer de fichiers restent actifs).
+6. **Couleur des checklists** : fond de carte modifiable (inspecteur,
+   barre contextuelle) avec encre adaptée.
+7. **Colonnes & sections en deux zones** : **couleur d'en-tête** et
+   **couleur de corps** séparées + titre **mis en forme** (police,
+   taille, **gras**, **italique**, couleur).
+8. **Mini-canvas verticaux** : les cartes **glissées dans une colonne
+   ou une section s'empilent verticalement** (alignées, sans
+   chevauchement) ; déposer une carte au milieu de la pile l'y insère,
+   la suppression re-compacte, le conteneur grandit si besoin.
+9. **Cadenas cliquable** : cliquer un élément **verrouillé** fait
+   apparaître un **cadenas dans son coin supérieur** — cliquer ce
+   cadenas le **déverrouille**.
+10. **Miniatures de l'accueil nettes** : chaque projet récent montre
+    **un seul élément représentatif** (image, note, lien…) rendu plein
+    cadre en 640×400 — net, là où le tableau entier réduit paraissait
+    flou.
+11. **Croquis & ligne en direct** : le tracé temporaire est **fidèle**
+    (couleur, épaisseurs et arrondis réels, trait plein) — on voit
+    exactement ce qu'on dessine pendant le geste.
+12. **Outil Image repensé** : posé sur le canvas, il crée une **carte
+    d'attente** (icône d'import d'image + « Cliquez pour choisir une
+    image ») ; le clic ouvre le sélecteur et l'image choisie **remplit
+    la carte** (dimensions adaptées).
 
 #### Nouveautés v1.9.0 — langue, liens, formes, barre riche réparée
 

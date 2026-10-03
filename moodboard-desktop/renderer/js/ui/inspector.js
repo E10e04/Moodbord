@@ -527,8 +527,11 @@
           url: url,
           title: U.titleFromUrl(url),
           domain: U.domainOf(url),
-          /* v1.9 — nouvelle adresse : l'ancien aperçu ne correspond plus. */
-          preview: ''
+          /* v1.10 — nouvelle adresse : les infos de l'ancien site ne
+           * correspondent plus (favicon, nom, description). */
+          preview: '',
+          site: '',
+          desc: ''
         });
         delete el._pvUrl;
         if (MB.linkPreview) MB.linkPreview.applyToElement(el);
@@ -563,40 +566,32 @@
         else window.open(d.url, '_blank');
       }));
       s.appendChild(rowU);
-      /* v1.9 — couleur de la carte : fond modifiable + retour au style
-       * par défaut (le texte reste clair, la lisibilité est préservée
-       * par un léger voile en CSS). */
+      /* v1.10 — couleur de la ZONE D'INFOS (la carte porte un hero
+       * blanc + une zone d'infos colorable ; le texte s'adapte). */
       var rowBg = U.el('div', 'btn-row');
       rowBg.appendChild(C.colorButton(function () {
-        return d.bg && d.bg !== 'transparent' ? d.bg : '#252525';
+        return d.bg && d.bg !== 'transparent' ? d.bg : '#2D2D2D';
       }, function (hex) {
         C.applyDataTo([el], 'Couleur de la carte', { bg: hex });
         MB.board.renderContent(el.id);
-      }, 'Couleur de la carte'));
+      }, 'Couleur de la zone d’infos'));
       rowBg.appendChild(C.textButton('Défaut', function () {
         C.applyDataTo([el], 'Couleur de la carte', { bg: '' });
         MB.board.renderContent(el.id);
-      }, 'Rétablir le fond par défaut de la carte'));
+      }, 'Rétablir le fond par défaut de la zone d’infos'));
       s.appendChild(rowBg);
-      /* v1.9 — aperçu statique : capturer / retirer l'image figée du
-       * site visé (capture d'écran dans l'application, og:image sinon). */
+      /* v1.10 — INFOS DU LIEN : logo (favicon) + titre/description
+       * relus depuis les métadonnées — le site n'est jamais chargé
+       * ni capturé. */
       var rowPv = U.el('div', 'btn-row');
-      rowPv.appendChild(C.textButton(d.preview ? 'Actualiser l’aperçu' : 'Capturer l’aperçu', function () {
-        MB.ui.toast('Capture de l’aperçu…', 'info');
-        MB.linkPreview.applyToElement(el).then(function (img) {
-          if (img) MB.ui.toast('Aperçu mis à jour', 'success');
-          else MB.ui.toast('Aucun aperçu disponible pour ce lien.', 'info');
+      rowPv.appendChild(C.textButton('Actualiser les infos', function () {
+        MB.ui.toast('Lecture des infos du lien…', 'info');
+        MB.linkPreview.applyToElement(el).then(function (info) {
+          if (info) MB.ui.toast('Infos du lien mises à jour', 'success');
+          else MB.ui.toast('Logo appliqué — les infos détaillées ne sont pas accessibles pour ce lien.', 'info');
           MB.ui.inspector.refresh();
         });
-      }, 'Aperçu statique (non animé) du site'));
-      if (d.preview) {
-        rowPv.appendChild(C.textButton('Retirer', function () {
-          C.applyDataTo([el], 'Retirer l’aperçu', { preview: '' });
-          delete el._pvUrl;
-          MB.board.renderContent(el.id);
-          MB.ui.inspector.refresh();
-        }, 'Supprimer l’image d’aperçu'));
-      }
+      }, 'Relit le logo et les métadonnées (sans charger le site)'));
       s.appendChild(rowPv);
       /* v1.8 — police du titre du lien. */
       var rowLkF = U.el('div', 'btn-row');
@@ -728,18 +723,32 @@
       s.appendChild(rowS2);
     } else if (el.type === 'section' || el.type === 'column') {
       s = section(el.type === 'section' ? T('insp.section') : T('insp.column'));
+      /* v1.10 — couleurs SÉPARÉES : en-tête et corps. */
       var rowSec = U.el('div', 'btn-row');
+      rowSec.appendChild(C.colorButton(function () {
+        return d.headColor || '#3A3A3A';
+      }, function (hex) {
+        C.applyDataTo([el], 'Couleur de l’en-tête', { headColor: hex });
+        MB.board.renderContent(el.id);
+      }, 'Couleur de l’en-tête'));
+      rowSec.appendChild(C.textButton('Sans en-tête coloré', function () {
+        C.applyDataTo([el], 'Couleur de l’en-tête', { headColor: '' });
+        MB.board.renderContent(el.id);
+      }, 'En-tête sans fond propre'));
       rowSec.appendChild(C.colorButton(function () {
         return d.color;
       }, function (hex) {
-        C.applyDataTo([el], 'Couleur', { color: hex });
+        C.applyDataTo([el], 'Couleur du corps', { color: hex });
         MB.board.renderContent(el.id);
-      }, 'Fond'));
-      rowSec.appendChild(C.textButton('Renommer', function () {
+      }, 'Couleur du corps'));
+      s.appendChild(rowSec);
+      var rowSecR = U.el('div', 'btn-row');
+      rowSecR.appendChild(C.textButton('Renommer', function () {
         MB.interact.startEditing(el, 'title');
       }));
-      s.appendChild(rowSec);
-      /* v1.8 — police du titre de la section / colonne. */
+      s.appendChild(rowSecR);
+      /* v1.10 — MISE EN FORME DU TITRE : police, taille, gras,
+       * italique, couleur. */
       var rowSecF = U.el('div', 'btn-row');
       rowSecF.appendChild(C.fontButton(function () {
         return d.titleFont || 'Georgia';
@@ -754,6 +763,26 @@
         MB.board.renderContent(el.id);
       }));
       s.appendChild(rowSecF);
+      var rowSecT = U.el('div', 'btn-row');
+      rowSecT.appendChild(C.toggle('bold', 'Titre en gras', function () {
+        return !!d.titleBold;
+      }, function (v) {
+        C.applyDataTo([el], 'Titre en gras', { titleBold: v });
+        MB.board.renderContent(el.id);
+      }));
+      rowSecT.appendChild(C.toggle('italic', 'Titre en italique', function () {
+        return !!d.titleItalic;
+      }, function (v) {
+        C.applyDataTo([el], 'Titre en italique', { titleItalic: v });
+        MB.board.renderContent(el.id);
+      }));
+      rowSecT.appendChild(C.colorButton(function () {
+        return d.titleColor || '#A8A8A8';
+      }, function (hex) {
+        C.applyDataTo([el], 'Couleur du titre', { titleColor: hex });
+        MB.board.renderContent(el.id);
+      }, 'Couleur du titre'));
+      s.appendChild(rowSecT);
       if (el.type === 'section') {
         var rowSec2 = U.el('div', 'btn-row');
         rowSec2.appendChild(C.toggle('eye', 'Titre visible', function () {
@@ -764,6 +793,11 @@
         }));
         s.appendChild(rowSec2);
       }
+      var hintSec = U.el('div', 'insp-hint');
+      hintSec.innerHTML =
+        'Mini-canvas : glissez des cartes dans ' + (el.type === 'section' ? 'la section' : 'la colonne') +
+        ' — elles s’empilent verticalement.';
+      s.appendChild(hintSec);
     } else if (el.type === 'import') {
       s = section(T('insp.import'));
       var rowIm = U.el('div', 'btn-row');
@@ -939,6 +973,19 @@
         refresh();
       }));
       s.appendChild(rowCk);
+      /* v1.10 — couleur de la carte. */
+      var rowCkC = U.el('div', 'btn-row');
+      rowCkC.appendChild(C.colorButton(function () {
+        return d.color && d.color !== 'transparent' ? d.color : '#252525';
+      }, function (hex) {
+        C.applyDataTo([el], 'Couleur de la carte', { color: hex });
+        MB.board.renderContent(el.id);
+      }, 'Couleur de la carte'));
+      rowCkC.appendChild(C.textButton('Défaut', function () {
+        C.applyDataTo([el], 'Couleur de la carte', { color: '#252525' });
+        MB.board.renderContent(el.id);
+      }, 'Rétablir le fond par défaut'));
+      s.appendChild(rowCkC);
       /* v1.8 — police de la checklist (titre + tâches). */
       var rowCkF = U.el('div', 'btn-row');
       rowCkF.appendChild(C.fontButton(function () {

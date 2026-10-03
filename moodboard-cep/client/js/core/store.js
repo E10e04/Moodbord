@@ -444,6 +444,52 @@
     emit('elements');
   }
 
+  /* v1.10 — COLONNES / SECTIONS = mini-canvas vertical : les cartes
+   * enfants s'empilent de haut en bas, alignées à gauche avec une
+   * marge ; le conteneur s'agrandit si la pile dépasse (et se
+   * re-compacte après une suppression). L'ordre de la pile suit la
+   * position verticale du dépôt : lâcher une carte AU MILIEU de la
+   * pile l'insère à cette place. */
+  function layoutContainerChildren(parentId) {
+    var parent = el(parentId);
+    if (!parent || (parent.type !== 'column' && parent.type !== 'section')) return false;
+    var kids = childrenOf(parentId);
+    if (!kids.length) return false;
+    kids.sort(function (a, b) {
+      return a.y - b.y;
+    });
+    var d = parent.data || {};
+    var headerH = (d.titleSize || 15) + 26;
+    var pad = 12;
+    var gap = 10;
+    var cur = parent.y + headerH + pad - 4;
+    kids.forEach(function (k) {
+      var b = bboxOf(k);
+      translateElement(k, parent.x + pad - k.x, cur - k.y);
+      cur += b.h + gap;
+    });
+    var needed = cur - gap + pad - parent.y;
+    var minH = parent.type === 'column' ? 220 : 300;
+    parent.h = Math.max(Math.min(parent.h, Math.max(minH, Math.ceil(needed))), Math.max(minH, Math.ceil(needed)));
+    if (parent.h < needed) parent.h = Math.ceil(needed);
+    return true;
+  }
+
+  /* Re-compacte les conteneurs (colonnes / sections) concernés par les
+   * ids donnés — après un drag, un redimensionnement ou une
+   * suppression d'enfant. */
+  function relayoutContainersOf(ids) {
+    var seen = {};
+    for (var i = 0; i < ids.length; i++) {
+      var p = el(ids[i]);
+      var pid = p && p.parentId;
+      if (pid && !seen[pid]) {
+        seen[pid] = true;
+        layoutContainerChildren(pid);
+      }
+    }
+  }
+
   function topmostSectionAt(point, excludeIds) {
     var excl = {};
     for (var i = 0; i < excludeIds.length; i++) excl[excludeIds[i]] = true;
@@ -611,6 +657,13 @@
   function deleteSelection() {
     var sel = state.selection.ids;
     if (!sel.length) return;
+    /* v1.10 — mémoriser les conteneurs verticaux touchés : la pile
+     * doit se re-compacter après la suppression. */
+    var affected = {};
+    deletionSet().forEach(function (id) {
+      var e = el(id);
+      if (e && e.parentId) affected[e.parentId] = true;
+    });
     mutate('Supprimer', function () {
       var ids = deletionSet();
       var gone = {};
@@ -625,6 +678,9 @@
       }
       state.elements = state.elements.filter(function (e) {
         return !gone[e.id];
+      });
+      Object.keys(affected).forEach(function (pid) {
+        layoutContainerChildren(pid);
       });
     });
     clearSelection();
@@ -850,6 +906,9 @@
     syncLineBox: syncLineBox,
     lineAnchor: lineAnchor,
     topmostSectionAt: topmostSectionAt,
+    /* v1.10 — mini-canvas vertical (colonnes / sections). */
+    layoutContainerChildren: layoutContainerChildren,
+    relayoutContainersOf: relayoutContainersOf,
 
     mutate: mutate,
     addElements: addElements,

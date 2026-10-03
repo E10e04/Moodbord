@@ -56,13 +56,23 @@
       case 'section':
         t = '<rect x="' + el.x + '" y="' + el.y + '" width="' + el.w + '" height="' + el.h +
           '" rx="16" fill="' + d.color + '" stroke="#3A3A3A" stroke-width="1"/>' +
-          multiLineText(el.x + 16, el.y + 26, d.title, 'font-family="' + esc(d.titleFont || 'Georgia') + '" font-size="' + (d.titleSize || 15) + '" fill="#A8A8A8"', 20);
+          (d.headColor && d.headColor !== 'transparent'
+            ? '<rect x="' + el.x + '" y="' + el.y + '" width="' + el.w + '" height="' + ((d.titleSize || 15) + 26) +
+              '" rx="16" fill="' + d.headColor + '"/><rect x="' + el.x + '" y="' + (el.y + (d.titleSize || 15) + 12) +
+              '" width="' + el.w + '" height="14" fill="' + d.headColor + '"/>'
+            : '') +
+          multiLineText(el.x + 16, el.y + (d.titleSize || 15) + 12, d.title, 'font-family="' + esc(d.titleFont || 'Georgia') + '" font-size="' + (d.titleSize || 15) + '" font-weight="' + (d.titleBold ? '700' : '400') + '" font-style="' + (d.titleItalic ? 'italic' : 'normal') + '" fill="' + (d.titleColor || '#A8A8A8') + '"', 20);
         break;
 
       case 'column':
         t = '<rect x="' + el.x + '" y="' + el.y + '" width="' + el.w + '" height="' + el.h +
           '" rx="14" fill="' + d.color + '" stroke="#3A3A3A" stroke-width="1"/>' +
-          multiLineText(el.x + 14, el.y + 24, d.title, 'font-family="' + esc(d.titleFont || 'Georgia') + '" font-size="' + (d.titleSize || 14) + '" fill="#A8A8A8"', 18);
+          (d.headColor && d.headColor !== 'transparent'
+            ? '<rect x="' + el.x + '" y="' + el.y + '" width="' + el.w + '" height="' + ((d.titleSize || 15) + 26) +
+              '" rx="14" fill="' + d.headColor + '"/><rect x="' + el.x + '" y="' + (el.y + (d.titleSize || 15) + 12) +
+              '" width="' + el.w + '" height="14" fill="' + d.headColor + '"/>'
+            : '') +
+          multiLineText(el.x + 14, el.y + (d.titleSize || 15) + 10, d.title, 'font-family="' + esc(d.titleFont || 'Georgia') + '" font-size="' + (d.titleSize || 14) + '" font-weight="' + (d.titleBold ? '700' : '400') + '" font-style="' + (d.titleItalic ? 'italic' : 'normal') + '" fill="' + (d.titleColor || '#A8A8A8') + '"', 18);
         break;
 
       case 'image': {
@@ -148,28 +158,58 @@
         break;
       }
 
-      /* v1.9 — carte de lien : fond colorable + aperçu statique embarqué
-       * (data URL uniquement — les URL distantes ne survivent pas à
-       * l'ouverture dans Illustrator) + flèche moderne. */
+      /* v1.10 — carte de lien portrait (design fourni) : hero blanc
+       * avec le LOGO du site + nom, zone d'infos sombre avec favicon,
+       * URL grise, titre orange souligné et description. Aucune
+       * capture — le logo est le favicon (URL directe). */
       case 'link': {
-        var lBg = d.bg && d.bg !== 'transparent' ? d.bg : '#252525';
-        var lInk = U.readableOn(lBg);
-        var lDim = d.bg && d.bg !== 'transparent' ? lInk : '#A8A8A8';
-        var shotH = d.preview && String(d.preview).indexOf('data:image') === 0 ? Math.min(el.h - 44, Math.round(el.w * 0.62)) : 0;
-        t = '<rect x="' + el.x + '" y="' + el.y + '" width="' + el.w + '" height="' + el.h +
-          '" rx="10" fill="' + lBg + '" stroke="#3A3A3A"' + rotAttr() + '/>';
-        if (shotH > 20) {
-          t += '<clipPath id="lshot' + el.id.replace(/[^a-z0-9]/gi, '') + '"><rect x="' + (el.x + 1) + '" y="' + (el.y + 1) +
-            '" width="' + (el.w - 2) + '" height="' + shotH + '" rx="9"/></clipPath>' +
-            '<image x="' + el.x + '" y="' + el.y + '" width="' + el.w + '" height="' + shotH +
-            '" preserveAspectRatio="xMidYMin slice" clip-path="url(#lshot' + el.id.replace(/[^a-z0-9]/gi, '') + ')" xlink:href="' + d.preview + '" href="' + d.preview + '"/>';
+        var lBg = d.bg && d.bg !== 'transparent' ? d.bg : '#2D2D2D';
+        var heroH = Math.round(el.h * 0.52);
+        var metaY = el.y + heroH;
+        var lFav = d.preview || (MB.linkPreview ? MB.linkPreview.faviconUrl(d.url) : '');
+        var lSite = d.site || d.domain || '';
+        t =
+          '<rect x="' + el.x + '" y="' + el.y + '" width="' + el.w + '" height="' + el.h +
+          '" rx="12" fill="' + lBg + '" stroke="#3A3A3A"' + rotAttr() + '/>' +
+          '<clipPath id="lhero' + el.id.replace(/[^a-z0-9]/gi, '') + '"><rect x="' + (el.x + 1) + '" y="' + (el.y + 1) +
+          '" width="' + (el.w - 2) + '" height="' + heroH + '" rx="11"/></clipPath>' +
+          '<rect x="' + el.x + '" y="' + el.y + '" width="' + el.w + '" height="' + heroH +
+          '" fill="#FFFFFF" clip-path="url(#lhero' + el.id.replace(/[^a-z0-9]/gi, '') + ')"/>';
+        if (lFav) {
+          t +=
+            '<image x="' + (el.x + el.w / 2 - 54) + '" y="' + (el.y + heroH / 2 - 26) +
+            '" width="52" height="52" preserveAspectRatio="xMidYMid meet"' +
+            ' xlink:href="' + lFav + '" href="' + lFav + '"/>' +
+            '<text x="' + (el.x + el.w / 2 + 8) + '" y="' + (el.y + heroH / 2 + 7) +
+            '" font-family="Georgia" font-size="17" font-weight="600" fill="#3C4043">' +
+            esc(String(lSite).slice(0, 18)) + '</text>';
+        } else {
+          t +=
+            '<text x="' + (el.x + el.w / 2) + '" y="' + (el.y + heroH / 2 + 8) +
+            '" text-anchor="middle" font-family="Georgia" font-size="26" font-weight="700" fill="#3C4043">' +
+            esc(String(lSite || '?').slice(0, 22)) + '</text>';
         }
-        var rowY = el.y + (shotH ? shotH + 14 : 17);
-        t += multiLineText(el.x + 14, rowY + 13, d.title, 'font-family="' + esc(d.titleFont || 'Georgia') + '" font-size="13" fill="' + lInk + '"', 16) +
-          multiLineText(el.x + 14, rowY + 31, d.domain, 'font-family="Georgia" font-size="11" fill="' + lDim + '"', 14) +
+        var urlY = metaY + 22;
+        if (lFav) {
+          t +=
+            '<image x="' + (el.x + 16) + '" y="' + (urlY - 11) + '" width="16" height="16"' +
+            ' xlink:href="' + lFav + '" href="' + lFav + '"/>' +
+            '<text x="' + (el.x + 38) + '" y="' + urlY + '" font-family="Georgia" font-size="11" fill="#9CA3AF">' +
+            esc(String(d.url).slice(0, 42)) + '</text>';
+        } else {
+          t +=
+            '<text x="' + (el.x + 16) + '" y="' + urlY + '" font-family="Georgia" font-size="11" fill="#9CA3AF">' +
+            esc(String(d.url).slice(0, 42)) + '</text>';
+        }
+        var lTitleColor = U.readableOn(lBg) === '#1E1E1E' ? '#B4530A' : '#F97316';
+        t +=
+          multiLineText(el.x + 16, urlY + 22, d.title, 'font-family="' + esc(d.titleFont || 'Georgia') + '" font-size="14" font-weight="600" text-decoration="underline" fill="' + lTitleColor + '"', 17) +
+          (d.desc
+            ? multiLineText(el.x + 16, urlY + 44, String(d.desc).slice(0, 130), 'font-family="Georgia" font-size="11.5" fill="#E5E7EB"', 15)
+            : '') +
           '<path d="M' + (el.x + el.w - 20) + ' ' + (el.y + el.h - 19) + ' L' + (el.x + el.w - 10) + ' ' + (el.y + el.h - 29) +
-          '" stroke="#4C8DFF" stroke-width="2" stroke-linecap="round" fill="none"' + rotAttr() + '/>' +
-          '<path d="M' + (el.x + el.w - 19) + ' ' + (el.y + el.h - 29) + ' h-9 v9" stroke="#4C8DFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"' + rotAttr() + '/>';
+          '" stroke="#4C8DFF" stroke-width="2" stroke-linecap="round" fill="none"/>' +
+          '<path d="M' + (el.x + el.w - 19) + ' ' + (el.y + el.h - 29) + ' h-9 v9" stroke="#4C8DFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>';
         break;
       }
 
@@ -225,8 +265,11 @@
 
       case 'checklist': {
         var ckFont = d.fontFamily || 'Georgia';
-        t = '<rect x="' + el.x + '" y="' + el.y + '" width="' + el.w + '" height="' + el.h + '" rx="10" fill="#252525"/>' +
-          multiLineText(el.x + 14, el.y + 24, d.title, 'font-family="' + esc(ckFont) + '" font-size="14" font-weight="700" fill="#F5F5F5"', 18);
+        /* v1.10 — couleur de carte : l'encre s'adapte. */
+        var ckBg = d.color && d.color !== 'transparent' ? d.color : '#252525';
+        var ckInk = U.readableOn(ckBg);
+        t = '<rect x="' + el.x + '" y="' + el.y + '" width="' + el.w + '" height="' + el.h + '" rx="10" fill="' + ckBg + '"/>' +
+          multiLineText(el.x + 14, el.y + 24, d.title, 'font-family="' + esc(ckFont) + '" font-size="14" font-weight="700" fill="' + ckInk + '"', 18);
         var ry = el.y + 46;
         for (var k = 0; k < d.items.length; k++) {
           var it = d.items[k];
@@ -234,7 +277,7 @@
           if (it.done) {
             t += '<path d="M' + (el.x + 18) + ' ' + (ry + 8) + ' l3 3 l5 -6" stroke="#fff" stroke-width="2" fill="none"/>';
           }
-          t += multiLineText(el.x + 42, ry + 12, it.text, 'font-family="' + esc(ckFont) + '" font-size="' + (d.fontSize || 13) + '" fill="' + (it.done ? '#A8A8A8' : '#F5F5F5') + '"' + (it.done ? ' text-decoration="line-through"' : ''), 16);
+          t += multiLineText(el.x + 42, ry + 12, it.text, 'font-family="' + esc(ckFont) + '" font-size="' + (d.fontSize || 13) + '" fill="' + (it.done ? '#A8A8A8' : ckInk) + '"' + (it.done ? ' text-decoration="line-through"' : ''), 16);
           ry += 38;
         }
         break;
@@ -359,6 +402,23 @@
     var bg = o.background || '#1E1E1E';
     var W = Math.max(10, Math.ceil(bbox.w + pad * 2));
     var H = Math.max(10, Math.ceil(bbox.h + pad * 2));
+    /* v1.10 — fitRatio : élargit le cadre (letterbox centré) au ratio
+     * exact de la miniature — le contenu remplit le cadre SANS
+     * déformation ni recadrage. */
+    var vbX = bbox.x - pad;
+    var vbY = bbox.y - pad;
+    if (o.fitRatio) {
+      var cur = W / H;
+      if (cur < o.fitRatio) {
+        var newW = Math.ceil(H * o.fitRatio);
+        vbX -= (newW - W) / 2;
+        W = newW;
+      } else {
+        var newH = Math.ceil(W / o.fitRatio);
+        vbY -= (newH - H) / 2;
+        H = newH;
+      }
+    }
     var body = '';
     for (var i = 0; i < list.length; i++) {
       body += elementSvg(list[i]);
@@ -366,9 +426,9 @@
     var svg =
       '<?xml version="1.0" encoding="UTF-8"?>\n' +
       '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" ' +
-      'width="' + W + '" height="' + H + '" viewBox="' + U.round(bbox.x - pad, 1) + ' ' +
-      U.round(bbox.y - pad, 1) + ' ' + W + ' ' + H + '">\n' +
-      '<rect x="' + (bbox.x - pad) + '" y="' + (bbox.y - pad) + '" width="' + W + '" height="' + H + '" fill="' + bg + '"/>\n' +
+      'width="' + W + '" height="' + H + '" viewBox="' + U.round(vbX, 1) + ' ' +
+      U.round(vbY, 1) + ' ' + W + ' ' + H + '">\n' +
+      '<rect x="' + U.round(vbX, 1) + '" y="' + U.round(vbY, 1) + '" width="' + W + '" height="' + H + '" fill="' + bg + '"/>\n' +
       body + '\n</svg>';
     return { svg: svg, w: W, h: H };
   }
@@ -445,12 +505,40 @@
     });
   }
 
+  /* v1.10 — ÉLÉMENT HÉROS de la miniature : la carte d'accueil montre
+   * UN seul contenu du moodboard (pas le tableau entier rapetissé —
+   * c'était flou). Priorité au contenu le plus visuel, puis au plus
+   * grand ; les conteneurs vides ne sont jamais choisis. */
+  function pickHero(list) {
+    var RANK = {
+      image: 0, note: 1, link: 2, palette: 3, color: 4, shape: 5,
+      typography: 6, checklist: 7, table: 8, board: 9, file: 10,
+      text: 11, comment: 12, sketch: 13
+    };
+    var best = null;
+    var bestScore = -1;
+    for (var i = 0; i < list.length; i++) {
+      var e = list[i];
+      if (e.type === 'section' || e.type === 'column' || e.type === 'group' || e.type === 'import') continue;
+      var rank = RANK[e.type];
+      if (rank === undefined) continue;
+      if (e.type === 'image' && !(e.data && e.data.src)) continue;
+      var b = MB.store.bboxOf(e);
+      var score = (20 - rank) * 1e6 + b.w * b.h;
+      if (score > bestScore) {
+        bestScore = score;
+        best = e;
+      }
+    }
+    return best;
+  }
+
   /* Miniature du tableau courant (JPEG data URL) — alimente les cartes de
    * l'écran d'accueil après chaque enregistrement. Best effort : tout échec
    * appelle cb('') et la carte utilisera son motif par défaut.
-   * v1.9 — vignette retravaillée : marge resserrée (le contenu remplit
-   * la carte), fond papier chaud qui se détache de l'accueil, JPEG 0.85
-   * (l'ancienne capture 0.72 sur fond brut paraissait terne). */
+   * v1.10 — UN SEUL ÉLÉMENT HÉROS, rendu PLEIN CADRE au ratio exact de
+   * la vignette à haute résolution (640×400) : net et lisible, là où
+   * l'ancien tableau entier réduit paraissait flou. */
   function thumbnail(maxW, maxH, cb) {
     var done = false;
     function finish(v) {
@@ -458,10 +546,14 @@
       done = true;
       cb(v || '');
     }
-    resolveAssets(visibleElements(null)).then(function () {
+    var list = visibleElements(null);
+    var hero = pickHero(list);
+    resolveAssets(list).then(function () {
       var out;
       try {
-        out = buildSvg(null, { pad: 24, background: '#2A2926' });
+        out = hero
+          ? buildSvg([hero], { pad: 14, background: '#2A2926', fitRatio: maxW / maxH })
+          : buildSvg(null, { pad: 24, background: '#2A2926', fitRatio: maxW / maxH });
       } catch (e) {
         finish('');
         return;
@@ -470,9 +562,8 @@
         finish('');
         return;
       }
-      var k = Math.min(maxW / out.w, maxH / out.h, 1);
-      var w = Math.max(2, Math.round(out.w * k));
-      var h = Math.max(2, Math.round(out.h * k));
+      var w = maxW;
+      var h = maxH;
       var blob = new Blob([out.svg], { type: 'image/svg+xml;charset=utf-8' });
       var url = URL.createObjectURL(blob);
       var img = new Image();
@@ -482,11 +573,13 @@
           canvas.width = w;
           canvas.height = h;
           var ctx = canvas.getContext('2d');
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
           ctx.fillStyle = '#2A2926';
           ctx.fillRect(0, 0, w, h);
           ctx.drawImage(img, 0, 0, w, h);
           URL.revokeObjectURL(url);
-          var dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          var dataUrl = canvas.toDataURL('image/jpeg', 0.88);
           finish(dataUrl && dataUrl.length > 300 ? dataUrl : '');
         } catch (e) {
           finish('');
@@ -508,8 +601,9 @@
     exportSvg: exportSvg,
     exportPng: exportPng,
     thumbnail: thumbnail,
-    buildSvg: function (only) {
-      return buildSvg(only);
+    pickHero: pickHero,
+    buildSvg: function (only, opts) {
+      return buildSvg(only, opts);
     }
   };
 })();

@@ -470,13 +470,23 @@
     var state = !!on;
     kbdChip.classList.toggle('is-on', state);
     kbdChip.classList.toggle('is-off', !state);
-    kbdChip.textContent = state ? '⌨ raccourcis actifs' : '⌨ raccourcis inactifs — cliquez ici';
+    /* v1.10 — icône de clavier SEULE : verte quand les raccourcis
+     * sont actifs, rouge sinon (le libellé vivait dans l'info-bulle
+     * et le texte « raccourcis actifs » encombrait la barre). */
+    kbdChip.innerHTML = MB.icons.get('keyboard', 15);
+    kbdChip.setAttribute(
+      'data-tip',
+      state
+        ? 'Raccourcis clavier actifs'
+        : 'Raccourcis inactifs — cliquez ici pour les réactiver'
+    );
     kbdChip.setAttribute(
       'aria-label',
       state
         ? 'Raccourcis clavier actifs'
-        : 'Raccourcis clavier inactifs — cliquez dans le panneau pour les activer'
+        : 'Raccourcis clavier inactifs — cliquer pour activer'
     );
+    kbdChip.title = state ? 'Raccourcis clavier actifs' : 'Raccourcis inactifs — cliquez ici';
   }
 
   function claimKeyboardFocus(e) {
