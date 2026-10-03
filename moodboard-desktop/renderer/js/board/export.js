@@ -148,12 +148,36 @@
         break;
       }
 
-      case 'link':
+      /* v1.9 — carte de lien : fond colorable + aperçu statique embarqué
+       * (data URL uniquement — les URL distantes ne survivent pas à
+       * l'ouverture dans Illustrator) + flèche moderne. */
+      case 'link': {
+        var lBg = d.bg && d.bg !== 'transparent' ? d.bg : '#252525';
+        var lInk = U.readableOn(lBg);
+        var lDim = d.bg && d.bg !== 'transparent' ? lInk : '#A8A8A8';
+        var shotH = d.preview && String(d.preview).indexOf('data:image') === 0 ? Math.min(el.h - 44, Math.round(el.w * 0.62)) : 0;
+        t = '<rect x="' + el.x + '" y="' + el.y + '" width="' + el.w + '" height="' + el.h +
+          '" rx="10" fill="' + lBg + '" stroke="#3A3A3A"' + rotAttr() + '/>';
+        if (shotH > 20) {
+          t += '<clipPath id="lshot' + el.id.replace(/[^a-z0-9]/gi, '') + '"><rect x="' + (el.x + 1) + '" y="' + (el.y + 1) +
+            '" width="' + (el.w - 2) + '" height="' + shotH + '" rx="9"/></clipPath>' +
+            '<image x="' + el.x + '" y="' + el.y + '" width="' + el.w + '" height="' + shotH +
+            '" preserveAspectRatio="xMidYMin slice" clip-path="url(#lshot' + el.id.replace(/[^a-z0-9]/gi, '') + ')" xlink:href="' + d.preview + '" href="' + d.preview + '"/>';
+        }
+        var rowY = el.y + (shotH ? shotH + 14 : 17);
+        t += multiLineText(el.x + 14, rowY + 13, d.title, 'font-family="' + esc(d.titleFont || 'Georgia') + '" font-size="13" fill="' + lInk + '"', 16) +
+          multiLineText(el.x + 14, rowY + 31, d.domain, 'font-family="Georgia" font-size="11" fill="' + lDim + '"', 14) +
+          '<path d="M' + (el.x + el.w - 20) + ' ' + (el.y + el.h - 19) + ' L' + (el.x + el.w - 10) + ' ' + (el.y + el.h - 29) +
+          '" stroke="#4C8DFF" stroke-width="2" stroke-linecap="round" fill="none"' + rotAttr() + '/>' +
+          '<path d="M' + (el.x + el.w - 19) + ' ' + (el.y + el.h - 29) + ' h-9 v9" stroke="#4C8DFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"' + rotAttr() + '/>';
+        break;
+      }
+
       case 'file':
         t = '<rect x="' + el.x + '" y="' + el.y + '" width="' + el.w + '" height="' + el.h +
           '" rx="10" fill="#252525" stroke="#3A3A3A"/>' +
-          multiLineText(el.x + 58, el.y + 30, el.type === 'link' ? d.title : d.name, 'font-family="' + esc(d.titleFont || 'Georgia') + '" font-size="13" fill="#F5F5F5"', 16) +
-          multiLineText(el.x + 58, el.y + 50, el.type === 'link' ? d.domain : (d.kind || ''), 'font-family="Georgia" font-size="11" fill="#A8A8A8"', 14) +
+          multiLineText(el.x + 58, el.y + 30, d.name, 'font-family="Georgia" font-size="13" fill="#F5F5F5"', 16) +
+          multiLineText(el.x + 58, el.y + 50, d.kind || '', 'font-family="Georgia" font-size="11" fill="#A8A8A8"', 14) +
           '<rect x="' + (el.x + 10) + '" y="' + (el.y + 17) + '" width="36" height="36" rx="8" fill="#3A3A3A"/>';
         break;
 
@@ -162,8 +186,17 @@
         if (d.shape === 'ellipse') {
           t = '<ellipse cx="' + (el.x + el.w / 2) + '" cy="' + (el.y + el.h / 2) + '" rx="' + (el.w / 2) + '" ry="' + (el.h / 2) + '" fill="' + d.fill + '"' + stroke + rotAttr() + '/>';
         } else if (d.shape === 'triangle') {
-          t = '<polygon points="' + (el.x + el.w / 2) + ',' + el.y + ' ' + (el.x + el.w) + ',' + (el.y + el.h) + ' ' + el.x + ',' + (el.y + el.h) +
-            '" fill="' + d.fill + '"' + stroke + rotAttr() + '/>';
+          /* v1.9 — polygone régulier à N branches (3 = triangle…). */
+          var n = Math.max(3, Math.min(24, parseInt(d.sides, 10) || 3));
+          var ptsS = [];
+          for (var si = 0; si < n; si++) {
+            var sa = -Math.PI / 2 + (2 * Math.PI * si) / n;
+            ptsS.push(
+              U.round(el.x + el.w / 2 + ((el.w / 2 - 1) * Math.cos(sa)), 1) + ',' +
+              U.round(el.y + el.h / 2 + ((el.h / 2 - 1) * Math.sin(sa)), 1)
+            );
+          }
+          t = '<polygon points="' + ptsS.join(' ') + '" fill="' + d.fill + '"' + stroke + rotAttr() + '/>';
         } else {
           t = '<rect x="' + el.x + '" y="' + el.y + '" width="' + el.w + '" height="' + el.h + '" rx="' + (d.radius || 0) +
             '" fill="' + d.fill + '"' + stroke + rotAttr() + '/>';
@@ -315,10 +348,15 @@
     return Promise.all(jobs);
   }
 
-  function buildSvg(only) {
+  function buildSvg(only, opts) {
+    var o = opts || {};
     var list = sortForExport(visibleElements(only));
     var bbox = MB.store.bboxOfMany(list);
-    var pad = 60;
+    /* v1.9 — mode miniature : cadrage serré + fond dédié (les cartes de
+     * l'écran d'accueil gagnent en lisibilité, le contenu remplit la
+     * vignette au lieu de flotter dans une marge terne). */
+    var pad = o.pad !== undefined ? o.pad : 60;
+    var bg = o.background || '#1E1E1E';
     var W = Math.max(10, Math.ceil(bbox.w + pad * 2));
     var H = Math.max(10, Math.ceil(bbox.h + pad * 2));
     var body = '';
@@ -330,7 +368,7 @@
       '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" ' +
       'width="' + W + '" height="' + H + '" viewBox="' + U.round(bbox.x - pad, 1) + ' ' +
       U.round(bbox.y - pad, 1) + ' ' + W + ' ' + H + '">\n' +
-      '<rect x="' + (bbox.x - pad) + '" y="' + (bbox.y - pad) + '" width="' + W + '" height="' + H + '" fill="#1E1E1E"/>\n' +
+      '<rect x="' + (bbox.x - pad) + '" y="' + (bbox.y - pad) + '" width="' + W + '" height="' + H + '" fill="' + bg + '"/>\n' +
       body + '\n</svg>';
     return { svg: svg, w: W, h: H };
   }
@@ -409,7 +447,10 @@
 
   /* Miniature du tableau courant (JPEG data URL) — alimente les cartes de
    * l'écran d'accueil après chaque enregistrement. Best effort : tout échec
-   * appelle cb('') et la carte utilisera son motif par défaut. */
+   * appelle cb('') et la carte utilisera son motif par défaut.
+   * v1.9 — vignette retravaillée : marge resserrée (le contenu remplit
+   * la carte), fond papier chaud qui se détache de l'accueil, JPEG 0.85
+   * (l'ancienne capture 0.72 sur fond brut paraissait terne). */
   function thumbnail(maxW, maxH, cb) {
     var done = false;
     function finish(v) {
@@ -420,7 +461,7 @@
     resolveAssets(visibleElements(null)).then(function () {
       var out;
       try {
-        out = buildSvg(null);
+        out = buildSvg(null, { pad: 24, background: '#2A2926' });
       } catch (e) {
         finish('');
         return;
@@ -441,9 +482,11 @@
           canvas.width = w;
           canvas.height = h;
           var ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#2A2926';
+          ctx.fillRect(0, 0, w, h);
           ctx.drawImage(img, 0, 0, w, h);
           URL.revokeObjectURL(url);
-          var dataUrl = canvas.toDataURL('image/jpeg', 0.72);
+          var dataUrl = canvas.toDataURL('image/jpeg', 0.85);
           finish(dataUrl && dataUrl.length > 300 ? dataUrl : '');
         } catch (e) {
           finish('');

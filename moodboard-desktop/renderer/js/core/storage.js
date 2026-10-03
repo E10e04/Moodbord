@@ -583,7 +583,7 @@
   }
 
   function readPrefs() {
-    var base = { lastDir: '', defaultFont: '', dataDir: '', fontFavs: [] };
+    var base = { lastDir: '', defaultFont: '', dataDir: '', fontFavs: [], lang: 'auto', shapeTool: 'rect' };
     if (baseDir) {
       var r = readText(baseDir + '/' + PREFS_FILE);
       if (!r.error && r.text) {
@@ -596,7 +596,11 @@
               dataDir: isAbsPath(p.dataDir || '') ? p.dataDir : '',
               fontFavs: Array.isArray(p.fontFavs) ? p.fontFavs.filter(function (x) {
                 return typeof x === 'string' && x;
-              }) : []
+              }) : [],
+              /* v1.9 — langue de l'interface ('auto' suit le système) et
+               * forme active de l'outil Forme. */
+              lang: p.lang === 'fr' || p.lang === 'en' ? p.lang : 'auto',
+              shapeTool: typeof p.shapeTool === 'string' ? p.shapeTool : 'rect'
             };
           }
         } catch (e) {
@@ -613,7 +617,9 @@
         lastDir: lastDir,
         defaultFont: pj && typeof pj.defaultFont === 'string' ? pj.defaultFont : '',
         dataDir: pj && isAbsPath(pj.dataDir || '') ? pj.dataDir : '',
-        fontFavs: pj && Array.isArray(pj.fontFavs) ? pj.fontFavs : []
+        fontFavs: pj && Array.isArray(pj.fontFavs) ? pj.fontFavs : [],
+        lang: pj && (pj.lang === 'fr' || pj.lang === 'en') ? pj.lang : 'auto',
+        shapeTool: pj && typeof pj.shapeTool === 'string' ? pj.shapeTool : 'rect'
       };
     } catch (e) {
       return base;

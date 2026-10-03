@@ -143,8 +143,8 @@
       '<div class="dialog-title">' + U.escapeHtml(opts.title) + '</div>' +
       '<div class="dialog-body">' + U.escapeHtml(opts.message) + '</div>',
       [
-        { label: opts.cancelLabel || 'Annuler', value: false, kind: 'ghost' },
-        { label: opts.confirmLabel || 'Confirmer', value: true, kind: opts.danger ? 'danger' : 'primary' }
+        { label: opts.cancelLabel || (MB.i18n ? MB.i18n.t('dlg.cancel') : 'Annuler'), value: false, kind: 'ghost' },
+        { label: opts.confirmLabel || (MB.i18n ? MB.i18n.t('dlg.confirm') : 'Confirmer'), value: true, kind: opts.danger ? 'danger' : 'primary' }
       ]
     );
   }
@@ -169,83 +169,117 @@
   }
 
   function shortcutsDialog() {
+    var en = !!(MB.i18n && MB.i18n.lang() === 'en');
     var rows = [
-      ['V', 'Outil Sélection'],
-      ['H', 'Outil Main (pan)'],
-      ['N', 'Note'],
-      ['T', 'Texte'],
-      ['I', 'Image (importer)'],
-      ['C', 'Checklist'],
-      ['L', 'Lien'],
-      ['S', 'Section'],
-      ['M', 'Commentaire'],
-      ['P', 'Ligne'],
-      ['B', 'Croquis'],
-      ['K', 'Couleur'],
-      ['A', 'Palette'],
-      ['Y', 'Typographie'],
-      ['R', 'Forme'],
-      ['E', 'Planche (moodboard lié)'],
-      ['Espace + glisser', 'Se déplacer dans le canvas'],
-      ['Molette', 'Zoom focalisé sur le curseur'],
-      ['⌘/Ctrl + +/−', 'Zoom avant / arrière (standard macOS : ⌘+ / ⌘−)'],
-      ['Flèches', 'Déplacer la sélection (⇧ = ×10)'],
-      ['Maj + clic', 'Ajouter / retirer de la sélection'],
-      ['Zone vide + glisser', 'Sélection au lasso (marquee)'],
-      ['Double-clic', 'Éditer (texte, note, cellule, image → recadrer)'],
-      ['Alt + ←', 'Revenir du planche liée au moodboard parent (ou clic sur son nom en haut)'],
-      ['Alt + glisser', 'Dupliquer (sur une section : déplacer le conteneur seul)'],
-      ['Suppr / Retour arr.', 'Supprimer la sélection'],
-      ['Échap', 'Quitter édition → annuler → déselection'],
-      ['⌘/Ctrl + Z', 'Annuler'],
-      ['⌘/Ctrl + ⇧ + Z', 'Rétablir'],
-      ['⌘/Ctrl + C / V / X', 'Copier / Coller / Couper'],
-      ['⌘/Ctrl + D', 'Dupliquer'],
-      ['⌘/Ctrl + A', 'Tout sélectionner'],
-      ['⌘/Ctrl + G', 'Grouper (⇧ pour dissocier)'],
-      ['⌘/Ctrl + S', 'Enregistrer (fichier courant ; 1er enregistrement : choix de l‘emplacement)'],
-      ['⌘/Ctrl + ⇧ + S', 'Enregistrer sous… (choisir un nouvel emplacement)'],
-      ['⌘/Ctrl + ,', 'Préférences (dossier des fichiers temporaires et autosaves)'],
-      ['⌘/Ctrl + 0', 'Zoom 100 %'],
-      ['⇧ + 1', 'Ajuster à l’écran'],
-      ['⇧ + 2', 'Zoom sur la sélection'],
-      ['⌘/Ctrl pendant un drag', 'Désactiver l’aimantage']
+      ['V', en ? 'Select tool' : 'Outil Sélection'],
+      ['H', en ? 'Hand tool (pan)' : 'Outil Main (pan)'],
+      ['N', en ? 'Note' : 'Note'],
+      ['T', en ? 'Text' : 'Texte'],
+      ['I', en ? 'Image (import)' : 'Image (importer)'],
+      ['C', en ? 'Checklist' : 'Checklist'],
+      ['L', en ? 'Link' : 'Lien'],
+      ['S', en ? 'Section' : 'Section'],
+      ['M', en ? 'Comment' : 'Commentaire'],
+      ['P', en ? 'Line' : 'Ligne'],
+      ['B', en ? 'Sketch' : 'Croquis'],
+      ['K', en ? 'Color' : 'Couleur'],
+      ['A', en ? 'Palette' : 'Palette'],
+      ['Y', en ? 'Typography' : 'Typographie'],
+      ['R', en ? 'Shape' : 'Forme'],
+      ['E', en ? 'Board (linked moodboard)' : 'Planche (moodboard lié)'],
+      [en ? 'Space + drag' : 'Espace + glisser', en ? 'Pan across the canvas' : 'Se déplacer dans le canvas'],
+      [en ? 'Scroll' : 'Molette', en ? 'Cursor-focused zoom' : 'Zoom focalisé sur le curseur'],
+      ['⌘/Ctrl + +/−', en ? 'Zoom in / out (macOS: ⌘+ / ⌘−)' : 'Zoom avant / arrière (standard macOS : ⌘+ / ⌘−)'],
+      [en ? 'Arrows' : 'Flèches', en ? 'Move the selection (⇧ = ×10)' : 'Déplacer la sélection (⇧ = ×10)'],
+      [en ? 'Shift + click' : 'Maj + clic', en ? 'Add / remove from the selection' : 'Ajouter / retirer de la sélection'],
+      [en ? 'Empty area + drag' : 'Zone vide + glisser', en ? 'Lasso selection (marquee)' : 'Sélection au lasso (marquee)'],
+      [en ? 'Double-click' : 'Double-clic', en ? 'Edit (text, note, cell, image → crop)' : 'Éditer (texte, note, cellule, image → recadrer)'],
+      ['Alt + ←', en ? 'Back from the linked board to the parent moodboard (or click its name at the top)' : 'Revenir du planche liée au moodboard parent (ou clic sur son nom en haut)'],
+      [en ? 'Alt + drag' : 'Alt + glisser', en ? 'Duplicate (on a section: move the container alone)' : 'Dupliquer (sur une section : déplacer le conteneur seul)'],
+      [en ? 'Delete / Backspace' : 'Suppr / Retour arr.', en ? 'Delete the selection' : 'Supprimer la sélection'],
+      ['Échap', en ? 'Exit editing → cancel → deselect' : 'Quitter édition → annuler → déselection'],
+      ['⌘/Ctrl + Z', en ? 'Undo' : 'Annuler'],
+      ['⌘/Ctrl + ⇧ + Z', en ? 'Redo' : 'Rétablir'],
+      ['⌘/Ctrl + C / V / X', en ? 'Copy / Paste / Cut' : 'Copier / Coller / Couper'],
+      ['⌘/Ctrl + D', en ? 'Duplicate' : 'Dupliquer'],
+      ['⌘/Ctrl + A', en ? 'Select all' : 'Tout sélectionner'],
+      ['⌘/Ctrl + G', en ? 'Group (⇧ to ungroup)' : 'Grouper (⇧ pour dissocier)'],
+      ['⌘/Ctrl + S', en ? 'Save (current file; first save asks for the location)' : 'Enregistrer (fichier courant ; 1er enregistrement : choix de l‘emplacement)'],
+      ['⌘/Ctrl + ⇧ + S', en ? 'Save as… (pick a new location)' : 'Enregistrer sous… (choisir un nouvel emplacement)'],
+      ['⌘/Ctrl + ,', en ? 'Preferences (language, temporary files & auto-saves)' : 'Préférences (langue, dossier des fichiers temporaires et autosaves)'],
+      ['⌘/Ctrl + 0', en ? 'Zoom 100%' : 'Zoom 100 %'],
+      ['⇧ + 1', en ? 'Fit to screen' : 'Ajuster à l‘écran'],
+      ['⇧ + 2', en ? 'Zoom to selection' : 'Zoom sur la sélection'],
+      [en ? '⌘/Ctrl while dragging' : '⌘/Ctrl pendant un drag', en ? 'Disable snapping' : 'Désactiver l’aimantage']
     ];
-    var html = '<div class="dialog-title">Raccourcis clavier</div><div class="dialog-body"><table class="kbd-table">';
+    var html = '<div class="dialog-title">' + (MB.i18n ? MB.i18n.t('shortcuts.title') : 'Raccourcis clavier') + '</div><div class="dialog-body"><table class="kbd-table">';
     rows.forEach(function (r) {
       html += '<tr><td><span class="kbd">' + U.escapeHtml(r[0]) + '</span></td><td>' + U.escapeHtml(r[1]) + '</td></tr>';
     });
     html += '</table></div>';
-    dialog(html, [{ label: 'Fermer', value: true, kind: 'primary' }]);
+    dialog(html, [{ label: MB.i18n ? MB.i18n.t('dlg.close') : 'Fermer', value: true, kind: 'primary' }]);
   }
 
   function aboutDialog() {
     var desktop = MB.desktop && MB.desktop.active;
+    var TT = function (k) {
+      return MB.i18n ? MB.i18n.t(k) : k;
+    };
     dialog(
       '<img class="about-logo" src="assets/logo.png" alt="" width="56" height="56" draggable="false">' +
       '<div class="dialog-title">Moodboard</div>' +
-      '<div class="dialog-body">Table de travail spatiale pour designers.<br><br>' +
+      '<div class="dialog-body">' + TT('about.tagline') + '<br><br>' +
       'Version ' + MB.VERSION +
-      (desktop ? ' · Application autonome (Electron) · macOS 11+ / Windows 10+' : ' · CEP 10+ · Illustrator 2021+') +
+      (desktop ? ' · ' + TT('about.desktop') : ' · ' + TT('about.cep')) +
       '<br>' +
       (desktop
-        ? 'Environnement : application autonome'
+        ? TT('about.env.desktop')
         : MB.storage && MB.storage.isCep()
-          ? 'Environnement : Adobe Illustrator (CEP actif)'
-          : 'Environnement : aperçu navigateur (hors Illustrator)') +
+          ? TT('about.env.cep')
+          : TT('about.env.web')) +
       '</div>',
-      [{ label: 'Fermer', value: true, kind: 'primary' }]
+      [{ label: TT('dlg.close'), value: true, kind: 'primary' }]
     );
   }
 
   /* ------------------------------------------------------ préférences */
 
-  /* v1.7 — Préférences (Fichier ▸ Préférences… / ⌘,) : choix du dossier
-   * des fichiers temporaires et des enregistrements automatiques
-   * (autosave, récents, journaux). Le dossier par défaut reste indiqué
-   * en permanence ; le changement migre les fichiers existants. */
+  /* v1.9 — Préférences (Fichier ▸ Préférences… / ⌘,) :
+   *  - LANGUE de l'interface : « Langue du système » (par défaut —
+   *    l'application ET l'extension suivent le système), ou forçage
+   *    Français / English ;
+   *  - dossier des fichiers temporaires et des enregistrements
+   *    automatiques (v1.7) : le choix est global (tous les moodboards),
+   *    chaque projet y garde son propre autosave. */
   function preferencesDialog() {
     var S = MB.storage;
+    var T = function (k, vars) {
+      return MB.i18n ? MB.i18n.t(k, vars) : k;
+    };
+
+    function langRows(cur) {
+      var opts = [
+        { id: 'auto', label: T('prefs.lang.auto') },
+        { id: 'fr', label: T('prefs.lang.fr') },
+        { id: 'en', label: T('prefs.lang.en') }
+      ];
+      var html = '';
+      opts.forEach(function (o) {
+        html +=
+          '<button type="button" class="pref-lang' + (cur === o.id ? ' is-active' : '') + '" data-lang="' + o.id + '" ' +
+          'role="radio" aria-checked="' + (cur === o.id ? 'true' : 'false') + '">' +
+          '<span class="pref-lang-dot" aria-hidden="true"></span>' +
+          '<span class="pref-lang-name">' + U.escapeHtml(o.label) + '</span>' +
+          (o.id === 'auto'
+            ? '<span class="pref-lang-sub">' + U.escapeHtml(
+                (MB.i18n && MB.i18n.lang() === 'en' ? 'English' : 'Français') +
+                ' · ' + (navigator.language || '')
+              ) + '</span>'
+            : '') +
+          '</button>';
+      });
+      return '<div class="pref-lang-group" role="radiogroup" aria-label="' + T('prefs.lang') + '">' + html + '</div>';
+    }
 
     function render(box) {
       var canFs = S.isFs();
@@ -253,42 +287,53 @@
       var cur = S.dataDir() || '(indisponible)';
       var def = S.dataDirDefault() || '';
       var revealable = !!(MB.desktop && MB.desktop.canReveal);
+      var langPref = MB.i18n ? MB.i18n.pref() : 'auto';
       box.innerHTML =
-        '<div class="dialog-title">Préférences</div>' +
+        '<div class="dialog-title">' + T('prefs.title') + '</div>' +
         '<div class="dialog-body">' +
-        '<span class="field-label">Fichiers temporaires &amp; enregistrements automatiques</span>' +
+
+        /* ---- langue ---- */
+        '<span class="field-label">' + T('prefs.lang') + '</span>' +
+        langRows(langPref) +
+        '<div class="prefs-sub">' + T('prefs.lang.note') + '</div>' +
+
+        /* ---- fichiers temporaires ---- */
+        '<span class="field-label" style="margin-top:14px">' + T('prefs.files') + '</span>' +
         '<div class="prefs-path' + (custom ? ' is-custom' : '') + '" title="' + U.escapeHtml(cur) + '">' +
         U.escapeHtml(cur) +
         '</div>' +
         '<div class="prefs-sub">' +
         (custom
-          ? 'Dossier personnalisé — les autosaves et fichiers temporaires y sont écrits.'
-          : 'Dossier par défaut' + (def ? ' — ' + U.escapeHtml(def) : '') + '.') +
+          ? T('prefs.files.custom')
+          : T('prefs.files.default', { dir: def })) +
         '</div>' +
         /* v1.8 — explicite : le choix est GLOBAL (tous les moodboards,
          * application comme extension) et chaque projet enregistré y
          * garde son propre autosave. */
-        '<div class="prefs-sub prefs-sub--all">' +
-        'Ce choix s‘applique à <strong>tous vos moodboards</strong> — application et extension. ' +
-        'Chaque projet enregistré y conserve son propre autosave (jamais écrasé par un autre).' +
-        '</div>' +
+        '<div class="prefs-sub prefs-sub--all">' + T('prefs.allBoards') + '</div>' +
         '<div class="prefs-actions">' +
         '<button type="button" class="btn btn-primary btn--xs" data-act="pick"' +
-        (canFs ? '' : ' disabled') + '>Choisir un dossier…</button>' +
+        (canFs ? '' : ' disabled') + '>' + T('prefs.pick') + '</button>' +
         '<button type="button" class="btn btn-ghost btn--xs" data-act="reveal"' +
-        (canFs && revealable ? '' : ' disabled') + '>Révéler</button>' +
+        (canFs && revealable ? '' : ' disabled') + '>' + T('prefs.reveal') + '</button>' +
         '<button type="button" class="btn btn-ghost btn--xs" data-act="reset"' +
-        (custom ? '' : ' disabled') + '>Dossier par défaut</button>' +
+        (custom ? '' : ' disabled') + '>' + T('prefs.reset') + '</button>' +
         '</div>' +
         (canFs
           ? ''
-          : '<p class="prefs-note">La persistance fichier n‘est pas disponible dans cet ' +
-            'environnement (aperçu navigateur) — les préférences s‘appliquent à ' +
-            'l‘application et au panneau Illustrator.</p>') +
+          : '<p class="prefs-note">' + T('prefs.webNote') + '</p>') +
         '</div>' +
         '<div class="dialog-actions">' +
-        '<button type="button" class="btn btn-primary" data-act="close">Fermer</button>' +
+        '<button type="button" class="btn btn-primary" data-act="close">' + T('prefs.close') + '</button>' +
         '</div>';
+
+      /* langue : application immédiate (préférence + rechargement). */
+      box.querySelectorAll('[data-lang]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          if (b.getAttribute('aria-checked') === 'true') return;
+          if (MB.i18n) MB.i18n.setLang(b.dataset.lang);
+        });
+      });
 
       box.querySelector('[data-act="close"]').addEventListener('click', function () {
         closePrefs();
@@ -306,8 +351,8 @@
           if (!r.unchanged) {
             toast(
               r.moved && r.moved.length
-                ? 'Dossier enregistré — ' + r.moved.length + ' fichier(s) déplacé(s)'
-                : 'Dossier enregistré',
+                ? T('prefs.movedToast', { n: r.moved.length })
+                : T('prefs.savedToast'),
               'success'
             );
           }
@@ -331,7 +376,7 @@
             toast(r.error, 'error');
             return;
           }
-          toast('Dossier par défaut rétabli', 'success');
+          toast(T('prefs.resetToast'), 'success');
           render(box);
         });
       }

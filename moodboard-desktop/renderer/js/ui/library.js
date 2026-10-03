@@ -8,12 +8,17 @@
   var MB = (window.MB = window.MB || {});
   var U = MB.util;
 
+  /* v1.9 — bibliothèque localisée. */
+  function T(k) {
+    return MB.i18n ? MB.i18n.t(k) : k;
+  }
+
   var TABS = [
-    { id: 'media', label: 'Médias' },
-    { id: 'colors', label: 'Couleurs' },
-    { id: 'palettes', label: 'Palettes' },
-    { id: 'fonts', label: 'Typo' },
-    { id: 'shapes', label: 'Formes' }
+    { id: 'media', key: 'lib.media' },
+    { id: 'colors', key: 'lib.colors' },
+    { id: 'palettes', key: 'lib.palettes' },
+    { id: 'fonts', key: 'lib.fonts' },
+    { id: 'shapes', key: 'lib.shapes' }
   ];
 
   var COLORS = [
@@ -168,7 +173,7 @@
 
   function renderColors() {
     var host = document.getElementById('lib-content');
-    host.innerHTML = '<div class="lib-note">Glissez une couleur sur le canvas, ou cliquez pour l’ajouter au centre.</div>';
+    host.innerHTML = '<div class="lib-note">' + T('lib.dragColor') + '</div>';
     var grid = U.el('div', 'lib-grid lib-grid--colors');
     COLORS.forEach(function (hex) {
       var item = U.el('div', 'lib-color');
@@ -204,7 +209,7 @@
 
   function renderPalettes() {
     var host = document.getElementById('lib-content');
-    host.innerHTML = '<div class="lib-note">Glissez une palette complète sur le canvas.</div>';
+    host.innerHTML = '<div class="lib-note">' + T('lib.dragPalette') + '</div>';
     var list = U.el('div', 'lib-list');
     PALETTES.forEach(function (p) {
       var item = U.el('div', 'lib-item lib-palette');
@@ -231,7 +236,7 @@
 
   function renderFonts() {
     var host = document.getElementById('lib-content');
-    host.innerHTML = '<div class="lib-note">Glissez une typographie pour créer une carte de spécimen.</div>';
+    host.innerHTML = '<div class="lib-note">' + T('lib.dragFont') + '</div>';
     var list = U.el('div', 'lib-list');
     FONTS.forEach(function (f) {
       var item = U.el('div', 'lib-item lib-font');
@@ -249,7 +254,7 @@
 
   function renderShapes() {
     var host = document.getElementById('lib-content');
-    host.innerHTML = '<div class="lib-note">Glissez une forme sur le canvas.</div>';
+    host.innerHTML = '<div class="lib-note">' + T('lib.dragShape') + '</div>';
     var grid = U.el('div', 'lib-grid lib-grid--shapes');
     SHAPES.forEach(function (s) {
       var item = U.el('div', 'lib-shape');
@@ -269,7 +274,7 @@
     host.innerHTML = '';
 
     var bar = U.el('div', 'lib-import');
-    var btn = U.el('button', 'btn btn-primary', MB.icons.get('import', 15) + '<span>Importer des images</span>');
+    var btn = U.el('button', 'btn btn-primary', MB.icons.get('import', 15) + '<span>' + T('lib.importImages') + '</span>');
     btn.type = 'button';
     btn.addEventListener('click', function () {
       MB.interact.openImportPicker(null);
@@ -322,7 +327,7 @@
     TABS.forEach(function (t) {
       var b = U.el('button', 'lib-tab' + (t.id === 'media' ? ' is-active' : ''));
       b.type = 'button';
-      b.textContent = t.label;
+      b.textContent = T(t.key);
       b.dataset.tab = t.id;
       b.addEventListener('click', function () {
         tabs.querySelectorAll('.lib-tab').forEach(function (x) {

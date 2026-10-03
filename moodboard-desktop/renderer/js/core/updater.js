@@ -23,6 +23,11 @@
   var MB = (window.MB = window.MB || {});
   var U = MB.util;
 
+  /* v1.9 — dialogues localisés. */
+  function T(k, v) {
+    return MB.i18n ? MB.i18n.t(k, v) : k;
+  }
+
   var REPO = 'E10e04/Moodbord';
   var API = 'https://api.github.com/repos/' + REPO;
   var RAW = 'https://raw.githubusercontent.com/' + REPO;
@@ -82,12 +87,20 @@
   }
 
   /* Extrait la première section exploitable des notes de release
-   * (markdown brut — affiché tel quel, échappé). */
+   * (markdown brut — affiché tel quel, échappé).
+   * v1.9 — aucun lien vers le dépôt n'est montré : les lignes qui en
+   * contiennent (URLs github.com du changelog auto-généré…) sont
+   * retirées avant affichage. */
   function notesExcerpt(body, max) {
     var t = String(body || '')
       .split('\r\n')
       .join('\n')
       .replace(/[\s\S]*?##?\s*Nouveaut[eé]s\s*:?\s*\n/i, '')
+      .split('\n')
+      .filter(function (line) {
+        return !/(github\.com|raw\.githubusercontent)/i.test(line);
+      })
+      .join('\n')
       .trim();
     if (t.length > (max || 420)) t = t.slice(0, max || 420) + '…';
     return t;
@@ -105,7 +118,10 @@
   }
 
   /* Ouvre une URL dans le navigateur par défaut (CEP : utilitaire
-   * dédié ; application : pont Electron ; web : nouvel onglet). */
+   * dédié ; application : pont Electron ; web : nouvel onglet).
+   * v1.9 — plus AUCUN lien vers le dépôt n'est proposé dans les
+   * dialogues de mise à jour : la fonction ne sert qu'aux erreurs
+   * de dernier recours (jamais appelée par défaut). */
   function openReleasesPage() {
     try {
       if (environment() === 'cep' && window.cep && window.cep.util && window.cep.util.openURLInDefaultBrowser) {
@@ -118,7 +134,7 @@
       }
       window.open(RELEASES_URL, '_blank');
     } catch (e) {
-      MB.ui.toast('Impossible d‘ouvrir la page : ' + RELEASES_URL, 'info');
+      /* silencieux */
     }
   }
 
@@ -230,20 +246,22 @@
   function notifyDialog(info) {
     var notes = notesExcerpt(info.notes);
     MB.ui.dialog(
-      '<div class="dialog-title">Mise à jour disponible</div>' +
+      '<div class="dialog-title">' + T('upd.available') + '</div>' +
       '<div class="dialog-body">' +
-      '<p><strong>Moodboard ' + U.escapeHtml(info.tag) + '</strong> est disponible ' +
-      (info.publishedAt ? '(' + U.escapeHtml(fmtDate(info.publishedAt)) + ') ' : '') +
-      '— vous utilisez la version ' + U.escapeHtml(currentVersion()) +
-      ' (' + U.escapeHtml(envLabel()) + ').</p>' +
+      '<p>' + T('upd.newVersion', {
+        v: U.escapeHtml(info.tag),
+        date: info.publishedAt ? '(' + U.escapeHtml(fmtDate(info.publishedAt)) + ') ' : '',
+        cur: U.escapeHtml(currentVersion()),
+        env: U.escapeHtml(envLabel())
+      }) + '</p>' +
       (notes
-        ? '<div class="field-label" style="margin-top:10px">Nouveautés</div>' +
+        ? '<div class="field-label" style="margin-top:10px">' + T('upd.news') + '</div>' +
           '<pre class="upd-notes">' + U.escapeHtml(notes) + '</pre>'
         : '') +
       '</div>',
       [
-        { label: 'Plus tard', value: false, kind: 'ghost' },
-        { label: 'Mettre à jour maintenant', value: true, kind: 'primary' }
+        { label: T('upd.later'), value: false, kind: 'ghost' },
+        { label: T('upd.updateNow'), value: true, kind: 'primary' }
       ]
     ).then(function (go) {
       if (go) runUpdate();
@@ -262,50 +280,47 @@
       /* state: 'idle' | 'checking' | 'known' */
       var l = latest;
       var html =
-        '<div class="dialog-title">Mises à jour</div>' +
+        '<div class="dialog-title">' + T('upd.title') + '</div>' +
         '<div class="dialog-body">' +
-        '<div class="upd-row"><span class="upd-key">Version installée</span>' +
+        '<div class="upd-row"><span class="upd-key">' + T('upd.installed') + '</span>' +
         '<strong>v' + U.escapeHtml(currentVersion()) + '</strong></div>' +
-        '<div class="upd-row"><span class="upd-key">Environnement</span>' +
+        '<div class="upd-row"><span class="upd-key">' + T('upd.environment') + '</span>' +
         '<span>' + U.escapeHtml(envLabel()) + '</span></div>' +
-        '<div class="upd-row"><span class="upd-key">Dernière version</span>' +
+        '<div class="upd-row"><span class="upd-key">' + T('upd.latest') + '</span>' +
         (state === 'checking'
-          ? '<span class="upd-dim">vérification en cours…</span>'
+          ? '<span class="upd-dim">' + T('upd.checking') + '</span>'
           : l
             ? '<strong class="' + (pending ? 'upd-new' : '') + '">v' + U.escapeHtml(l.tag) + '</strong>' +
               (l.publishedAt ? ' <span class="upd-dim">(' + U.escapeHtml(fmtDate(l.publishedAt)) + ')</span>' : '')
-            : '<span class="upd-dim">inconnue</span>') +
+            : '<span class="upd-dim">' + T('upd.unknown') + '</span>') +
         '</div>';
 
       if (state !== 'checking' && l) {
         if (pending) {
           var notes = notesExcerpt(l.notes);
           html +=
-            '<div class="upd-available">Une nouvelle version est disponible.</div>' +
-            (notes ? '<div class="field-label" style="margin-top:8px">Nouveautés</div><pre class="upd-notes">' + U.escapeHtml(notes) + '</pre>' : '');
+            '<div class="upd-available">' + T('upd.newAvailable') + '</div>' +
+            (notes ? '<div class="field-label" style="margin-top:8px">' + T('upd.news') + '</div><pre class="upd-notes">' + U.escapeHtml(notes) + '</pre>' : '');
         } else {
-          html += '<div class="upd-ok">Vous êtes à jour.</div>';
+          html += '<div class="upd-ok">' + T('upd.upToDate') + '</div>';
         }
       }
       if (state !== 'checking' && !l) {
         html +=
-          '<p class="upd-dim">Aucune information récupérée pour l‘instant — ' +
-          'la vérification nécessite une connexion internet.</p>';
+          '<p class="upd-dim">' + T('upd.noInfo') + '</p>';
       }
       if (environment() === 'web') {
         html +=
-          '<p class="upd-dim">Les mises à jour automatiques s‘appliquent à ' +
-          'l‘application et à l‘extension Illustrator.</p>';
+          '<p class="upd-dim">' + T('upd.webNote') + '</p>';
       }
       html += '</div>';
 
-      /* actions */
+      /* actions — v1.9 : plus de lien vers le dépôt dans l'interface. */
       var actions = [];
       if (state !== 'checking') {
-        if (pending) actions.push({ label: 'Mettre à jour maintenant', value: 'update', kind: 'primary' });
-        actions.push({ label: 'Vérifier les mises à jour', value: 'check', kind: pending ? 'ghost' : 'primary' });
-        actions.push({ label: 'Ouvrir la page des versions', value: 'page', kind: 'ghost' });
-        actions.push({ label: 'Fermer', value: null, kind: 'ghost' });
+        if (pending) actions.push({ label: T('upd.updateNow'), value: 'update', kind: 'primary' });
+        actions.push({ label: T('upd.check'), value: 'check', kind: pending ? 'ghost' : 'primary' });
+        actions.push({ label: T('dlg.close'), value: null, kind: 'ghost' });
       }
       html += '<div class="dialog-actions" id="upd-actions"></div>';
       box.innerHTML = html;
@@ -327,8 +342,6 @@
             check().then(function () {
               render('known');
             });
-          } else if (a.value === 'page') {
-            openReleasesPage();
           } else {
             closeDlg();
           }
@@ -378,13 +391,11 @@
       progressSink = null;
       running = false;
       box.innerHTML =
-        '<div class="dialog-title">Échec de la mise à jour</div>' +
+        '<div class="dialog-title">' + T('upd.fail') + '</div>' +
         '<div class="dialog-body"><p>' + U.escapeHtml(message) + '</p>' +
-        '<p class="upd-dim">Vous pouvez réessayer plus tard (clic sur le numéro de version) ' +
-        'ou télécharger manuellement la nouvelle version depuis la page des releases.</p></div>' +
+        '<p class="upd-dim">' + T('upd.retryLater') + '</p></div>' +
         '<div class="dialog-actions">' +
-        '<button type="button" class="btn btn-ghost" data-a="page">Ouvrir la page</button>' +
-        '<button type="button" class="btn btn-primary" data-a="close">Fermer</button>' +
+        '<button type="button" class="btn btn-primary" data-a="close">' + T('dlg.close') + '</button>' +
         '</div>';
       bindFooter(box);
     }
@@ -394,8 +405,6 @@
         if (b._close) b._close();
         else if (b.parentNode && b.parentNode.parentNode) b.parentNode.parentNode.removeChild(b.parentNode);
       });
-      var pg = b.querySelector('[data-a="page"]');
-      if (pg) pg.addEventListener('click', openReleasesPage);
     }
 
     var p = new Promise(function (resolve) {
@@ -648,7 +657,7 @@
     if (probe.error) {
       ui.fail(
         'Le dossier de l‘extension n‘est pas accessible en écriture (' + probe.error +
-        ') — installez la mise à jour manuellement depuis la page des versions.'
+        ') — réessayez en administrateur ou réinstallez l‘extension.'
       );
       return;
     }
@@ -746,31 +755,24 @@
 
   function runUpdate() {
     if (running) {
-      MB.ui.toast('Une mise à jour est déjà en cours.', 'info');
+      MB.ui.toast(T('upd.alreadyRunning'), 'info');
       return;
     }
     var env = environment();
     if (env === 'web') {
       /* Aperçu navigateur : rien à mettre à jour ici. */
       MB.ui.dialog(
-        '<div class="dialog-title">Mises à jour</div>' +
-        '<div class="dialog-body"><p>Cet aperçu navigateur ne se met pas à jour lui-même : ' +
-        'les mises à jour s‘appliquent à l‘application de bureau et à l‘extension Illustrator.</p>' +
-        '<p>Téléchargez la dernière version depuis la page des releases du dépôt.</p></div>',
-        [
-          { label: 'Fermer', value: false, kind: 'ghost' },
-          { label: 'Ouvrir la page des versions', value: true, kind: 'primary' }
-        ]
-      ).then(function (open) {
-        if (open) openReleasesPage();
-      });
+        '<div class="dialog-title">' + T('upd.title') + '</div>' +
+        '<div class="dialog-body"><p>' + T('upd.webDialog') + '</p></div>',
+        [{ label: T('dlg.close'), value: false, kind: 'primary' }]
+      );
       return;
     }
 
     var start = function (info) {
       running = true;
       progressDialog({
-        title: env === 'app' ? 'Mise à jour de l‘application' : 'Mise à jour de l‘extension',
+        title: env === 'app' ? T('upd.progress') : T('upd.progressExt'),
         label: 'Préparation…'
       }).then(function (ui) {
         if (env === 'app') updateDesktop(info, ui);
@@ -784,11 +786,11 @@
     }
     check().then(function (r) {
       if (r.error || !r.latest) {
-        MB.ui.toast('Vérification impossible — êtes-vous connecté à internet ?', 'error');
+        MB.ui.toast(T('upd.checkFail'), 'error');
         return;
       }
       if (!r.update) {
-        MB.ui.toast('Vous êtes déjà à jour (v' + currentVersion() + ').', 'success');
+        MB.ui.toast(T('upd.alreadyCurrent', { v: currentVersion() }), 'success');
         return;
       }
       start(r.latest);

@@ -145,7 +145,10 @@
             url: url,
             title: (extra && extra.title) || U.titleFromUrl(url),
             domain: U.domainOf(url),
-            titleFont: (extra && extra.titleFont) || ''
+            titleFont: (extra && extra.titleFont) || '',
+            /* v1.9 — couleur de la carte + aperçu statique. */
+            bg: (extra && extra.bg) || '',
+            preview: (extra && extra.preview) || ''
           };
           return lk;
         }
@@ -188,6 +191,10 @@
           var sh = base('shape', p, Object.assign({ w: 170, h: 130 }, extra));
           sh.data = {
             shape: (extra && extra.shape) || 'rect',
+            /* v1.9 — triangle = polygone régulier : nombre de branches
+             * (3 = triangle, 4 = losange, 5 = pentagone, 6 = hexagone…)
+             * réglable dans le panneau Projet. */
+            sides: (extra && extra.sides) || 3,
             fill: '#4C8DFF',
             stroke: 'none',
             strokeWidth: 2,

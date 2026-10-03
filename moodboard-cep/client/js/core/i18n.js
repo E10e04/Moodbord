@@ -1,0 +1,686 @@
+/* =========================================================================
+ * i18n.js — Langue de l'interface (v1.9).
+ *
+ * PRÉFÉRENCE (Fichier ▸ Préférences… ▸ Langue) :
+ *   - « Langue du système » (PAR DÉFAUT) : l'application et l'extension
+ *     suivent la langue du système d'exploitation — fr → français,
+ *     toute autre langue → anglais (lingua franca) ;
+ *   - « Français » / « English » : forcent la langue dans les DEUX
+ *     environnements (la préférence vit dans prefs.json, partagé par
+ *     l'application et le panneau Illustrator quand ils partagent le
+ *     même dossier de données ; sinon chacun suit le système).
+ *
+ * Le français reste la langue de référence du code : tout texte absent
+ * de la traduction anglaise retombe sur le français.
+ * ========================================================================= */
+(function () {
+  'use strict';
+
+  var MB = (window.MB = window.MB || {});
+
+  var FR = {
+    /* ---- barre supérieure / menus ---- */
+    'menu.file': 'Fichier',
+    'menu.edit': 'Édition',
+    'menu.object': 'Objet',
+    'menu.view': 'Affichage',
+    'menu.illustrator': 'Illustrateur',
+    'menu.help': 'Aide',
+    'menu.new': 'Nouveau moodboard',
+    'menu.open': 'Ouvrir…',
+    'menu.save': 'Enregistrer',
+    'menu.saveas': 'Enregistrer sous…',
+    'menu.import': 'Importer des images…',
+    'menu.demo': 'Charger le tableau de démonstration',
+    'menu.exportPng': 'Exporter le PNG…',
+    'menu.exportSvg': 'Exporter le SVG…',
+    'menu.exportSel': 'Exporter la sélection en SVG…',
+    'menu.prefs': 'Préférences…',
+    'menu.undo': 'Annuler',
+    'menu.redo': 'Rétablir',
+    'menu.cut': 'Couper',
+    'menu.copy': 'Copier',
+    'menu.paste': 'Coller',
+    'menu.duplicate': 'Dupliquer',
+    'menu.delete': 'Supprimer',
+    'menu.selectAll': 'Tout sélectionner',
+    'menu.deselect': 'Désélectionner',
+    'menu.group': 'Grouper',
+    'menu.ungroup': 'Dissocier',
+    'menu.lock': 'Verrouiller / déverrouiller',
+    'menu.hide': 'Masquer',
+    'menu.revealAll': 'Révéler tout',
+    'menu.front': 'Premier plan',
+    'menu.forward': 'Avancer',
+    'menu.backward': 'Reculer',
+    'menu.back': 'Arrière-plan',
+    'menu.zoomIn': 'Zoom avant',
+    'menu.zoomOut': 'Zoom arrière',
+    'menu.zoom100': 'Zoom 100 %',
+    'menu.fit': 'Ajuster à l’écran',
+    'menu.zoomSel': 'Zoom sur la sélection',
+    'menu.grid': 'Grille de points',
+    'menu.snap': 'Aimantage intelligent',
+    'menu.library': 'Bibliothèque',
+    'menu.inspector': 'Inspecteur',
+    'menu.cep.swatches': 'Importer la palette du document…',
+    'menu.cep.send': 'Envoyer les couleurs sélectionnées…',
+    'menu.cep.place': 'Placer l’image sélectionnée…',
+    'menu.cep.docinfo': 'Informations du document…',
+    'menu.shortcuts': 'Raccourcis clavier',
+    'menu.diagnostics': 'Diagnostics…',
+    'menu.about': 'À propos',
+    'save.saved': 'Enregistré',
+    'save.saving': 'Enregistrement…',
+    'save.dirty': 'Modifié',
+    'app.home': 'Écran d’accueil',
+    'app.projectName': 'Nom du projet',
+
+    /* ---- outils ---- */
+    'tool.select.label': 'Sélection',
+    'tool.select.hint': 'Cliquer un objet, glisser pour déplacer',
+    'tool.pan.label': 'Main',
+    'tool.pan.hint': 'Glisser pour déplacer la vue',
+    'tool.note.label': 'Note',
+    'tool.note.hint': 'Cliquer ou glisser sur le canvas',
+    'tool.text.label': 'Texte',
+    'tool.text.hint': 'Cliquer pour créer un texte',
+    'tool.checklist.label': 'Checklist',
+    'tool.checklist.hint': 'Cliquer pour créer une checklist',
+    'tool.comment.label': 'Commentaire',
+    'tool.comment.hint': 'Cliquer pour créer un commentaire',
+    'tool.image.label': 'Image',
+    'tool.image.hint': 'Cliquer pour importer des images',
+    'tool.link.label': 'Lien',
+    'tool.link.hint': 'Cliquer pour créer un lien',
+    'tool.line.label': 'Ligne',
+    'tool.line.hint': 'Glisser pour tracer une ligne',
+    'tool.shape.label': 'Forme',
+    'tool.shape.hint': 'Glisser pour dessiner · double-clic ou appui long : choisir la forme (rectangle, cercle, triangle)',
+    'tool.shape.current': 'Forme — {shape} — glissez pour dessiner',
+    'tool.sketch.label': 'Croquis',
+    'tool.sketch.hint': 'Glisser pour dessiner à main levée',
+    'tool.section.label': 'Section',
+    'tool.section.hint': 'Glisser pour délimiter une section',
+    'tool.column.label': 'Colonne',
+    'tool.column.hint': 'Glisser pour délimiter une colonne',
+    'tool.table.label': 'Tableau',
+    'tool.table.hint': 'Cliquer pour créer un tableau',
+    'tool.board.label': 'Planche',
+    'tool.board.hint': 'Créer un moodboard lié dans ce moodboard — cliquez sur sa flèche pour l’ouvrir',
+    'tool.color.label': 'Couleur',
+    'tool.color.hint': 'Cliquer pour créer une pastille couleur',
+    'tool.palette.label': 'Palette',
+    'tool.palette.hint': 'Cliquer pour créer une palette',
+    'tool.typography.label': 'Typographie',
+    'tool.typography.hint': 'Cliquer pour créer une carte typo',
+    'tool.import.label': 'Importer',
+    'tool.import.hint': 'Double-clic : explorateur · glisser sur le canvas : carte d’import (tout importer, même les moodboards)',
+    'shape.rect': 'Rectangle',
+    'shape.ellipse': 'Cercle',
+    'shape.triangle': 'Triangle',
+    'shape.branches': 'Branches (côtés du polygone)',
+    'shape.pickTitle': 'Choisir une forme',
+
+    /* ---- panneau Projet / inspecteur ---- */
+    'insp.title': 'Inspecteur',
+    'insp.project': 'Projet',
+    'insp.selection': 'Sélection ({n})',
+    'insp.document': 'Document',
+    'insp.hidden': 'Masqués ({n})',
+    'insp.object': 'Objet',
+    'insp.text': 'Texte',
+    'insp.note': 'Note',
+    'insp.comment': 'Commentaire',
+    'insp.image': 'Image',
+    'insp.line': 'Ligne',
+    'insp.color': 'Couleur',
+    'insp.palette': 'Palette',
+    'insp.typography': 'Typographie',
+    'insp.link': 'Lien',
+    'insp.board': 'Planche liée',
+    'insp.shape': 'Forme',
+    'insp.section': 'Section',
+    'insp.column': 'Colonne',
+    'insp.table': 'Tableau',
+    'insp.checklist': 'Checklist',
+    'insp.sketch': 'Croquis',
+    'insp.import': 'Import',
+    'insp.actions': 'Actions',
+    'insp.alignment': 'Alignement & distribution',
+    'insp.autoLayout': 'Disposition automatique',
+    'insp.selectHint': 'Sélectionnez un objet pour éditer ses propriétés.',
+    'insp.revealAll': 'Tout révéler',
+
+    /* ---- barre d'état / statuts ---- */
+    'status.selectHint': 'Sélection — cliquez un objet, glissez pour le déplacer',
+    'status.shortcuts': 'Raccourcis clavier : actifs quand le panneau détient le focus (clic dans le panneau)',
+    'status.versionTip': 'Version installée — cliquez pour vérifier les mises à jour',
+    'status.versionPending': 'Moodboard {v} est disponible — cliquez pour mettre à jour',
+    'kbd.on': 'Clavier actif',
+    'kbd.off': 'Clavier inactif (cliquez dans le panneau)',
+
+    /* ---- barre supérieure / bibliothèque ---- */
+    'panel.library': 'Bibliothèque',
+    'panel.inspector': 'Inspecteur',
+    'panel.collapse': 'Réduire',
+    'lib.media': 'Médias',
+    'lib.colors': 'Couleurs',
+    'lib.palettes': 'Palettes',
+    'lib.fonts': 'Typo',
+    'lib.shapes': 'Formes',
+    'lib.importImages': 'Importer des images',
+    'lib.noMedia': 'Aucun média dans la session.<br>Importez des images ou déposez-les depuis le Finder.',
+    'lib.dragColor': 'Glissez une couleur sur le canvas, ou cliquez pour l’ajouter au centre.',
+    'lib.dragPalette': 'Glissez une palette complète sur le canvas.',
+    'lib.dragFont': 'Glissez une typographie pour créer une carte de spécimen.',
+    'lib.dragShape': 'Glissez une forme sur le canvas.',
+
+    /* ---- canvas vide ---- */
+    'empty.title': 'Cette table est vide.',
+    'empty.body': 'Glissez des images depuis le Finder, choisissez un outil à gauche,<br>ou faites un clic droit pour créer un élément.',
+    'empty.kbd': 'Espace + glisser pour se déplacer · Molette pour zoomer',
+
+    /* ---- préférences ---- */
+    'prefs.title': 'Préférences',
+    'prefs.lang': 'Langue de l’interface',
+    'prefs.lang.auto': 'Langue du système',
+    'prefs.lang.fr': 'Français',
+    'prefs.lang.en': 'English',
+    'prefs.lang.note': 'Par défaut, l’application et l’extension suivent la langue du système.',
+    'prefs.lang.reloaded': 'Langue enregistrée — rechargement…',
+    'prefs.files': 'Fichiers temporaires & enregistrements automatiques',
+    'prefs.files.custom': 'Dossier personnalisé — les autosaves et fichiers temporaires y sont écrits.',
+    'prefs.files.default': 'Dossier par défaut — {dir}.',
+    'prefs.pick': 'Choisir un dossier…',
+    'prefs.reveal': 'Révéler',
+    'prefs.reset': 'Dossier par défaut',
+    'prefs.close': 'Fermer',
+    'prefs.allBoards': 'Ce choix s‘applique à <strong>tous vos moodboards</strong> — application et extension. Chaque projet enregistré y conserve son propre autosave (jamais écrasé par un autre).',
+    'prefs.savedToast': 'Dossier enregistré',
+    'prefs.movedToast': 'Dossier enregistré — {n} fichier(s) déplacé(s)',
+    'prefs.resetToast': 'Dossier par défaut rétabli',
+    'prefs.webNote': 'La persistance fichier n‘est pas disponible dans cet environnement (aperçu navigateur) — les préférences s‘appliquent à l‘application et au panneau Illustrator.',
+
+    /* ---- mises à jour ---- */
+    'upd.title': 'Mises à jour',
+    'upd.available': 'Mise à jour disponible',
+    'upd.newVersion': '<strong>Moodboard {v}</strong> est disponible {date}— vous utilisez la version {cur} ({env}).',
+    'upd.later': 'Plus tard',
+    'upd.updateNow': 'Mettre à jour maintenant',
+    'upd.check': 'Vérifier les mises à jour',
+    'upd.installed': 'Version installée',
+    'upd.environment': 'Environnement',
+    'upd.latest': 'Dernière version',
+    'upd.checking': 'vérification en cours…',
+    'upd.unknown': 'inconnue',
+    'upd.newAvailable': 'Une nouvelle version est disponible.',
+    'upd.upToDate': 'Vous êtes à jour.',
+    'upd.news': 'Nouveautés',
+    'upd.noInfo': 'Aucune information récupérée pour l‘instant — la vérification nécessite une connexion internet.',
+    'upd.webNote': 'Les mises à jour automatiques s‘appliquent à l‘application et à l‘extension Illustrator.',
+    'upd.progress': 'Mise à jour de l‘application',
+    'upd.progressExt': 'Mise à jour de l‘extension',
+    'upd.downloadDone': 'Téléchargement terminé',
+    'upd.ready': 'Mise à jour prête',
+    'upd.quit': 'Quitter Moodboard',
+    'upd.fail': 'Échec de la mise à jour',
+    'upd.retryLater': 'Vous pourrez réessayer plus tard (clic sur le numéro de version).',
+    'upd.alreadyRunning': 'Une mise à jour est déjà en cours.',
+    'upd.checkFail': 'Vérification impossible — êtes-vous connecté à internet ?',
+    'upd.alreadyCurrent': 'Vous êtes déjà à jour (v{v}).',
+    'upd.webDialog': 'Cet aperçu navigateur ne se met pas à jour lui-même : les mises à jour s‘appliquent à l‘application de bureau et à l‘extension Illustrator.',
+    'upd.pendingChip': 'v{v} · maj dispo',
+
+    /* ---- écran d’accueil ---- */
+    'home.recents': 'Fichiers récents',
+    'home.favorites': 'Favoris',
+    'home.trash': 'Corbeille',
+    'home.newBoard': 'Nouveau moodboard',
+    'home.open': 'Ouvrir…',
+    'home.demo': 'Démonstration',
+    'home.import': 'Importer',
+    'home.help': 'Aide',
+    'home.search': 'Rechercher un moodboard…',
+    'home.session': 'Reprendre la session',
+    'home.sessionSub': 'non enregistré',
+    'home.element': 'élément',
+    'home.file': 'fichier',
+    'home.favorite': 'favori',
+    'home.entry': 'entrée',
+    'home.trashed': 'retiré {d}',
+    'home.noResults': 'Aucun résultat pour « {q} »',
+    'home.noResultsSub': 'Essayez un autre nom de moodboard.',
+    'home.noFav': 'Aucun favori pour l‘instant.',
+    'home.noFavSub': 'Épinglez vos moodboards fréquents depuis le menu ⋯ d‘une carte.',
+    'home.noTrash': 'La corbeille est vide.',
+    'home.noTrashSub': 'Les projets retirés de la liste restent restaurables ici.',
+    'home.noRecent': 'Aucun moodboard récent pour l‘instant.',
+    'home.noRecentSub': 'Créez-en un avec « Nouveau moodboard » ou ouvrez un fichier existant.',
+    'home.fav': 'Favori',
+    'home.menuOpen': 'Ouvrir',
+    'home.menuFav': 'Ajouter aux favoris',
+    'home.menuUnfav': 'Retirer des favoris',
+    'home.menuTrash': 'Retirer de la liste',
+    'home.menuRestore': 'Restaurer dans les récents',
+    'home.menuDelete': 'Supprimer de la corbeille',
+    'home.menuReveal': 'Révéler dans le Finder / l’Explorateur',
+
+    /* ---- à propos / raccourcis / dialogues ---- */
+    'about.tagline': 'Table de travail spatiale pour designers.',
+    'about.env.desktop': 'Environnement : application autonome',
+    'about.env.cep': 'Environnement : Adobe Illustrator (CEP actif)',
+    'about.env.web': 'Environnement : aperçu navigateur (hors Illustrator)',
+    'about.desktop': 'Application autonome (Electron) · macOS 11+ / Windows 10+',
+    'about.cep': 'CEP 10+ · Illustrator 2021+',
+    'dlg.close': 'Fermer',
+    'dlg.cancel': 'Annuler',
+    'dlg.confirm': 'Confirmer',
+    'dlg.ok': 'OK',
+    'shortcuts.title': 'Raccourcis clavier',
+
+    /* ---- toasts courants ---- */
+    'toast.saved': 'Enregistré · {name}',
+    'toast.copied': 'Copié',
+    'toast.nothingUndo': 'Rien à annuler',
+    'toast.nothingRedo': 'Rien à rétablir',
+
+    /* ---- types (libellés) ---- */
+    'type.text': 'texte',
+    'type.note': 'note',
+    'type.comment': 'commentaire',
+    'type.image': 'image',
+    'type.color': 'couleur',
+    'type.palette': 'palette',
+    'type.typography': 'typographie',
+    'type.link': 'lien',
+    'type.file': 'fichier',
+    'type.line': 'ligne',
+    'type.shape': 'forme',
+    'type.section': 'section',
+    'type.column': 'colonne',
+    'type.table': 'tableau',
+    'type.checklist': 'checklist',
+    'type.sketch': 'croquis',
+    'type.board': 'planche',
+    'type.group': 'groupe',
+    'type.import': 'carte d’import'
+  };
+
+  var EN = {
+    'menu.file': 'File',
+    'menu.edit': 'Edit',
+    'menu.object': 'Object',
+    'menu.view': 'View',
+    'menu.illustrator': 'Illustrator',
+    'menu.help': 'Help',
+    'menu.new': 'New moodboard',
+    'menu.open': 'Open…',
+    'menu.save': 'Save',
+    'menu.saveas': 'Save as…',
+    'menu.import': 'Import images…',
+    'menu.demo': 'Load demo board',
+    'menu.exportPng': 'Export PNG…',
+    'menu.exportSvg': 'Export SVG…',
+    'menu.exportSel': 'Export selection as SVG…',
+    'menu.prefs': 'Preferences…',
+    'menu.undo': 'Undo',
+    'menu.redo': 'Redo',
+    'menu.cut': 'Cut',
+    'menu.copy': 'Copy',
+    'menu.paste': 'Paste',
+    'menu.duplicate': 'Duplicate',
+    'menu.delete': 'Delete',
+    'menu.selectAll': 'Select all',
+    'menu.deselect': 'Deselect',
+    'menu.group': 'Group',
+    'menu.ungroup': 'Ungroup',
+    'menu.lock': 'Lock / unlock',
+    'menu.hide': 'Hide',
+    'menu.revealAll': 'Reveal all',
+    'menu.front': 'Bring to front',
+    'menu.forward': 'Bring forward',
+    'menu.backward': 'Send backward',
+    'menu.back': 'Send to back',
+    'menu.zoomIn': 'Zoom in',
+    'menu.zoomOut': 'Zoom out',
+    'menu.zoom100': 'Zoom 100%',
+    'menu.fit': 'Fit to screen',
+    'menu.zoomSel': 'Zoom to selection',
+    'menu.grid': 'Dot grid',
+    'menu.snap': 'Smart snapping',
+    'menu.library': 'Library',
+    'menu.inspector': 'Inspector',
+    'menu.cep.swatches': 'Import document swatches…',
+    'menu.cep.send': 'Send selected colors…',
+    'menu.cep.place': 'Place selected image…',
+    'menu.cep.docinfo': 'Document info…',
+    'menu.shortcuts': 'Keyboard shortcuts',
+    'menu.diagnostics': 'Diagnostics…',
+    'menu.about': 'About',
+    'save.saved': 'Saved',
+    'save.saving': 'Saving…',
+    'save.dirty': 'Modified',
+    'app.home': 'Home screen',
+    'app.projectName': 'Project name',
+
+    'tool.select.label': 'Select',
+    'tool.select.hint': 'Click an object, drag to move it',
+    'tool.pan.label': 'Hand',
+    'tool.pan.hint': 'Drag to pan the view',
+    'tool.note.label': 'Note',
+    'tool.note.hint': 'Click or drag on the canvas',
+    'tool.text.label': 'Text',
+    'tool.text.hint': 'Click to create text',
+    'tool.checklist.label': 'Checklist',
+    'tool.checklist.hint': 'Click to create a checklist',
+    'tool.comment.label': 'Comment',
+    'tool.comment.hint': 'Click to create a comment',
+    'tool.image.label': 'Image',
+    'tool.image.hint': 'Click to import images',
+    'tool.link.label': 'Link',
+    'tool.link.hint': 'Click to create a link',
+    'tool.line.label': 'Line',
+    'tool.line.hint': 'Drag to draw a line',
+    'tool.shape.label': 'Shape',
+    'tool.shape.hint': 'Drag to draw · double-click or long-press: pick the shape (rectangle, circle, triangle)',
+    'tool.shape.current': 'Shape — {shape} — drag to draw',
+    'tool.sketch.label': 'Sketch',
+    'tool.sketch.hint': 'Drag to draw freehand',
+    'tool.section.label': 'Section',
+    'tool.section.hint': 'Drag to outline a section',
+    'tool.column.label': 'Column',
+    'tool.column.hint': 'Drag to outline a column',
+    'tool.table.label': 'Table',
+    'tool.table.hint': 'Click to create a table',
+    'tool.board.label': 'Board',
+    'tool.board.hint': 'Create a linked moodboard inside this one — click its arrow to open it',
+    'tool.color.label': 'Color',
+    'tool.color.hint': 'Click to create a color chip',
+    'tool.palette.label': 'Palette',
+    'tool.palette.hint': 'Click to create a palette',
+    'tool.typography.label': 'Typography',
+    'tool.typography.hint': 'Click to create a type specimen',
+    'tool.import.label': 'Import',
+    'tool.import.hint': 'Double-click: file browser · drag to canvas: import card (import anything, even moodboards)',
+    'shape.rect': 'Rectangle',
+    'shape.ellipse': 'Circle',
+    'shape.triangle': 'Triangle',
+    'shape.branches': 'Branches (polygon sides)',
+    'shape.pickTitle': 'Pick a shape',
+
+    'insp.title': 'Inspector',
+    'insp.project': 'Project',
+    'insp.selection': 'Selection ({n})',
+    'insp.document': 'Document',
+    'insp.hidden': 'Hidden ({n})',
+    'insp.object': 'Object',
+    'insp.text': 'Text',
+    'insp.note': 'Note',
+    'insp.comment': 'Comment',
+    'insp.image': 'Image',
+    'insp.line': 'Line',
+    'insp.color': 'Color',
+    'insp.palette': 'Palette',
+    'insp.typography': 'Typography',
+    'insp.link': 'Link',
+    'insp.board': 'Linked board',
+    'insp.shape': 'Shape',
+    'insp.section': 'Section',
+    'insp.column': 'Column',
+    'insp.table': 'Table',
+    'insp.checklist': 'Checklist',
+    'insp.sketch': 'Sketch',
+    'insp.import': 'Import',
+    'insp.actions': 'Actions',
+    'insp.alignment': 'Align & distribute',
+    'insp.autoLayout': 'Auto layout',
+    'insp.selectHint': 'Select an object to edit its properties.',
+    'insp.revealAll': 'Reveal all',
+
+    'status.selectHint': 'Selection — click an object, drag to move it',
+    'status.shortcuts': 'Keyboard shortcuts: active when the panel has focus (click inside it)',
+    'status.versionTip': 'Installed version — click to check for updates',
+    'status.versionPending': 'Moodboard {v} is available — click to update',
+    'kbd.on': 'Keyboard active',
+    'kbd.off': 'Keyboard inactive (click inside the panel)',
+
+    'panel.library': 'Library',
+    'panel.inspector': 'Inspector',
+    'panel.collapse': 'Collapse',
+    'lib.media': 'Media',
+    'lib.colors': 'Colors',
+    'lib.palettes': 'Palettes',
+    'lib.fonts': 'Type',
+    'lib.shapes': 'Shapes',
+    'lib.importImages': 'Import images',
+    'lib.noMedia': 'No media in this session.<br>Import images or drop them from the Finder.',
+    'lib.dragColor': 'Drag a color onto the canvas, or click to add it in the center.',
+    'lib.dragPalette': 'Drag a whole palette onto the canvas.',
+    'lib.dragFont': 'Drag a typography to create a specimen card.',
+    'lib.dragShape': 'Drag a shape onto the canvas.',
+
+    'empty.title': 'This board is empty.',
+    'empty.body': 'Drag images from the Finder, pick a tool on the left,<br>or right-click to create an element.',
+    'empty.kbd': 'Space + drag to pan · Scroll to zoom',
+
+    'prefs.title': 'Preferences',
+    'prefs.lang': 'Interface language',
+    'prefs.lang.auto': 'System language',
+    'prefs.lang.fr': 'Français',
+    'prefs.lang.en': 'English',
+    'prefs.lang.note': 'By default, the app and the extension follow the system language.',
+    'prefs.lang.reloaded': 'Language saved — reloading…',
+    'prefs.files': 'Temporary files & auto-saves',
+    'prefs.files.custom': 'Custom folder — auto-saves and temporary files are written there.',
+    'prefs.files.default': 'Default folder — {dir}.',
+    'prefs.pick': 'Choose a folder…',
+    'prefs.reveal': 'Reveal',
+    'prefs.reset': 'Default folder',
+    'prefs.close': 'Close',
+    'prefs.allBoards': 'This applies to <strong>all your moodboards</strong> — app and extension. Each saved project keeps its own auto-save there (never overwritten by another).',
+    'prefs.savedToast': 'Folder saved',
+    'prefs.movedToast': 'Folder saved — {n} file(s) moved',
+    'prefs.resetToast': 'Default folder restored',
+    'prefs.webNote': 'File persistence is not available in this environment (browser preview) — preferences apply to the app and the Illustrator panel.',
+
+    'upd.title': 'Updates',
+    'upd.available': 'Update available',
+    'upd.newVersion': '<strong>Moodboard {v}</strong> is available {date}— you are on version {cur} ({env}).',
+    'upd.later': 'Later',
+    'upd.updateNow': 'Update now',
+    'upd.check': 'Check for updates',
+    'upd.installed': 'Installed version',
+    'upd.environment': 'Environment',
+    'upd.latest': 'Latest version',
+    'upd.checking': 'checking…',
+    'upd.unknown': 'unknown',
+    'upd.newAvailable': 'A new version is available.',
+    'upd.upToDate': 'You are up to date.',
+    'upd.news': "What's new",
+    'upd.noInfo': 'No information retrieved yet — checking requires an internet connection.',
+    'upd.webNote': 'Automatic updates apply to the desktop app and the Illustrator extension.',
+    'upd.progress': 'Updating the application',
+    'upd.progressExt': 'Updating the extension',
+    'upd.downloadDone': 'Download complete',
+    'upd.ready': 'Update ready',
+    'upd.quit': 'Quit Moodboard',
+    'upd.fail': 'Update failed',
+    'upd.retryLater': 'You can try again later (click the version number).',
+    'upd.alreadyRunning': 'An update is already in progress.',
+    'upd.checkFail': 'Check failed — are you connected to the internet?',
+    'upd.alreadyCurrent': 'You are already up to date (v{v}).',
+    'upd.webDialog': 'This browser preview does not update itself: updates apply to the desktop app and the Illustrator extension.',
+    'upd.pendingChip': 'v{v} · update',
+
+    'home.recents': 'Recent files',
+    'home.favorites': 'Favorites',
+    'home.trash': 'Trash',
+    'home.newBoard': 'New moodboard',
+    'home.open': 'Open…',
+    'home.demo': 'Demo',
+    'home.import': 'Import',
+    'home.help': 'Help',
+    'home.search': 'Search a moodboard…',
+    'home.session': 'Resume session',
+    'home.sessionSub': 'not saved',
+    'home.element': 'element',
+    'home.file': 'file',
+    'home.favorite': 'favorite',
+    'home.entry': 'item',
+    'home.trashed': 'removed {d}',
+    'home.noResults': 'No results for “{q}”',
+    'home.noResultsSub': 'Try another moodboard name.',
+    'home.noFav': 'No favorites yet.',
+    'home.noFavSub': 'Pin your frequent moodboards from a card’s ⋯ menu.',
+    'home.noTrash': 'The trash is empty.',
+    'home.noTrashSub': 'Projects removed from the list stay restorable here.',
+    'home.noRecent': 'No recent moodboard yet.',
+    'home.noRecentSub': 'Create one with “New moodboard” or open an existing file.',
+    'home.fav': 'Favorite',
+    'home.menuOpen': 'Open',
+    'home.menuFav': 'Pin',
+    'home.menuUnfav': 'Unpin',
+    'home.menuTrash': 'Move to trash',
+    'home.menuRestore': 'Restore',
+    'home.menuDelete': 'Delete permanently',
+    'home.menuReveal': 'Reveal in Finder / Explorer',
+
+    'about.tagline': 'A spatial worktable for designers.',
+    'about.env.desktop': 'Environment: standalone app',
+    'about.env.cep': 'Environment: Adobe Illustrator (CEP active)',
+    'about.env.web': 'Environment: browser preview (outside Illustrator)',
+    'about.desktop': 'Standalone app (Electron) · macOS 11+ / Windows 10+',
+    'about.cep': 'CEP 10+ · Illustrator 2021+',
+    'dlg.close': 'Close',
+    'dlg.cancel': 'Cancel',
+    'dlg.confirm': 'Confirm',
+    'dlg.ok': 'OK',
+    'shortcuts.title': 'Keyboard shortcuts',
+
+    'toast.saved': 'Saved · {name}',
+    'toast.copied': 'Copied',
+    'toast.nothingUndo': 'Nothing to undo',
+    'toast.nothingRedo': 'Nothing to redo',
+
+    'type.text': 'text',
+    'type.note': 'note',
+    'type.comment': 'comment',
+    'type.image': 'image',
+    'type.color': 'color',
+    'type.palette': 'palette',
+    'type.typography': 'typography',
+    'type.link': 'link',
+    'type.file': 'file',
+    'type.line': 'line',
+    'type.shape': 'shape',
+    'type.section': 'section',
+    'type.column': 'column',
+    'type.table': 'table',
+    'type.checklist': 'checklist',
+    'type.sketch': 'sketch',
+    'type.board': 'board',
+    'type.group': 'group',
+    'type.import': 'import card'
+  };
+
+  var DICTS = { fr: FR, en: EN };
+  var current = 'fr';
+
+  /* Langue du SYSTÈME : la préférence « auto » (par défaut) s'y réfère.
+   * fr* → français ; tout le reste → anglais (lingua franca). */
+  function systemLang() {
+    try {
+      var langs = (navigator.languages && navigator.languages.length)
+        ? navigator.languages
+        : [navigator.language || 'fr'];
+      var first = String(langs[0] || 'fr').toLowerCase();
+      if (first.indexOf('fr') === 0) return 'fr';
+      return 'en';
+    } catch (e) {
+      return 'fr';
+    }
+  }
+
+  function readStored() {
+    try {
+      if (MB.storage && MB.storage.prefs) {
+        var p = MB.storage.prefs();
+        if (p && (p.lang === 'fr' || p.lang === 'en')) return p.lang;
+      }
+    } catch (e) {
+      /* i18n s'exécute potentiellement avant le module de stockage */
+    }
+    /* Repli localStorage direct (i18n se charge AVANT storage.js). */
+    try {
+      var raw = localStorage.getItem('mb.prefs.v1');
+      var pj = raw ? JSON.parse(raw) : null;
+      if (pj && (pj.lang === 'fr' || pj.lang === 'en')) return pj.lang;
+    } catch (e) {
+      /* valeurs par défaut */
+    }
+    return 'auto';
+  }
+
+  function resolve() {
+    var pref = readStored();
+    current = pref === 'auto' ? systemLang() : pref;
+    return current;
+  }
+
+  /* t('menu.file') → libellé dans la langue active.
+   * t('key', { v: '1.9' }) → remplace {v}. */
+  function t(key, vars) {
+    var s = (DICTS[current] && DICTS[current][key]) || FR[key] || key;
+    if (vars) {
+      Object.keys(vars).forEach(function (k) {
+        s = s.split('{' + k + '}').join(String(vars[k]));
+      });
+    }
+    return s;
+  }
+
+  function init() {
+    resolve();
+    document.documentElement.setAttribute('lang', current === 'en' ? 'en' : 'fr');
+  }
+
+  /* Changement de langue : la préférence est écrite, puis la page est
+   * rechargée (les menus et panneaux sont reconstruits au démarrage). */
+  function setLang(lang) {
+    var v = lang === 'fr' || lang === 'en' ? lang : 'auto';
+    try {
+      if (MB.storage && MB.storage.setPref) {
+        MB.storage.setPref('lang', v);
+      } else {
+        var raw = localStorage.getItem('mb.prefs.v1');
+        var pj = raw ? JSON.parse(raw) : {};
+        pj.lang = v;
+        localStorage.setItem('mb.prefs.v1', JSON.stringify(pj));
+      }
+    } catch (e) {
+      /* non bloquant */
+    }
+    MB.ui.toast(t('prefs.lang.reloaded'), 'success');
+    setTimeout(function () {
+      try {
+        window.location.reload();
+      } catch (err) {
+        /* recharger reste possible à la main */
+      }
+    }, 650);
+  }
+
+  init();
+
+  MB.i18n = {
+    t: t,
+    init: init,
+    setLang: setLang,
+    lang: function () {
+      return current;
+    },
+    pref: readStored,
+    systemLang: systemLang
+  };
+})();

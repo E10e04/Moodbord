@@ -191,7 +191,7 @@ Dézipper l'archive **à la racine** du dossier extensions, de sorte que `CSXS/`
 > 5. relancer Illustrator.
 >
 > **Vérifiez la version installée** : le badge en bas à droite de la barre d'état
-> du panneau doit afficher **v1.8.0**. S'il affiche autre chose, l'ancienne
+> du panneau doit afficher **v1.9.0**. S'il affiche autre chose, l'ancienne
 > installation est encore active.
 
 ### 3. Activer le PlayerDebugMode
@@ -267,6 +267,39 @@ Si un jour les **drags ne répondent plus alors que le zoom molette fonctionne**
 `MB.interact.diag()` retourne le nombre d'événements **réellement livrés** par le moteur de chaque famille (`pointerdown`, `mousedown`, `pointermove`, `mousemove`, `blur`, `pointercancel`…) ainsi que l'état de la machine à gestes (`gesture`, `spaceDown`, `tool`). Depuis la v1.0.1, la couche d'interaction est **adaptive** : elle branche à la fois les Pointer Events et les événements souris, et bascule automatiquement sur la souris si le moteur CEP hôte ne livre pas les Pointer Events (cas observé selon les versions d'Illustrator).
 
 Depuis la **v1.0.2**, les gestes **survivent** aux événements `blur` / `pointercancel` parasites que certains hôtes CEP émettent au milieu d'un drag (symptôme typique : « le zoom marche mais rien ne se déplace ») : le geste continue s'il reçoit encore des événements, et n'est annulé proprement (avec rollback) que si plus rien n'arrive pendant 600 ms.
+
+#### Nouveautés v1.9.0 — langue, liens, formes, barre riche réparée
+
+1. **Langue de l'interface** (Préférences ▸ Langue) : « Langue du
+   système » par défaut — l'application ET l'extension suivent la langue
+   du système d'exploitation — ou forçage **Français / English**.
+   Menus, outils, panneaux, dialogues et écran d'accueil traduits ;
+   la préférence vit dans `prefs.json` (partagée).
+2. **Barre de mise en forme réparée** : un appui sur ses boutons ne
+   quittait plus l'édition en cours (le clic remontait au canvas et
+   validait l'élément avant l'action) — la sélection survit et le
+   formatage s'applique vraiment.
+3. **Cartes de lien repensées** : **couleur de carte** modifiable
+   (inspecteur, avec encre adaptée), **aperçu STATIQUE** du site —
+   capture d'écran par l'application (WebContentsView hors écran,
+   jamais animé), `og:image` dans l'extension, favicon en repli — et
+   **flèche d'ouverture moderne** (diagonale fine).
+4. **Miniatures de l'écran d'accueil** retravaillées : cadrage
+   resserré (le contenu remplit la carte), fond papier chaud, JPEG 0.85,
+   léger zoom au survol.
+5. **Bouton Police** : libellé « Police » (l'ancien rendu affichait la
+   source de la fonction : « function () { … } ») ; la police courante
+   reste dans l'info-bulle.
+6. **Mises à jour sans lien externe** : les dialogues ne montrent plus
+   aucun lien vers le dépôt GitHub (boutons retirés, notes de release
+   filtrées) — la mise à jour reste automatique.
+7. **Outil Forme** : **sélecteur Rectangle / Cercle / Triangle** —
+   double-clic ou appui long sur le bouton d'outil, ou sélecteur ouvert
+   directement au point de dépôt sur le canvas. Le **triangle** est un
+   polygone régulier dont le **nombre de branches** (3, 4, 5, 6, 8, 12
+   ou libre 3-24) se règle dans le panneau Projet.
+8. **Préférences** : section langue + dossier des fichiers temporaires
+   (v1.7/v1.8) dans un dialogue repensé, sans texte parasite.
 
 #### Nouveautés v1.8.0 — notes riches, groupes, import, tableaux, favoris
 

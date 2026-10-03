@@ -218,6 +218,34 @@ npm run dist:mac               # → dist/Moodboard-1.4.0-x64.dmg + arm64.dmg (s
 
 ## 📜 Changelog
 
+### v1.9.0 — langue de l'interface, liens repensés, sélecteur de formes
+
+1. **Langue de l'interface** (Préférences ▸ Langue) : « Langue du
+   système » par défaut — l'application ET l'extension suivent la
+   langue du système — ou forçage **Français / English** (menus,
+   outils, panneaux, dialogues, écran d'accueil traduits ; préférence
+   partagée dans `prefs.json`).
+2. **Barre de mise en forme réparée** (bug v1.8) : un appui sur ses
+   boutons ne quitte plus l'édition — le clic remontait au canvas et
+   validait l'élément avant l'action du bouton ; la sélection survit
+   et le formatage s'applique.
+3. **Cartes de lien** : couleur de carte modifiable + **aperçu
+   STATIQUE** du site visé (capture d'écran dans l'application via
+   WebContentsView hors écran ; `og:image` dans l'extension CEP ;
+   favicon en repli) + **flèche d'ouverture moderne**.
+4. **Miniatures de l'écran d'accueil** : cadrage resserré, fond papier
+   chaud, JPEG 0.85, zoom au survol.
+5. **Bouton Police** : libellé « Police » (l'ancien affichait la source
+   de la fonction `current()`).
+6. **Dialogues de mise à jour** : plus aucun lien vers le dépôt GitHub
+   (boutons retirés, notes filtrées) — la mise à jour reste automatique.
+7. **Outil Forme** : sélecteur **Rectangle / Cercle / Triangle**
+   (double-clic ou appui long sur l'outil, ou directement au point de
+   dépôt sur le canvas) ; le triangle devient un **polygone régulier**
+   dont le nombre de **branches** (3-24) se règle dans le panneau Projet.
+8. Vérifications : **360 assertions E2E** (v102→v190) + 114 simulation
+   stockage au vert, zéro erreur console, VLM conforme.
+
 ### v1.8.0 — notes riches, groupes réparés, outil Importer, tableaux, favoris
 
 1. **Notes et textes riches** : pendant l'édition, une **barre de mise en
