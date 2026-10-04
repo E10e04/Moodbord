@@ -39,6 +39,11 @@ const csp =
   "default-src 'none'; " +
   "script-src 'self'; " +
   "style-src 'self' 'unsafe-inline'; " +
+  /* v1.14 : l'outil Preview rend le template web dans une iframe
+   * locale (assets/preview-template) — frame-src l'y autorise (file:
+   * en plus de 'self', les origines file: ne matchent pas toujours
+   * 'self' selon les versions de Chromium). */
+  "frame-src 'self' file:; " +
   "img-src 'self' data: blob: https:; " +
   "font-src 'self' data:; " +
   'connect-src &#39;self&#39; https://api.github.com https://github.com https://raw.githubusercontent.com https://objects.githubusercontent.com; ' +

@@ -49,9 +49,11 @@
       { id: 'palette', icon: 'palette', key: 'A', tKey: 'tool.palette' },
       { id: 'typography', icon: 'typography', key: 'Y', tKey: 'tool.typography' },
       { sep: true },
-      /* v1.11 — carte Assignees (composant Bencho) : qui travaille
-       * sur ce morceau du moodboard. */
-      { id: 'assignees', icon: 'users', key: 'U', tKey: 'tool.assignees' },
+      /* v1.14 — l'outil PREVIEW remplace l'outil Assignées : il
+       * n'ajoute rien au canvas — il ouvre l'expérience de
+       * visualisation (choix des couleurs puis rendu du template
+       * web recoloré en direct). */
+      { id: 'preview', icon: 'preview', key: 'U', tKey: 'tool.preview' },
       { id: 'import', icon: 'import', tKey: 'tool.import' }
     ];
   }
@@ -189,6 +191,9 @@
       var id = keyMap[e.key.toLowerCase()];
       if (id) {
         MB.store.setTool(id);
+        /* v1.14 — raccourci Preview : comme le clic sur l'outil, le
+         * raccourci ouvre la configuration des couleurs. */
+        if (id === 'preview' && MB.ui.preview) MB.ui.preview.open();
         e.preventDefault();
       }
     });
@@ -231,6 +236,11 @@
         }, 450);
       }
 
+      /* v1.14 — PREVIEW : outil de VISUALISATION, pas de création —
+       * pas de ghost drag-out (rien à déposer sur le canvas) ; le
+       * clic ouvre l'interface de configuration des couleurs. */
+      if (t.id === 'preview') return;
+
       // drag-out : ghost + drop sur le canvas
       MB.ui.ghost.start(
         {
@@ -267,6 +277,12 @@
     // clic simple (pas de drag) : active l'outil
     btn.addEventListener('click', function () {
       MB.store.setTool(t.id);
+      /* v1.14 — PREVIEW : le clic sur l'outil ouvre directement la
+       * configuration des couleurs (le site n'est JAMAIS généré
+       * avant que le designer ait validé sa palette). */
+      if (t.id === 'preview' && MB.ui.preview) {
+        MB.ui.preview.open();
+      }
     });
 
     /* v1.8 — double-clic sur l'outil Importer : ouvre DIRECTEMENT

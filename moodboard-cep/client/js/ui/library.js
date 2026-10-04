@@ -1,12 +1,14 @@
 /* =========================================================================
  * library.js — Bibliothèque latérale : médias importés, couleurs,
- * palettes, typographies, formes. Chaque item se glisse sur le canvas.
+ * palettes, typographies. Chaque item se glisse sur le canvas.
  *
  * v1.13 — bibliothèque ÉDITABLE : les quatre onglets (Médias, Couleurs,
  * Palettes, Typo) acceptent des AJOUTS et des RETRAITS — y compris sur
  * les entrées intégrées et les ASSETS DE DÉMO (masqués, jamais détruits
  * : « Restaurer les images de démo » les ramène). L'état complet vit
  * dans library.json v2 (cf. storage.readLibraryFull/writeLibraryFull).
+ * v1.14 — onglet FORMES retiré (les formes se créent avec l'outil Forme
+ * de la barre d'outils ; la bibliothèque reste épurée).
  * ========================================================================= */
 (function () {
   'use strict';
@@ -23,8 +25,7 @@
     { id: 'media', key: 'lib.media' },
     { id: 'colors', key: 'lib.colors' },
     { id: 'palettes', key: 'lib.palettes' },
-    { id: 'fonts', key: 'lib.fonts' },
-    { id: 'shapes', key: 'lib.shapes' }
+    { id: 'fonts', key: 'lib.fonts' }
   ];
 
   var COLORS = [
@@ -121,12 +122,6 @@
     'Georgia', 'Times New Roman', 'Palatino Linotype', 'Garamond',
     'Arial', 'Verdana', 'Trebuchet MS', 'Tahoma',
     'Courier New', 'Impact'
-  ];
-
-  var SHAPES = [
-    { id: 'rect', label: 'Rectangle' },
-    { id: 'ellipse', label: 'Ellipse' },
-    { id: 'triangle', label: 'Triangle' }
   ];
 
   /* Médias de démonstration embarqués (assets/demo) : peuplent
@@ -720,25 +715,6 @@
     host.appendChild(list);
   }
 
-  /* ------------------------------------------------------------ FORMES */
-
-  function renderShapes() {
-    var host = document.getElementById('lib-content');
-    host.innerHTML = '<div class="lib-note">' + T('lib.dragShape') + '</div>';
-    var grid = U.el('div', 'lib-grid lib-grid--shapes');
-    SHAPES.forEach(function (s) {
-      var item = U.el('div', 'lib-shape');
-      item.dataset.tip = s.label;
-      item.innerHTML = MB.icons.get(s.id === 'rect' ? 'square' : s.id, 26);
-      item.dataset.ghostHtml = MB.icons.get(s.id === 'rect' ? 'square' : s.id, 18);
-      bindDragItem(item, function () {
-        return { shape: s.id };
-      }, 'shape', 'lib:forme ' + s.id);
-      grid.appendChild(item);
-    });
-    host.appendChild(grid);
-  }
-
   /* ------------------------------------------------------------- MÉDIAS */
 
   function renderMedia() {
@@ -867,7 +843,6 @@
     if (tab === 'colors') renderColors();
     else if (tab === 'palettes') renderPalettes();
     else if (tab === 'fonts') renderFonts();
-    else if (tab === 'shapes') renderShapes();
     else renderMedia();
   }
 

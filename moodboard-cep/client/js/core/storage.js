@@ -582,8 +582,16 @@
     return s.slice(0, i) || '/';
   }
 
+  /* v1.14 — configuration PREVIEW (couleurs du dernier aperçu) :
+   * un objet libre { colors:[{id,name,role,value}] } sanitisé par
+   * le moteur (MB.preview.sanitizeConfig) avant écriture. */
+  function validPreviewConfig(p) {
+    if (!p || typeof p !== 'object' || !Array.isArray(p.colors)) return null;
+    return p;
+  }
+
   function readPrefs() {
-    var base = { lastDir: '', defaultFont: '', dataDir: '', fontFavs: [], lang: 'auto', shapeTool: 'rect' };
+    var base = { lastDir: '', defaultFont: '', dataDir: '', fontFavs: [], lang: 'auto', shapeTool: 'rect', preview: null };
     if (baseDir) {
       var r = readText(baseDir + '/' + PREFS_FILE);
       if (!r.error && r.text) {
@@ -600,7 +608,8 @@
               /* v1.9 — langue de l'interface ('auto' suit le système) et
                * forme active de l'outil Forme. */
               lang: p.lang === 'fr' || p.lang === 'en' ? p.lang : 'auto',
-              shapeTool: typeof p.shapeTool === 'string' ? p.shapeTool : 'rect'
+              shapeTool: typeof p.shapeTool === 'string' ? p.shapeTool : 'rect',
+              preview: validPreviewConfig(p.preview)
             };
           }
         } catch (e) {
@@ -619,7 +628,8 @@
         dataDir: pj && isAbsPath(pj.dataDir || '') ? pj.dataDir : '',
         fontFavs: pj && Array.isArray(pj.fontFavs) ? pj.fontFavs : [],
         lang: pj && (pj.lang === 'fr' || pj.lang === 'en') ? pj.lang : 'auto',
-        shapeTool: pj && typeof pj.shapeTool === 'string' ? pj.shapeTool : 'rect'
+        shapeTool: pj && typeof pj.shapeTool === 'string' ? pj.shapeTool : 'rect',
+        preview: validPreviewConfig(pj && pj.preview)
       };
     } catch (e) {
       return base;

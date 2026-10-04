@@ -35,7 +35,7 @@ Point d'honnêteté : **Adobe recommande UXP pour tout nouveau développement d'
 - Canvas infini avec **caméra découplée** : zoom focalisé sur le curseur (molette), zoom 100 % / ajuster à l'écran / zoom sur la sélection, pan (Espace + glisser, bouton milieu, outil Main `H`).
 
 ### Objets — 16 types éditables + groupes
-Texte, note, commentaire, image, couleur, palette, typographie, lien, fichier, **ligne attachable** (avec flèches, raccordable aux autres éléments), forme, **colonne conteneur** (mini-canvas vertical), tableau, checklist, croquis (tracé à main levée), **carte assignées** (composant personnes) — plus le **groupe** (`⌘/Ctrl + G`) comme conteneur logique.
+Texte, note, commentaire, image, couleur, palette, typographie, lien, fichier, **ligne attachable** (avec flèches, raccordable aux autres éléments), forme, **colonne conteneur** (mini-canvas vertical), tableau, checklist, croquis (tracé à main levée), **carte assignées** (cartes existantes ; l'outil de création a été remplacé par l'outil Preview en v1.14) — plus le **groupe** (`⌘/Ctrl + G`) comme conteneur logique.
 
 ### Sélection et transformation
 - Sélection multiple, **marquee** (lasso sur zone vide), `Maj + clic` pour ajouter/retirer.
@@ -46,6 +46,7 @@ Texte, note, commentaire, image, couleur, palette, typographie, lien, fichier, *
 
 ### Édition et flux de travail
 - **Historique Undo/Redo transactionnel** (80 entrées, 1 entrée par geste).
+- **OUTIL PREVIEW (v1.14)** (`U`) : configurer les **couleurs par rôles** (principale, secondaire, accent + autant de couleurs supplémentaires que voulu, ou une palette entière de la bibliothèque) puis **prévisualiser un vrai site web** (template Clearwave embarqué) recoloré **en direct** — responsive Bureau / Tablette / Mobile, retour au canvas d'Échap, rien n'est ajouté au moodboard.
 - Presse-papiers (copier / couper / coller), `⌘/Ctrl + D` pour dupliquer.
 - `Alt + glisser` = **duplication rapide** ; sur une section/colonne, `Alt + glisser` déplace **le conteneur seul** (sans son contenu).
 - **Alignement / distribution** de la sélection ; **disposition automatique** d'un lot d'images : grille, masonry ou collage.
@@ -191,7 +192,7 @@ Dézipper l'archive **à la racine** du dossier extensions, de sorte que `CSXS/`
 > 5. relancer Illustrator.
 >
 > **Vérifiez la version installée** : le badge en bas à droite de la barre d'état
-> du panneau doit afficher **v1.13.0**. S'il affiche autre chose, l'ancienne
+> du panneau doit afficher **v1.14.0**. S'il affiche autre chose, l'ancienne
 > installation est encore active.
 
 ### 3. Activer le PlayerDebugMode
@@ -267,6 +268,41 @@ Si un jour les **drags ne répondent plus alors que le zoom molette fonctionne**
 `MB.interact.diag()` retourne le nombre d'événements **réellement livrés** par le moteur de chaque famille (`pointerdown`, `mousedown`, `pointermove`, `mousemove`, `blur`, `pointercancel`…) ainsi que l'état de la machine à gestes (`gesture`, `spaceDown`, `tool`). Depuis la v1.0.1, la couche d'interaction est **adaptive** : elle branche à la fois les Pointer Events et les événements souris, et bascule automatiquement sur la souris si le moteur CEP hôte ne livre pas les Pointer Events (cas observé selon les versions d'Illustrator).
 
 Depuis la **v1.0.2**, les gestes **survivent** aux événements `blur` / `pointercancel` parasites que certains hôtes CEP émettent au milieu d'un drag (symptôme typique : « le zoom marche mais rien ne se déplace ») : le geste continue s'il reçoit encore des événements, et n'est annulé proprement (avec rollback) que si plus rien n'arrive pendant 600 ms.
+
+#### Nouveautés v1.14.0 — outil Preview, bibliothèque recentrée
+
+1. **Nouvel outil « Preview »** (raccourci **U**, à la place de l'outil
+   Assignées) : tester l'identité colorimétrique du moodboard sur un **vrai
+   site web**. Le clic ouvre d'abord la **configuration des couleurs** —
+   trois rôles par défaut (**Principale** : structure, titres, marque ;
+   **Secondaire** : fonds et surfaces ; **Accent** : boutons, CTA, éléments
+   interactifs), et autant de couleurs supplémentaires que nécessaire
+   (« + Ajouter une couleur » → Couleur 4, 5, 6…). Chaque ligne offre
+   pastille, code **HEX**, sélecteur et suppression ; une **palette de la
+   bibliothèque** se charge d'un clic (« Depuis la bibliothèque… »). Le bouton
+   **Prévisualiser** rend le template fourni (**TemplateMo 622 Clearwave**,
+   embarqué) comme un vrai site — **recoloré en direct** par variables CSS
+   (`--preview-primary/secondary/accent/…`) : modifier une pastille pendant
+   l'aperçu recolore le site **instantanément**, sans rechargement. L'aperçu
+   est **responsive** (Bureau / Tablette 768 / Mobile 390), le **contraste**
+   du texte sur les couleurs est calculé (WCAG), et **Échap** ramène au canvas
+   — aucun élément du moodboard n'est touché. La dernière configuration est
+   conservée (prefs).
+2. **Bibliothèque recentrée** : l'onglet **Formes** est retiré (les formes se
+   créent avec l'outil Forme de la barre d'outils — rectangle, cercle,
+   triangle) ; les quatre onglets restants (Médias, Couleurs, Palettes, Typo)
+   sont inchangés.
+3. **Outil Assignées retiré du rail** : remplacé par Preview. Les cartes
+   déjà posées sur les planches existantes **continuent de se rendre** et
+   de s'exporter (aucune perte de données).
+
+Le moteur de Preview est **extensible par rôles** (primary, secondary,
+accent, extra-4/5/6… — les rôles personnalisés restent possibles) : un
+futur template n'aura qu'à consommer d'autres variables.
+
+Vérifié par **662 assertions E2E** (15 suites : v102→v1140, dont la
+nouvelle suite v1140 ×84 couvrant les 18 tests demandés) + **114 assertions
+de simulation de stockage**, zéro erreur console.
 
 #### Nouveautés v1.13.0 — bibliothèque éditable, note réparée, chargement liquide, cercles parfaits
 

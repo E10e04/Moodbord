@@ -31,7 +31,7 @@
   var CLICK_CREATE = {
     text: 1, note: 1, color: 1, palette: 1, typography: 1,
     link: 1, checklist: 1, comment: 1, table: 1, image: 1, import: 1,
-    board: 1, assignees: 1
+    board: 1
   };
   var RECT_CREATE = { column: 1, shape: 1 };
 
@@ -1083,6 +1083,15 @@
     if (st.tool === 'line') return startLineCreate(e);
     if (st.tool === 'sketch') return startSketch(e);
     if (RECT_CREATE[st.tool]) return startRectCreate(e);
+    /* v1.14 — OUTIL PREVIEW : le clic sur le canvas ouvre la
+     * configuration des couleurs (aucun élément ne se crée — le
+     * Preview est une expérience de visualisation, complémentaire
+     * du moodboard). */
+    if (st.tool === 'preview') {
+      e.preventDefault();
+      if (MB.ui.preview) MB.ui.preview.open();
+      return;
+    }
     if (CLICK_CREATE[st.tool]) {
       gesture = {
         mode: 'create-click',

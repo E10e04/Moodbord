@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src &#39;self&#39; https://api.github.com https://github.com https://raw.githubusercontent.com https://objects.githubusercontent.com; base-uri &#39;none&#39;; form-action &#39;none&#39;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; frame-src 'self' file:; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src &#39;self&#39; https://api.github.com https://github.com https://raw.githubusercontent.com https://objects.githubusercontent.com; base-uri &#39;none&#39;; form-action &#39;none&#39;">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Moodboard — Adobe Illustrator (CEP)</title>
 <link rel="stylesheet" href="css/panel.css">
@@ -130,6 +130,7 @@
 <script src="js/core/storage.js"></script>
 <script src="js/core/imaging.js"></script>
 <script src="js/core/updater.js"></script>
+<script src="js/core/previewEngine.js"></script>
 <script src="js/core/demo.js"></script>
 
 <!-- ===== Canvas engine ===== -->
@@ -142,6 +143,7 @@
 <!-- ===== UI ===== -->
 <script src="js/ui/assignees.js"></script>
 <script src="js/ui/palette.js"></script>
+<script src="js/ui/preview.js"></script>
 <script src="js/ui/overlays.js"></script>
 <script src="js/ui/home.js"></script>
 <script src="js/ui/toolbar.js"></script>
