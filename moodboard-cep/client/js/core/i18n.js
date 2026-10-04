@@ -237,6 +237,10 @@
     'lib.removedPalette': 'Palette retirée de la bibliothèque',
     'lib.addedFont': 'Police ajoutée à la bibliothèque',
     'lib.removedFont': 'Police retirée de la bibliothèque',
+    /* v1.14.1 — onglet Typo : toutes les polices de l'ordinateur. */
+    'lib.fontsSourceHost': 'Toutes les polices d’Illustrateur',
+    'lib.fontsSourceSystem': 'Toutes les polices de cet ordinateur',
+    'lib.fontsSourceWeb': 'Polices web-safe (aperçu navigateur)',
     'lib.removedDemo': 'Image de démo retirée de la bibliothèque',
     'lib.restoredDemo': 'Images de démo restaurées',
     'lib.alreadyLib': 'Déjà dans la bibliothèque.',
@@ -585,6 +589,10 @@
     'lib.removedPalette': 'Palette removed from the library',
     'lib.addedFont': 'Typeface added to the library',
     'lib.removedFont': 'Typeface removed from the library',
+    /* v1.14.1 — Typo tab: every font on the computer. */
+    'lib.fontsSourceHost': 'Every Illustrator typeface',
+    'lib.fontsSourceSystem': 'Every font on this computer',
+    'lib.fontsSourceWeb': 'Web-safe fonts (browser preview)',
     'lib.removedDemo': 'Demo image removed from the library',
     'lib.restoredDemo': 'Demo images restored',
     'lib.alreadyLib': 'Already in the library.',

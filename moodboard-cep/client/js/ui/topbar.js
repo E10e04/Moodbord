@@ -248,6 +248,19 @@
     if (openMenu && !openMenu.wrap.contains(e.target)) closeMenu();
   }
 
+  /* v1.14.1 — UNE FOIS UN MOODBOARD OUVERT, le logo et le nom
+   * « Moodboard » quittent la barre supérieure (à côté de Fichier et
+   * des autres menus) : la marque laisse la place au travail. Seul
+   * l'écran d'accueil de l'application de bureau garde l'état
+   * « sans moodboard ouvert » — il couvre de toute façon la barre ;
+   * en web/extension, un moodboard est ouvert dès le démarrage. */
+  function refreshBrand() {
+    var brand = document.querySelector('#topbar .brand');
+    if (!brand) return;
+    var homeShowing = !!(MB.ui.home && MB.ui.home.visible && MB.ui.home.visible());
+    brand.classList.toggle('is-gone', !homeShowing);
+  }
+
   function init() {
     var bar = document.getElementById('menubar');
     var menus = buildMenus();
@@ -296,6 +309,12 @@
 
     // v1.6 — fil d'Ariane des planches liées : racine ▸ planche ▸ …
     initCrumb();
+
+    /* v1.14.1 — logo + nom retirés dès qu'un moodboard est ouvert (la
+     * demande d'un état se referme quand l'état change : show/hide de
+     * l'accueil et chargement d'un document rafraîchissent aussi). */
+    refreshBrand();
+    MB.store.on('project', refreshBrand);
 
     // nom du projet
     var nameInput = document.getElementById('proj-name');
@@ -488,5 +507,5 @@
   }
 
   MB.ui = MB.ui || {};
-  MB.ui.topbar = { init: init, closeMenu: closeMenu };
+  MB.ui.topbar = { init: init, closeMenu: closeMenu, refreshBrand: refreshBrand };
 })();

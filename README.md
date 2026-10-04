@@ -183,7 +183,12 @@ npm run dist:mac               # → dist/Moodboard-1.4.0-x64.dmg + arm64.dmg (s
   `Alt+glisser` duplication, alignement/distribution, disposition automatique
   (grille, masonry, collage).
 - **Bibliothèque latérale** + import par drop multi-fichiers (cascade depuis
-  le curseur).
+  le curseur) — éditable (ajouts/retraits dans chaque onglet, Typo liste
+  TOUTES les polices de l'ordinateur).
+- **Outil Preview** (`U`) : l'identité du moodboard (rôles principale /
+  secondaire / accent + couleurs libres) appliquée à un vrai site web
+  embarqué, recoloré EN DIRECT par variables CSS, responsive
+  ordinateur / tablette / téléphone.
 - **Export** : SVG vectoriel (ouvrable dans Illustrator) et PNG 2×.
 - **Diagnostics intégrés** : badge de version, menu Aide ▸ Diagnostics…,
   journal persistant `diagnostic.log`.
@@ -195,8 +200,11 @@ npm run dist:mac               # → dist/Moodboard-1.4.0-x64.dmg + arm64.dmg (s
 
 ## 🧪 Vérifications effectuées
 
-- **Web/CEP — 486/486 tests E2E navigateur** (9 suites : v1.8.0, v1.6.1, v1.6.0, v1.5.0 ×2 phases, v1.4.0 ×2 phases, v1.3.0, v1.2.0, events, v1.0.2) + **114/114 assertions de stockage** (83 v1.4-1.7 + 31 v1.8 : slots par projet, noms synchronisés) : drags au 1/100 de pixel,
-  simulation CEP sans Pointer Events, survie blur/pointercancel, undo exact.
+- **Web/CEP — 706/706 tests E2E navigateur** (16 suites : v1.0.2 → v1.14.1,
+  dont la suite v1141 ×44 couvrant les six demandes) + **114/114 assertions
+  de stockage** : drags au 1/100 de pixel, simulation CEP sans Pointer
+  Events, survie blur/pointercancel, undo exact, Preview recoloré en
+  direct vérifié dans l'iframe.
 - **Bureau — 10/10 tests E2E** sous Electron headless (Xvfb) : déplacement
   d'élément delta monde exact, autosave persisté sur disque via IPC, CSP
   acceptée, zéro erreur console.
@@ -218,6 +226,40 @@ npm run dist:mac               # → dist/Moodboard-1.4.0-x64.dmg + arm64.dmg (s
    placeholder générés par IA.
 
 ## 📜 Changelog
+
+## 🆕 v1.14.1 — six correctifs d'usage
+
+1. **Typo : toutes les polices de l'ordinateur** — l'onglet Typo de la
+   bibliothèque liste chaque famille installée (Illustrateur en CEP, système
+   en bureau) ; retrait réversible, source indiquée.
+2. **Panneau de couleurs du Preview redessiné** — marges cohérentes (18 px),
+   plus rien de collé au conteneur.
+3. **Palettes de la bibliothèque en ronds qui se chevauchent** — le sélecteur
+   du Preview montre les couleurs (design de l'outil Palette), pas les noms.
+4. **Fenêtre Preview pleinement interactive** (bureau) — correctif
+   `-webkit-app-region: no-drag` (les pastilles, le « + » et les boutons
+   responsive ne répondaient pas au clic sur la zone de déplacement
+   native) ; la bibliothèque reste atteignable pendant l'aperçu.
+5. **Boutons responsive en icônes** — ordinateur, tablette, téléphone.
+6. **Barre supérieure épurée** — logo et nom retirés une fois un moodboard
+   ouvert (ils reviennent sur l'écran d'accueil).
+
+706 assertions E2E (16 suites, v1141 ×44) + 114 simulation, zéro erreur
+console.
+
+### v1.14.0 — outil Preview, bibliothèque recentrée
+
+1. **Outil « Preview »** (`U`, à la place d'Assignées) : configuration des
+   couleurs par rôles (principale / secondaire / accent + couleurs libres,
+   palettes de la bibliothèque) puis rendu du template TemplateMo 622
+   Clearwave comme un vrai site — recoloré en direct par variables CSS,
+   responsive, contraste WCAG calculé, Échap = retour canvas exact.
+2. **Onglet Formes retiré** de la bibliothèque (l'outil Forme du rail reste
+   le chemin de création) ; **outil Assignées retiré du rail** (les cartes
+   existantes continuent de se rendre et s'exporter).
+
+662 assertions E2E (15 suites, v1140 ×84 couvrant les 18 tests demandés) +
+114 simulation.
 
 ## 🆕 v1.13.0 — bibliothèque éditable, note réparée, chargement liquide, cercles parfaits
 

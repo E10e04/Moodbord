@@ -89,6 +89,18 @@ button:focus-visible, input:focus-visible, [contenteditable]:focus-visible {
 .tb-sep { width: 1px; height: 20px; background: var(--border); margin: 0 6px; }
 
 .brand { display: flex; align-items: center; gap: 8px; user-select: none; }
+/* v1.14.1 — une fois un moodboard ouvert, la marque quitte la barre
+ * (repli en douceur — jamais un saut de mise en page). */
+.brand.is-gone {
+  width: 0; min-width: 0;
+  gap: 0;
+  /* annule les deux gouttières de .tb-left (10 px chacune) — la
+   * barre ne garde AUCUNE trace du bloc replié */
+  margin: 0 -10px;
+  overflow: hidden; opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+}
 .brand-mark {
   width: 22px; height: 22px; display: block;
   filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.35));
@@ -198,6 +210,13 @@ button:focus-visible, input:focus-visible, [contenteditable]:focus-visible {
 
 .lib-content { padding: 0 10px 14px; }
 .lib-note { color: var(--text-faint); font-size: 11.5px; line-height: 1.5; padding: 8px 2px 10px; }
+/* v1.14.1 — source des familles de l'onglet Typo (ordinateur entier) :
+ * la même note, un cran plus discret. */
+.lib-note--dim { padding: 0 2px 10px; font-size: 11px; color: var(--text-faint); opacity: 0.75; font-style: italic; }
+/* v1.14.1 — liste Typo : des CENTAINES de familles peuvent arriver —
+ * la liste respire un peu moins pour que tout tienne à l'écran. */
+.lib-list--fonts { gap: 2px; }
+.lib-list--fonts .lib-font { padding: 6px 10px; }
 
 /* v1.13 — bibliothèque ÉDITABLE : barre d'ajout (bouton « + … » de
    chaque onglet), créateurs (palette, typo), bouton de suppression
@@ -2299,21 +2318,32 @@ body.mb-desktop-win32 #home-screen .home-main-inner { padding-top: 44px; }
 }
 @keyframes pv-pop { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: none; } }
 
-.pv-body { overflow-y: auto; }
+/* v1.14.1 — le design bâclé est réparé : chaque section porte son
+   padding — le titre, le corps ET les actions respirent pareil (18 px
+   de marges latérales partout, plus un souffle en haut/en bas). */
+.pv-card .dialog-title {
+  padding: 16px 18px 0;
+  margin-bottom: 10px;
+}
+
+.pv-body {
+  overflow-y: auto;
+  padding: 2px 18px 4px;
+}
 
 .pv-intro {
   margin: 0 0 12px;
   font-size: 12px; line-height: 1.55; color: var(--text-dim);
 }
 
-.pv-source { margin-bottom: 10px; }
+.pv-source { margin: 0 0 12px; }
 .pv-src-btn {
   display: inline-flex; align-items: center; gap: 7px;
   font-size: 11.5px; font-weight: 500; color: var(--text-dim);
   background: var(--panel2);
   border: 1px dashed var(--border);
   border-radius: 8px;
-  padding: 7px 12px;
+  padding: 8px 12px;
   cursor: pointer;
   transition: color 0.15s, border-color 0.15s;
 }
@@ -2388,32 +2418,63 @@ body.mb-desktop-win32 #home-screen .home-main-inner { padding-top: 44px; }
 .pv-actions {
   display: flex; justify-content: flex-end; gap: 8px;
   border-top: 1px solid var(--border-soft);
-  padding: 12px 16px;
+  padding: 12px 18px;
+  margin-top: 12px;
 }
 
-/* sélecteur de palette (popover) */
+/* sélecteur de palette (popover) — v1.14.1 : les RONDS QUI SE
+   CHEVAUCHENT de l'outil Palette. Chaque palette se montre par ses
+   couleurs ; le nom vit dans l'info-bulle. */
 .pv-pal-list {
-  display: flex; flex-direction: column; gap: 4px;
+  display: flex; flex-direction: column; gap: 6px;
   max-height: 264px; overflow-y: auto;
-  min-width: 236px;
+  min-width: 240px;
 }
 .pv-pal {
-  display: flex; flex-direction: column; gap: 6px;
+  display: flex; align-items: center;
   padding: 8px 10px;
   background: var(--panel2);
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
-  text-align: left;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, background 0.15s;
 }
 .pv-pal:hover { border-color: var(--accent); }
-.pv-pal-name { font-size: 12px; font-weight: 600; color: var(--text); }
-.pv-pal-strip { display: flex; height: 14px; border-radius: 4px; overflow: hidden; }
-.pv-pal-strip i { flex: 1; }
+.pv-pal-stack {
+  position: relative;
+  height: 28px;
+  display: block;
+}
+.pv-pal-dot {
+  position: absolute; top: 0; left: 0;
+  width: 28px; height: 28px;
+  border-radius: 999px;
+  /* l'anneau est la couleur du POPOVER (le fond derrière les ronds —
+   * la même règle que l'outil Palette : le filet est ce qui est
+   * derrière, sinon la pile prend un halo) + un liseré intérieur à
+   * 14 % pour lire une couleur sombre sur le gris sombre. */
+  box-shadow:
+    0 0 0 2px #2A2A2A,
+    inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+}
 .pv-pal-empty { font-size: 11.5px; line-height: 1.5; color: var(--text-dim); max-width: 224px; }
 
 /* ---------------- fenêtre Preview ---------------- */
+
+/* v1.14.1 — INTERACTIVITÉ RÉPARÉE (application de bureau, macOS) : la
+   fenêtre couvrait la barre supérieure — zone de déplacement de la
+   fenêtre native (-webkit-app-region: drag). Tout ce qui s'y pose
+   sans déclarer no-drag déplace la fenêtre au lieu de cliquer : les
+   pastilles, le +, les boutons responsive étaient morts. Le no-drag
+   sur la couche retire sa boîte de la zone de drag (l'ordre de
+   peinture fait le reste) — inertes en web/CEP/Windows. */
+.pv-win,
+.pv-cfg,
+.ctx-pop,
+.ctxmenu,
+.dialog-backdrop {
+  -webkit-app-region: no-drag;
+}
 
 .pv-win {
   position: fixed; inset: 0; z-index: 310;
@@ -2424,11 +2485,16 @@ body.mb-desktop-win32 #home-screen .home-main-inner { padding-top: 44px; }
 
 .pv-head {
   flex: 0 0 44px; height: 44px;
-  display: flex; align-items: center; gap: 14px;
+  display: flex; align-items: center; gap: 10px;
   padding: 0 10px;
   background: var(--panel);
   border-bottom: 1px solid var(--border);
 }
+/* macOS (traffic lights natifs en haut à gauche) : le titre de la
+   fenêtre Preview ne se cache pas derrière. */
+body.mb-desktop-darwin .pv-head { padding-left: 84px; }
+
+.pv-lib { flex-shrink: 0; }
 
 .pv-head-title {
   display: flex; align-items: center; gap: 8px;
@@ -2484,10 +2550,9 @@ body.mb-desktop-win32 #home-screen .home-main-inner { padding-top: 44px; }
   padding: 2px;
 }
 .pv-dev-btn {
-  font-size: 11px; font-weight: 600;
-  font-family: var(--mono);
+  display: flex; align-items: center; justify-content: center;
+  width: 30px; height: 26px;
   color: var(--text-dim);
-  padding: 4px 10px;
   border-radius: 6px;
   cursor: pointer;
   transition: color 0.15s, background 0.15s;

@@ -749,6 +749,9 @@
     render();
     root.hidden = false;
     open_ = true;
+    /* v1.14.1 — la marque de la barre supérieure suit l'état : visible
+     * sur l'accueil (sans moodboard ouvert), retirée dans l'éditeur. */
+    if (MB.ui.topbar && MB.ui.topbar.refreshBrand) MB.ui.topbar.refreshBrand();
     /* Recherche prête à l'emploi — sans voler le focus aux champs de
      * dialogue (l'écran vient juste de s'ouvrir, rien n'est en cours). */
     try {
@@ -763,6 +766,9 @@
     closeMenu();
     root.hidden = true;
     open_ = false;
+    /* v1.14.1 — un moodboard vient de s'ouvrir : logo et nom quittent
+     * la barre supérieure (cf. topbar.refreshBrand). */
+    if (MB.ui.topbar && MB.ui.topbar.refreshBrand) MB.ui.topbar.refreshBrand();
   }
 
   function visible() {

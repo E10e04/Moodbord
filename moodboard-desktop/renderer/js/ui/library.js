@@ -543,26 +543,31 @@
 
   /* ------------------------------------------------------------- TYPOS */
 
-  /* v1.13 — typos : familles ajoutées en tête, intégrées moins les
-   * retirées ; dédoublonnage insensible à la casse. */
+  /* v1.14.1 — TOUTES les polices de l'ordinateur rejoignent l'onglet :
+   * MB.fonts énumère les familles installées (Illustrateur en CEP,
+   * système en application de bureau, liste web en navigateur) —
+   * les familles ajoutées à la main restent EN TÊTE, le filet
+   * web-safe comble les machines pauvres. Dédoublonnage insensible à
+   * la casse ; hiddenFonts masque n'importe laquelle (ré-ajouter le
+   * même nom la fait revenir). */
   function visibleFonts() {
     var seen = {};
+    var hidden = {};
+    state.hiddenFonts.forEach(function (h) {
+      hidden[String(h).toLowerCase()] = true;
+    });
     var shown = [];
-    state.fonts.forEach(function (f) {
-      var k = f.toLowerCase();
-      if (!seen[k]) {
-        seen[k] = true;
-        shown.push(f);
-      }
-    });
-    FONTS.forEach(function (f) {
-      if (state.hiddenFonts.indexOf(f) >= 0) return;
-      var k = f.toLowerCase();
-      if (!seen[k]) {
-        seen[k] = true;
-        shown.push(f);
-      }
-    });
+    function push(f) {
+      var k = String(f || '').toLowerCase();
+      if (!f || seen[k] || hidden[k]) return;
+      seen[k] = true;
+      shown.push(f);
+    }
+    state.fonts.forEach(push); /* familles ajoutées — en tête */
+    if (MB.fonts && MB.fonts.isReady && MB.fonts.isReady()) {
+      MB.fonts.list().forEach(push); /* l'ordinateur ENTIER */
+    }
+    FONTS.forEach(push); /* filet web-safe */
     return shown;
   }
 
@@ -573,36 +578,39 @@
       return;
     }
     var lower = f.toLowerCase();
-    var builtin = null;
-    FONTS.forEach(function (b) {
-      if (b.toLowerCase() === lower) builtin = b;
+    /* v1.14.1 — ré-ajouter une famille masquée la RAMÈNE (police du
+     * système retirée par erreur comme intégrée d'origine). */
+    var wasHidden = state.hiddenFonts.some(function (x) {
+      return x.toLowerCase() === lower;
     });
-    if (builtin) {
-      if (state.hiddenFonts.indexOf(builtin) >= 0) {
-        state.hiddenFonts = state.hiddenFonts.filter(function (x) {
-          return x !== builtin;
-        });
-        persist();
-        if (activeTabId() === 'fonts') renderFonts();
-        MB.ui.toast(T('lib.addedFont'), 'success');
-        return;
-      }
-      MB.ui.toast(T('lib.alreadyLib'), 'info');
+    if (wasHidden) {
+      state.hiddenFonts = state.hiddenFonts.filter(function (x) {
+        return x.toLowerCase() !== lower;
+      });
+      persist();
+      if (activeTabId() === 'fonts') renderFonts();
+      MB.ui.toast(T('lib.addedFont'), 'success');
       return;
     }
     var dup = state.fonts.some(function (x) {
       return x.toLowerCase() === lower;
     });
-    if (!dup) state.fonts.unshift(f);
+    var known = false;
+    if (MB.fonts && MB.fonts.isReady && MB.fonts.isReady()) {
+      known = MB.fonts.list().some(function (x) {
+        return x.toLowerCase() === lower;
+      });
+    }
+    if (!dup && !known) state.fonts.unshift(f);
     persist();
     if (activeTabId() === 'fonts') renderFonts();
     MB.ui.toast(T('lib.addedFont'), 'success');
   }
 
   function removeFont(name) {
-    if (FONTS.indexOf(name) >= 0 && state.hiddenFonts.indexOf(name) < 0) {
-      state.hiddenFonts.push(name);
-    }
+    /* v1.14.1 — tout se retire (intégrée OU système) : le retrait est
+     * un masquage — ré-ajouter le nom la ramène. */
+    if (state.hiddenFonts.indexOf(name) < 0) state.hiddenFonts.push(name);
     state.fonts = state.fonts.filter(function (f) {
       return f !== name;
     });
@@ -692,12 +700,22 @@
     host.appendChild(addBar('lib.addFont', function () {
       showFontCreator();
     }));
+    /* v1.14.1 — la source des familles (système/Illustrateur/web)
+    * se dit discrètement sous le bouton d'ajout. */
+    if (MB.fonts && MB.fonts.source) {
+      var src = MB.fonts.source();
+      var srcKey =
+        src === 'host' ? 'lib.fontsSourceHost' :
+        src === 'system' ? 'lib.fontsSourceSystem' :
+        'lib.fontsSourceWeb';
+      host.appendChild(U.el('div', 'lib-note lib-note--dim', T(srcKey)));
+    }
     var shown = visibleFonts();
     if (!shown.length) {
       host.appendChild(U.el('div', 'lib-note', T('lib.emptyTab')));
       return;
     }
-    var list = U.el('div', 'lib-list');
+    var list = U.el('div', 'lib-list lib-list--fonts');
     shown.forEach(function (f) {
       var item = U.el('div', 'lib-item lib-font');
       item.innerHTML =
@@ -902,6 +920,15 @@
      * palettes, typos ET retraits (y compris assets de démo) sont relus
      * au démarrage. */
     state = MB.storage.readLibraryFull();
+
+    /* v1.14.1 — l'énumération des polices de l'ORDINATEUR est
+     * asynchrone (Illustrateur / queryLocalFonts) : l'onglet Typo se
+     * complète dès qu'elle arrive. */
+    if (MB.fonts && MB.fonts.onChange) {
+      MB.fonts.onChange(function () {
+        if (activeTabId() === 'fonts') renderFonts();
+      });
+    }
 
     // Bibliothèque Médias : les assets de démonstration non masqués
     // sont chargés en arrière-plan (le rendu suit l'ajout si l'onglet

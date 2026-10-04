@@ -268,7 +268,32 @@
     if (nat) nat.value = valueAt(i);
   }
 
-  /* -------- sélecteur de palette de la bibliothèque (§13) -------- */
+  /* -------- sélecteur de palette de la bibliothèque (§13) --------
+   *
+   * v1.14.1 — le design est celui des RONDS DE COULEUR QUI SE
+   * CHEVAUCHENT de l'outil Palette (le picker du canvas) : chaque
+   * palette se montre par ses couleurs — 28 px, recouvrement de
+   * 10 px, anneau de la couleur du popover, z-order inversé — le
+   * nom vit dans l'info-bulle, jamais à l'écran. */
+
+  var PAL_FACE = 28;
+  var PAL_LAP = 10;
+
+  function palRailWidth(n) {
+    return n <= 0 ? 0 : PAL_FACE + (n - 1) * (PAL_FACE - PAL_LAP);
+  }
+
+  function palStack(colors) {
+    var dots = '';
+    colors.forEach(function (c, k) {
+      var hex = U.normalizeHex(c.hex) || '#1A7A6E';
+      dots +=
+        '<span class="pv-pal-dot" style="background:' + U.escapeHtml(hex) +
+        ';transform:translateX(' + (k * (PAL_FACE - PAL_LAP)) + 'px)' +
+        ';z-index:' + (colors.length - k) + '"></span>';
+    });
+    return '<span class="pv-pal-stack" style="width:' + palRailWidth(colors.length) + 'px">' + dots + '</span>';
+  }
 
   function showPalettePicker(anchor) {
     var list = [];
@@ -281,13 +306,11 @@
     } else {
       html = '<div class="pv-pal-list">';
       list.forEach(function (p, i) {
-        var strip = p.colors.map(function (c) {
-          return '<i style="background:' + U.escapeHtml(c.hex) + '"></i>';
-        }).join('');
         html +=
-          '<button type="button" class="pv-pal" data-i="' + i + '">' +
-          '<span class="pv-pal-name">' + U.escapeHtml(p.name) + '</span>' +
-          '<span class="pv-pal-strip">' + strip + '</span>' +
+          '<button type="button" class="pv-pal" data-i="' + i + '"' +
+          ' title="' + U.escapeHtml(p.name) + '"' +
+          ' aria-label="' + U.escapeHtml(T('preview.fromLibrary')) + ' — ' + U.escapeHtml(p.name) + '">' +
+          palStack(p.colors) +
           '</button>';
       });
       html += '</div>';
@@ -320,6 +343,12 @@
     for (var j = 3; j < next.length; j++) next[j].role = 'color' + (j + 1);
     colors = next;
     if (cfgEl) drawRows();
+    /* v1.14.1 — la palette choisie depuis la FENÊTRE de preview
+     * recolore le site sur place (pastilles + variables CSS). */
+    if (winEl) {
+      drawChips();
+      applyColors();
+    }
     MB.preview.saveConfig(colors);
     MB.ui.toast(T('preview.paletteApplied', { name: p.name }), 'success');
   }
@@ -336,9 +365,9 @@
   /* ======================================================= FENÊTRE */
 
   var DEVICES = [
-    { id: 'desktop', label: 'preview.desktop', width: '100%' },
-    { id: 'tablet', label: 'preview.tablet', width: '768px' },
-    { id: 'mobile', label: 'preview.mobile', width: '390px' }
+    { id: 'desktop', label: 'preview.desktop', icon: 'monitor', width: '100%' },
+    { id: 'tablet', label: 'preview.tablet', icon: 'tablet', width: '768px' },
+    { id: 'mobile', label: 'preview.mobile', icon: 'smartphone', width: '390px' }
   ];
 
   function openWindow() {
@@ -354,6 +383,20 @@
     title.innerHTML = MB.icons.get('preview', 16) + '<span>Preview</span>';
     head.appendChild(title);
 
+    /* v1.14.1 — la bibliothèque reste atteignable PENDANT le preview :
+     * le même sélecteur à ronds qui se chevauchent, la palette
+     * s'applique au site en direct. */
+    var libBtn = U.el('button', 'icon-btn pv-lib');
+    libBtn.type = 'button';
+    libBtn.id = 'pv-lib';
+    libBtn.title = T('preview.fromLibrary');
+    libBtn.setAttribute('aria-label', T('preview.fromLibrary'));
+    libBtn.innerHTML = MB.icons.get('palette', 15);
+    libBtn.addEventListener('click', function () {
+      showPalettePicker(libBtn);
+    });
+    head.appendChild(libBtn);
+
     var chips = U.el('div', 'pv-chips');
     chips.id = 'pv-chips';
     head.appendChild(chips);
@@ -367,7 +410,9 @@
       b.title = T(d.label);
       b.setAttribute('aria-label', T(d.label));
       b.setAttribute('aria-pressed', d.id === device ? 'true' : 'false');
-      b.textContent = d.id === 'desktop' ? '1440' : d.id === 'tablet' ? '768' : '390';
+      /* v1.14.1 — ORDINATEUR / TABLETTE / TÉLÉPHONE en icônes (les
+       * largeurs restent dans l'info-bulle pour qui les veut). */
+      b.innerHTML = MB.icons.get(d.icon, 15);
       b.addEventListener('click', function () {
         setDevice(d.id);
       });

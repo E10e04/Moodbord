@@ -192,7 +192,7 @@ Dézipper l'archive **à la racine** du dossier extensions, de sorte que `CSXS/`
 > 5. relancer Illustrator.
 >
 > **Vérifiez la version installée** : le badge en bas à droite de la barre d'état
-> du panneau doit afficher **v1.14.0**. S'il affiche autre chose, l'ancienne
+> du panneau doit afficher **v1.14.1**. S'il affiche autre chose, l'ancienne
 > installation est encore active.
 
 ### 3. Activer le PlayerDebugMode
@@ -268,6 +268,36 @@ Si un jour les **drags ne répondent plus alors que le zoom molette fonctionne**
 `MB.interact.diag()` retourne le nombre d'événements **réellement livrés** par le moteur de chaque famille (`pointerdown`, `mousedown`, `pointermove`, `mousemove`, `blur`, `pointercancel`…) ainsi que l'état de la machine à gestes (`gesture`, `spaceDown`, `tool`). Depuis la v1.0.1, la couche d'interaction est **adaptive** : elle branche à la fois les Pointer Events et les événements souris, et bascule automatiquement sur la souris si le moteur CEP hôte ne livre pas les Pointer Events (cas observé selon les versions d'Illustrator).
 
 Depuis la **v1.0.2**, les gestes **survivent** aux événements `blur` / `pointercancel` parasites que certains hôtes CEP émettent au milieu d'un drag (symptôme typique : « le zoom marche mais rien ne se déplace ») : le geste continue s'il reçoit encore des événements, et n'est annulé proprement (avec rollback) que si plus rien n'arrive pendant 600 ms.
+
+#### Nouveautés v1.14.1 — six correctifs d'usage
+
+1. **Typo : toutes les polices de l'ordinateur.** L'onglet Typo de la
+   bibliothèque liste désormais **chaque famille installée** — celles
+   d'Illustrateur dans le panneau CEP, celles du système dans l'application
+   de bureau (les retirer est réversible : ré-ajouter le nom les ramène).
+   La source est indiquée discrètement sous le bouton d'ajout.
+2. **Panneau de couleurs du Preview redessiné** : titre, texte, rangées et
+   boutons respirent (marges cohérentes de 18 px — plus rien de collé au
+   conteneur).
+3. **Palettes de la bibliothèque en ronds qui se chevauchent** : le sélecteur
+   « Depuis la bibliothèque… » montre chaque palette par ses **couleurs**
+   (ronds de 28 px, recouvrement de 10 px — le design de l'outil Palette),
+   plus de noms à l'écran.
+4. **Fenêtre Preview pleinement interactive** (application de bureau) : la
+   fenêtre couvrait la zone de déplacement native — les pastilles, le « + »
+   et les boutons responsive ne répondaient pas au clic. Toutes les
+   couches déclarent désormais `no-drag` ; la **bibliothèque reste en plus
+   atteignable pendant l'aperçu** (bouton palette dans la barre — la
+   palette s'applique au site en direct).
+5. **Boutons responsive en icônes** : ordinateur, tablette, téléphone
+   (les libellés localisés restent dans les info-bulles).
+6. **Barre supérieure épurée** : une fois un moodboard ouvert, le logo et
+   le nom « Moodboard » quittent la barre (à côté de Fichier & co) — ils
+   reviennent sur l'écran d'accueil de l'application.
+
+Vérifié par **706 assertions E2E** (16 suites : v102→v1141, dont la
+nouvelle suite v1141 ×44 couvrant les six demandes) + **114 assertions
+de simulation de stockage**, zéro erreur console.
 
 #### Nouveautés v1.14.0 — outil Preview, bibliothèque recentrée
 
