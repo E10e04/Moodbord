@@ -9,6 +9,12 @@ moodboard-desktop/dist/
 # Copie racine générée localement (identique à renderer/index.html)
 moodboard-desktop/index.html
 
+# ── Zip d'extension construit localement ──────────────────────
+# v1.12 : le zip suivi au repo faisait échouer la CI (deux fichiers
+# matchaient le glob du job de publication — « test: too many
+# arguments »). Les releases sont servies par la CI, jamais versionnées.
+moodboard-cep/dist/
+
 # ── Système / éditeur ──────────────────────────────────────────
 .DS_Store
 Thumbs.db
