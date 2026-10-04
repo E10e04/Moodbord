@@ -624,12 +624,13 @@
     MB.ui.toast(T('lib.removedFont'), 'success');
   }
 
-  /* v1.15 — le navigateur de polices : TOUTES les polices du SYSTÈME
+  /* v1.16 — le navigateur de polices : TOUTES les polices du SYSTÈME
    * (MB.fonts — Illustrator / application / liste web) dans une liste
    * défilante avec recherche instantanée et aperçu rendu dans chaque
-   * famille. Un clic ajoute la police à la bibliothèque ; les familles
-   * déjà présentes se montrent cochées (re-cliquer les re-masque pas —
-   * le toast le dit). */
+   * famille. UN SEUL CLIC ajoute la police à la bibliothèque (feedback
+   * immédiat : la ligne s'allume, la marque « dans la bibliothèque »
+   * apparaît) ; les familles déjà présentes se montrent cochées
+   * (re-cliquer ne les masque pas — le toast le dit). */
   function showFontCreator() {
     var host = document.getElementById('lib-content');
     host.innerHTML = '';
@@ -673,10 +674,6 @@
         item.innerHTML =
           '<span class="lib-font-name">' + U.escapeHtml(f) + (inLib ? ' <span class="lib-font-in">' + U.escapeHtml(T('lib.fontInLib')) + '</span>' : '') + '</span>' +
           '<span class="lib-font-sample" style="font-family:\'' + U.escapeHtml(f) + '\'">Aa Bb Cc</span>';
-        item.addEventListener('click', function () {
-          addFont(this.dataset.font, true);
-          renderAll();
-        });
         list.appendChild(item);
       }
       if (!shown) {
@@ -684,12 +681,54 @@
       }
     }
 
+    /* v1.16 — UN SEUL CLIC ajoute : l'écoute vit sur le CONTENEUR
+     * (délégation) — elle survit aux reconstructions de la liste, et le
+     * clavier (Enter/Espace natifs des <button>) marche pareil. */
+    list.addEventListener('click', function (e) {
+      var item = e.target && e.target.closest ? e.target.closest('.lib-font-add') : null;
+      if (!item || !list.contains(item)) return;
+      var name = item.dataset.font;
+      var lower = String(name || '').toLowerCase();
+      var wasIn = visibleFonts().some(function (x) {
+        return x.toLowerCase() === lower;
+      });
+      addFont(name, true);
+      renderAll();
+      if (wasIn) return;
+      /* feedback immédiat : la ligne fraîchement ajoutée s'allume. */
+      var items = list.querySelectorAll('.lib-font-add');
+      for (var k = 0; k < items.length; k++) {
+        if (items[k].dataset.font === name) {
+          items[k].classList.add('is-just-added');
+          setTimeout(function (node) {
+            return function () { node.classList.remove('is-just-added'); };
+          }(items[k]), 750);
+          break;
+        }
+      }
+    });
+
     search.addEventListener('input', renderAll);
     /* l'énumération système arrive APRÈS l'ouverture : la liste se
-     * complète dès qu'elle est prête. */
+     * complète dès qu'elle est prête.
+     * v1.16 — mais JAMAIS pendant un clic : remplacer la liste sous le
+     * pointeur détachait l'élément visé entre mousedown et mouseup — le
+     * clic était perdu et il FALLAIT recliquer (le « double clic »
+     * signalé). On attend que la liste ne soit plus :active (garde de
+     * deux secondes au pire). */
     if (MB.fonts && MB.fonts.whenReady) {
       MB.fonts.whenReady(function () {
-        if (document.getElementById('lib-font-all')) renderAll();
+        if (document.getElementById('lib-font-all') !== list) return;
+        var attempt = 0;
+        (function paint() {
+          if (document.getElementById('lib-font-all') !== list) return;
+          if (attempt < 40 && list.matches(':active')) {
+            attempt++;
+            setTimeout(paint, 50);
+            return;
+          }
+          renderAll();
+        })();
       });
     }
 

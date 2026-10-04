@@ -266,6 +266,14 @@ button:focus-visible, input:focus-visible, [contenteditable]:focus-visible {
 .lib-font-add:hover { background: var(--panel2); }
 .lib-font-add .lib-font-sample { margin-left: auto; }
 .lib-font-add.is-in-lib { opacity: 0.62; }
+/* v1.16 — l'ajout se voit au PREMIER clic : la ligne fraîchement
+   ajoutée s'allume un instant (accent), avant de retomber. */
+@keyframes libFontFlash {
+  0% { background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
+  100% { background: transparent; box-shadow: none; }
+}
+.lib-font-add.is-just-added { animation: libFontFlash 0.75s ease-out; }
+.lib-font-add.is-just-added.is-in-lib { opacity: 0.62; }
 .lib-font-in {
   font-size: 9px; font-weight: 600;
   letter-spacing: 0.04em; text-transform: uppercase;
@@ -2577,18 +2585,29 @@ body.mb-desktop-darwin .pv-head { padding-left: 84px; }
 }
 .pv-chip:hover { box-shadow: 0 0 0 2px var(--accent); }
 
+/* v1.16 — la croix de retrait passe au ROUGE franc, demandé : au
+   survol d'une pastille (couleur OU police), elle apparaît « au-dessus,
+   dans le coin droit » — badge rouge plein, croix blanche, impossible
+   à manquer. */
 .pv-chip-del {
-  position: absolute; top: -5px; right: -5px;
+  position: absolute; top: -6px; right: -6px;
   width: 14px; height: 14px;
   display: none; align-items: center; justify-content: center;
   border-radius: 50%;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  color: var(--text-dim);
+  background: var(--danger);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  color: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
   cursor: pointer;
+  transition: transform 0.12s, background 0.12s;
 }
-.pv-chip:hover .pv-chip-del { display: flex; }
-.pv-chip-del:hover { color: var(--danger); border-color: var(--danger); }
+.pv-chip:hover .pv-chip-del,
+.pv-font-chip:hover .pv-chip-del { display: flex; }
+.pv-chip-del:hover {
+  background: #C93B34;
+  border-color: #fff;
+  transform: scale(1.18);
+}
 
 .pv-chip--add {
   background: var(--panel2);

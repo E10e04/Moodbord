@@ -9,7 +9,7 @@
   /* Version affichée dans la barre d'état, la boîte « À propos » et le
    * rapport de diagnostic — LA référence pour vérifier que le panneau
    * exécuté est bien la dernière installation. */
-  MB.VERSION = '1.15.0';
+  MB.VERSION = '1.16.0';
 
   /* ---------- Événements adaptatifs (pointer + souris) ----------
    *

@@ -15,6 +15,15 @@
  * téléphone ont laissé leur place à la SÉLECTION DE POLICES en direct
  * (pastilles « Aa » — le même langage que les pastilles de couleurs).
  *
+ * v1.16 — TOUTES les pastilles de la barre (couleurs ET polices) se
+ * suppriment : au survol, une CROIX ROUGE apparaît dans le coin droit
+ * supérieur ; les rôles se recomposent sur place (la première couleur
+ * restante redevient principale, etc.) — la dernière de chaque sorte
+ * reste toujours là, l'identité ne se vide jamais. Côté bibliothèque,
+ * l'ajout d'une police est confirmé au PREMIER clic (délégation + aucun
+ * re-rendu pendant le geste — le « double clic » subi en CEP/bureau
+ * est terminé).
+ *
  * Retour au canvas : fermeture = suppression de la couche ; aucun
  * élément du moodboard n'est touché, créé ou modifié.
  * ========================================================================= */
@@ -122,9 +131,14 @@
   }
 
   function removeFontRole(i) {
-    if (i < 2) return; /* les deux rôles principaux restent toujours */
+    /* v1.16 — toute police se retire (même principale) tant qu'il en
+     * reste une : les rôles se recomposent — font1 garde le premier
+     * restant (titres), font2 le suivant (texte). */
+    if (i < 0 || i >= fonts.length || fonts.length <= 1) return;
     fonts.splice(i, 1);
-    for (var j = 2; j < fonts.length; j++) fonts[j].role = 'font' + (j + 1);
+    for (var j = 0; j < fonts.length; j++) {
+      fonts[j].role = j < 2 ? MB.preview.CORE_FONTS[j] : 'font' + (j + 1);
+    }
     if (cfgEl) drawFontRows();
     if (winEl) {
       drawFontChips();
@@ -173,9 +187,14 @@
   }
 
   function removeColor(i) {
-    if (i < 3) return; /* les rôles principaux restent toujours */
+    /* v1.16 — toute couleur se retire (même principale) tant qu'il en
+     * reste une : les rôles se recomposent sur place, le cœur manquant
+     * reprend l'identité d'origine au prochain sanitize. */
+    if (i < 0 || i >= colors.length || colors.length <= 1) return;
     colors.splice(i, 1);
-    for (var j = 3; j < colors.length; j++) colors[j].role = 'color' + (j + 1);
+    for (var j = 0; j < colors.length; j++) {
+      colors[j].role = j < 3 ? MB.preview.CORE_ROLES[j] : 'color' + (j + 1);
+    }
     if (cfgEl) drawRows();
     if (winEl) {
       drawChips();
@@ -395,7 +414,9 @@
         row.appendChild(nat);
       }
 
-      if (i >= 3) {
+      /* v1.16 — retrait possible sur TOUTES les rangées tant qu'il
+       * reste une couleur (l'identité ne se vide jamais). */
+      if (colors.length > 1) {
         var del = U.el('button', 'pv-del');
         del.type = 'button';
         del.title = T('preview.removeColor');
@@ -462,7 +483,9 @@
       });
       row.appendChild(choose);
 
-      if (i >= 2) {
+      /* v1.16 — retrait possible sur TOUTES les rangées tant qu'il
+       * reste une police. */
+      if (fonts.length > 1) {
         var del = U.el('button', 'pv-del');
         del.type = 'button';
         del.title = T('preview.removeFont');
@@ -697,7 +720,10 @@
           setColor(i, hex);
         });
       });
-      if (i >= 3) {
+      /* v1.16 — la CROIX ROUGE de retrait : au survol de la pastille,
+       * coin droit supérieur. Toutes les couleurs la portent tant qu'il
+       * en reste une — la dernière reste (identité jamais vide). */
+      if (colors.length > 1) {
         var del = U.el('span', 'pv-chip-del');
         del.title = T('preview.removeColor');
         del.setAttribute('aria-hidden', 'true');
@@ -744,7 +770,9 @@
       chip.addEventListener('click', function () {
         pickFont(i, chip);
       });
-      if (i >= 2) {
+      /* v1.16 — même croix rouge que les couleurs : toute police se
+       * retire au survol tant qu'il en reste une. */
+      if (fonts.length > 1) {
         var del = U.el('span', 'pv-chip-del');
         del.title = T('preview.removeFont');
         del.setAttribute('aria-hidden', 'true');
