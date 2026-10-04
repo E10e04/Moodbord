@@ -3,11 +3,17 @@
  * à un vrai site web.
  *
  * Deux temps, jamais de génération immédiate :
- *   1. CONFIGURATION — un panneau (couleurs + rôles, palette de la
- *      bibliothèque, ajout/retrait) ;
+ *   1. CONFIGURATION — un panneau à DEUX ONGLETS (v1.15) :
+ *        · COULEURS — rôles, palette de la bibliothèque, ajout/retrait ;
+ *        · POLICES — principale (titres), secondaire (texte), ajout ;
  *   2. FENÊTRE PREVIEW — le template est rendu comme un VRAI site
- *      (iframe), et chaque couleur modifiée le recolore INSTANTANÉMENT
- *      (variables CSS uniquement — ni rechargement, ni reconstruction).
+ *      (iframe), et chaque couleur OU police modifiée restyle
+ *      INSTANTANÉMENT (variables CSS uniquement — ni rechargement, ni
+ *      reconstruction).
+ *
+ * v1.15 — le preview est DESKTOP : les pastilles ordinateur/tablette/
+ * téléphone ont laissé leur place à la SÉLECTION DE POLICES en direct
+ * (pastilles « Aa » — le même langage que les pastilles de couleurs).
  *
  * Retour au canvas : fermeture = suppression de la couche ; aucun
  * élément du moodboard n'est touché, créé ou modifié.
@@ -22,11 +28,12 @@
 
   /* état courant de l'outil (partagé config ↔ fenêtre) */
   var colors = [];
+  var fonts = [];     /* v1.15 — identité typographique (rôles font1…N) */
   var cfgEl = null;    // couche configuration
   var cfgClose = null; // fermeture programmatique
   var winEl = null;    // couche fenêtre
   var iframe = null;
-  var device = 'desktop';
+  var device = 'desktop'; /* v1.15 — un seul appareil (compat harnais) */
 
   function T(k, vars) {
     return MB.i18n ? MB.i18n.t(k, vars) : k;
@@ -56,6 +63,89 @@
     return (colors[i] && colors[i].value) || '#1A7A6E';
   }
 
+  /* ------------------------------------------------- noms de rôles polices (v1.15) */
+
+  function fontRoleName(i) {
+    if (i === 0) return T('preview.fontRole1');
+    if (i === 1) return T('preview.fontRole2');
+    return T('preview.fontRoleN', { n: i + 1 });
+  }
+
+  function fontRoleHint(i) {
+    if (i === 0) return T('preview.fontHint1');
+    if (i === 1) return T('preview.fontHint2');
+    return '';
+  }
+
+  function fontValueAt(i) {
+    return (fonts[i] && fonts[i].value) || MB.preview.ORIGINAL_FONTS.font2;
+  }
+
+  /* ------------------------------------------------- édition police */
+
+  function setFont(i, name) {
+    var v = String(name || '').replace(/[\u0000-\u001f"'\\<>]/g, '').trim().slice(0, 64);
+    if (!v || !fonts[i]) return;
+    fonts[i].value = v;
+    if (cfgEl) syncFontRow(i);
+    if (winEl) {
+      syncFontChip(i);
+      applyColors();
+    }
+    MB.preview.saveConfig(colors, fonts);
+  }
+
+  function addFontRole() {
+    if (fonts.length >= MB.preview.MAX_FONTS) return;
+    /* la police proposée : la première du système pas encore utilisée —
+     * jamais un doublon dès la création. */
+    var candidate = 'Georgia';
+    if (MB.fonts && MB.fonts.isReady && MB.fonts.isReady()) {
+      var list = MB.fonts.list();
+      for (var i = 0; i < list.length; i++) {
+        var used = fonts.some(function (f) {
+          return f.value.toLowerCase() === list[i].toLowerCase();
+        });
+        if (!used) {
+          candidate = list[i];
+          break;
+        }
+      }
+    }
+    fonts.push({ id: MB.preview.newId(), role: 'font' + (fonts.length + 1), value: candidate });
+    if (cfgEl) drawFontRows();
+    if (winEl) {
+      drawFontChips();
+      applyColors();
+    }
+    MB.preview.saveConfig(colors, fonts);
+  }
+
+  function removeFontRole(i) {
+    if (i < 2) return; /* les deux rôles principaux restent toujours */
+    fonts.splice(i, 1);
+    for (var j = 2; j < fonts.length; j++) fonts[j].role = 'font' + (j + 1);
+    if (cfgEl) drawFontRows();
+    if (winEl) {
+      drawFontChips();
+      applyColors();
+    }
+    MB.preview.saveConfig(colors, fonts);
+  }
+
+  /* le sélecteur de police du projet (recherche + favoris + toutes les
+   * polices du système) — le même que les cartes texte. */
+  function pickFont(i, anchor) {
+    var C = MB.ui.controls;
+    if (C && C.fontPopover) {
+      C.fontPopover(anchor, function () {
+        return fontValueAt(i);
+      }, function (name) {
+        setFont(i, name);
+      });
+    }
+  }
+
   /* ------------------------------------------------- édition couleur */
 
   function setColor(i, hex) {
@@ -68,7 +158,7 @@
       applyColors();
     }
     /* §22 — persistance : la dernière configuration survit. */
-    MB.preview.saveConfig(colors);
+    MB.preview.saveConfig(colors, fonts);
   }
 
   function addColor() {
@@ -79,6 +169,7 @@
     if (cfgEl) drawRows();
     if (winEl) drawChips();
     applyColors();
+    MB.preview.saveConfig(colors, fonts);
   }
 
   function removeColor(i) {
@@ -90,7 +181,7 @@
       drawChips();
       applyColors();
     }
-    MB.preview.saveConfig(colors);
+    MB.preview.saveConfig(colors, fonts);
   }
 
   /* ==================================================== CONFIGURATION */
@@ -101,6 +192,9 @@
     var cfg = MB.preview.loadConfig();
     colors = cfg.colors.map(function (c) {
       return { id: c.id, role: c.role, value: c.value };
+    });
+    fonts = (cfg.fonts || MB.preview.defaultFonts()).map(function (f) {
+      return { id: f.id, role: f.role, value: f.value };
     });
     openConfig();
   }
@@ -131,8 +225,32 @@
     var title = U.el('div', 'dialog-title', T('preview.title'));
     card.appendChild(title);
 
+    /* v1.15 — deux onglets : COULEURS (l'identité chromatique, comme
+     * avant) et POLICES (l'identité typographique — même mécanique,
+     * même persistance, même édition en direct). */
+    var tabs = U.el('div', 'pv-tabs');
+    tabs.setAttribute('role', 'tablist');
+    tabs.setAttribute('aria-label', T('preview.title'));
+    var tabC = U.el('button', 'pv-tab is-active', T('preview.tabColors'));
+    var tabF = U.el('button', 'pv-tab', T('preview.tabFonts'));
+    tabC.type = 'button';
+    tabF.type = 'button';
+    tabC.setAttribute('role', 'tab');
+    tabF.setAttribute('role', 'tab');
+    tabC.setAttribute('aria-selected', 'true');
+    tabF.setAttribute('aria-selected', 'false');
+    tabs.appendChild(tabC);
+    tabs.appendChild(tabF);
+    card.appendChild(tabs);
+
     var body = U.el('div', 'dialog-body pv-body');
-    body.appendChild(U.el('p', 'pv-intro', T('preview.intro')));
+
+    var paneColors = U.el('div', 'pv-pane');
+    var paneFonts = U.el('div', 'pv-pane');
+    paneFonts.hidden = true;
+
+    /* ── onglet COULEURS ──────────────────────────────── */
+    paneColors.appendChild(U.el('p', 'pv-intro', T('preview.intro')));
 
     /* source : palettes existantes du moodboard (§13 — réutiliser les
      * couleurs déjà là plutôt que les retaper). */
@@ -147,11 +265,11 @@
       showPalettePicker(srcBtn);
     });
     srcRow.appendChild(srcBtn);
-    body.appendChild(srcRow);
+    paneColors.appendChild(srcRow);
 
     var rows = U.el('div', 'pv-rows');
     rows.id = 'pv-rows';
-    body.appendChild(rows);
+    paneColors.appendChild(rows);
 
     var add = U.el(
       'button',
@@ -161,9 +279,44 @@
     add.type = 'button';
     add.setAttribute('aria-label', T('preview.addColor'));
     add.addEventListener('click', addColor);
-    body.appendChild(add);
+    paneColors.appendChild(add);
 
+    /* ── onglet POLICES (v1.15) ────────────────────────── */
+    paneFonts.appendChild(U.el('p', 'pv-intro', T('preview.fontsIntro')));
+
+    var frows = U.el('div', 'pv-rows');
+    frows.id = 'pv-font-rows';
+    paneFonts.appendChild(frows);
+
+    var addF = U.el(
+      'button',
+      'pv-add',
+      MB.icons.get('plus', 13) + '<span>' + U.escapeHtml(T('preview.addFont')) + '</span>'
+    );
+    addF.type = 'button';
+    addF.setAttribute('aria-label', T('preview.addFont'));
+    addF.addEventListener('click', addFontRole);
+    paneFonts.appendChild(addF);
+
+    body.appendChild(paneColors);
+    body.appendChild(paneFonts);
     card.appendChild(body);
+
+    function switchTab(id) {
+      var onColors = id === 'colors';
+      paneColors.hidden = !onColors;
+      paneFonts.hidden = onColors;
+      tabC.classList.toggle('is-active', onColors);
+      tabF.classList.toggle('is-active', !onColors);
+      tabC.setAttribute('aria-selected', onColors ? 'true' : 'false');
+      tabF.setAttribute('aria-selected', onColors ? 'false' : 'true');
+    }
+    tabC.addEventListener('click', function () {
+      switchTab('colors');
+    });
+    tabF.addEventListener('click', function () {
+      switchTab('fonts');
+    });
 
     var foot = U.el('div', 'dialog-actions pv-actions');
     var no = U.el('button', 'btn btn-ghost', T('dlg.cancel'));
@@ -180,6 +333,7 @@
     card.appendChild(foot);
 
     drawRows();
+    drawFontRows();
   }
 
   function drawRows() {
@@ -268,6 +422,71 @@
     if (nat) nat.value = valueAt(i);
   }
 
+  /* -------- rangées de POLICES du panneau de configuration (v1.15) -------
+   * La même géométrie que les rangées de couleurs : l'échantillon « Aa »
+   * RENDU dans la police (le swatch), le rôle + le nom de la famille (la
+   * méta), le sélecteur (le champ) — et le retrait pour les polices
+   * supplémentaires. */
+
+  function drawFontRows() {
+    var host = cfgEl ? cfgEl.querySelector('#pv-font-rows') : null;
+    if (!host) return;
+    host.innerHTML = '';
+    fonts.forEach(function (f, i) {
+      var row = U.el('div', 'pv-row pv-frow');
+      row.dataset.f = i;
+
+      var sample = U.el('button', 'pv-font-sample');
+      sample.type = 'button';
+      sample.style.fontFamily = "'" + fontValueAt(i) + "'";
+      sample.textContent = 'Aa';
+      sample.dataset.tip = T('preview.editFontLive');
+      sample.setAttribute('aria-label', fontRoleName(i) + ' — ' + f.value);
+      sample.addEventListener('click', function () {
+        pickFont(i, sample);
+      });
+      row.appendChild(sample);
+
+      var meta = U.el('div', 'pv-meta');
+      meta.appendChild(U.el('span', 'pv-role', U.escapeHtml(fontRoleName(i))));
+      var hint = fontRoleHint(i);
+      if (hint) meta.appendChild(U.el('span', 'pv-role-hint', U.escapeHtml(hint)));
+      meta.appendChild(U.el('span', 'pv-font-name', U.escapeHtml(f.value)));
+      row.appendChild(meta);
+
+      var choose = U.el('button', 'pv-choose', U.escapeHtml(T('preview.chooseFont')));
+      choose.type = 'button';
+      choose.setAttribute('aria-label', fontRoleName(i) + ' — ' + T('preview.chooseFont'));
+      choose.addEventListener('click', function () {
+        pickFont(i, choose);
+      });
+      row.appendChild(choose);
+
+      if (i >= 2) {
+        var del = U.el('button', 'pv-del');
+        del.type = 'button';
+        del.title = T('preview.removeFont');
+        del.setAttribute('aria-label', T('preview.removeFont'));
+        del.innerHTML = MB.icons.get('x', 11);
+        del.addEventListener('click', function () {
+          removeFontRole(i);
+        });
+        row.appendChild(del);
+      }
+
+      host.appendChild(row);
+    });
+  }
+
+  function syncFontRow(i) {
+    var row = cfgEl ? cfgEl.querySelector('.pv-frow[data-f="' + i + '"]') : null;
+    if (!row) return;
+    var sample = row.querySelector('.pv-font-sample');
+    if (sample) sample.style.fontFamily = "'" + fontValueAt(i) + "'";
+    var name = row.querySelector('.pv-font-name');
+    if (name) name.textContent = fontValueAt(i);
+  }
+
   /* -------- sélecteur de palette de la bibliothèque (§13) --------
    *
    * v1.14.1 — le design est celui des RONDS DE COULEUR QUI SE
@@ -349,26 +568,29 @@
       drawChips();
       applyColors();
     }
-    MB.preview.saveConfig(colors);
+    MB.preview.saveConfig(colors, fonts);
     MB.ui.toast(T('preview.paletteApplied', { name: p.name }), 'success');
   }
 
   function onApply() {
-    /* 1-2-3-4 du flux : récupérer les couleurs, enregistrer les rôles,
-     * créer la configuration, charger le template, appliquer, montrer. */
-    var cfg = MB.preview.saveConfig(colors);
-    if (cfg) colors = cfg.colors;
+    /* 1-2-3-4 du flux : récupérer couleurs + polices, enregistrer les
+     * rôles, créer la configuration, charger le template, appliquer,
+     * montrer. */
+    var cfg = MB.preview.saveConfig(colors, fonts);
+    if (cfg) {
+      colors = cfg.colors;
+      fonts = cfg.fonts;
+    }
     if (cfgClose) cfgClose();
     openWindow();
   }
 
   /* ======================================================= FENÊTRE */
 
-  var DEVICES = [
-    { id: 'desktop', label: 'preview.desktop', icon: 'monitor', width: '100%' },
-    { id: 'tablet', label: 'preview.tablet', icon: 'tablet', width: '768px' },
-    { id: 'mobile', label: 'preview.mobile', icon: 'smartphone', width: '390px' }
-  ];
+  /* v1.15 — le preview est DESKTOP : les pastilles ordinateur/tablette/
+   * téléphone (v1.14.1) sont RETIRÉES. Le groupe .pv-fonts occupe leur
+   * place : les polices du site, modifiables en direct. setDevice reste
+   * exporté pour les harnais E2E — inerte, un seul appareil. */
 
   function openWindow() {
     if (winEl) return;
@@ -401,25 +623,13 @@
     chips.id = 'pv-chips';
     head.appendChild(chips);
 
-    var devs = U.el('div', 'pv-devices');
-    devs.id = 'pv-devices';
-    DEVICES.forEach(function (d) {
-      var b = U.el('button', 'pv-dev-btn' + (d.id === device ? ' is-active' : ''));
-      b.type = 'button';
-      b.dataset.dev = d.id;
-      b.title = T(d.label);
-      b.setAttribute('aria-label', T(d.label));
-      b.setAttribute('aria-pressed', d.id === device ? 'true' : 'false');
-      /* v1.14.1 — ORDINATEUR / TABLETTE / TÉLÉPHONE en icônes (les
-       * largeurs restent dans l'info-bulle pour qui les veut). */
-      b.innerHTML = MB.icons.get(d.icon, 15);
-      b.addEventListener('click', function () {
-        setDevice(d.id);
-      });
-      devs.appendChild(b);
-    });
-    devs.title = T('preview.device');
-    head.appendChild(devs);
+    /* v1.15 — les POLICES à la place des appareils : une pastille « Aa »
+     * par police (rendue dans sa famille), cliquable → sélecteur de
+     * police du projet, le site se restyle INSTANTANÉMENT. */
+    var fontsHost = U.el('div', 'pv-fonts');
+    fontsHost.id = 'pv-fonts';
+    fontsHost.title = T('preview.tabFonts');
+    head.appendChild(fontsHost);
 
     var close = U.el('button', 'icon-btn pv-close');
     close.type = 'button';
@@ -435,7 +645,7 @@
     var stage = U.el('div', 'pv-stage');
     var frame = U.el('div', 'pv-frame');
     frame.id = 'pv-frame';
-    frame.dataset.device = device;
+    frame.dataset.device = 'desktop';
 
     iframe = U.el('iframe', 'pv-site');
     iframe.setAttribute('title', T('preview.title'));
@@ -452,6 +662,7 @@
     document.getElementById('layer-dialogs').appendChild(layer);
     winEl = layer;
     drawChips();
+    drawFontChips();
   }
 
   function closeWindow() {
@@ -460,17 +671,10 @@
     iframe = null;
   }
 
-  function setDevice(id) {
-    device = id;
-    var frame = winEl ? winEl.querySelector('#pv-frame') : null;
-    if (frame) frame.dataset.device = id;
-    if (winEl) {
-      winEl.querySelectorAll('.pv-dev-btn').forEach(function (b) {
-        var on = b.dataset.dev === id;
-        b.classList.toggle('is-active', on);
-        b.setAttribute('aria-pressed', on ? 'true' : 'false');
-      });
-    }
+  function setDevice() {
+    /* v1.15 — preview desktop uniquement (compat harnais E2E). */
+    device = 'desktop';
+    return device;
   }
 
   /* -------- pastilles d'édition en direct (§10) -------- */
@@ -520,11 +724,60 @@
     if (chip) chip.style.background = valueAt(i);
   }
 
+  /* -------- pastilles de POLICES en direct (v1.15) --------
+   * À la place des appareils : une pastille « Aa » par police, rendue
+   * dans SA famille — le même geste que les pastilles de couleurs :
+   * cliquer ouvre le sélecteur, le site se restyle à chaque choix. */
+
+  function drawFontChips() {
+    var host = winEl ? winEl.querySelector('#pv-fonts') : null;
+    if (!host) return;
+    host.innerHTML = '';
+    fonts.forEach(function (f, i) {
+      var chip = U.el('button', 'pv-font-chip');
+      chip.type = 'button';
+      chip.style.fontFamily = "'" + fontValueAt(i) + "'";
+      chip.textContent = 'Aa';
+      chip.dataset.f = i;
+      chip.title = fontRoleName(i) + ' · ' + f.value;
+      chip.setAttribute('aria-label', fontRoleName(i) + ' — ' + f.value + ' — ' + T('preview.editFontLive'));
+      chip.addEventListener('click', function () {
+        pickFont(i, chip);
+      });
+      if (i >= 2) {
+        var del = U.el('span', 'pv-chip-del');
+        del.title = T('preview.removeFont');
+        del.setAttribute('aria-hidden', 'true');
+        del.innerHTML = MB.icons.get('x', 8);
+        del.addEventListener('click', function (e) {
+          e.stopPropagation();
+          removeFontRole(i);
+        });
+        chip.appendChild(del);
+      }
+      host.appendChild(chip);
+    });
+    if (fonts.length < MB.preview.MAX_FONTS) {
+      var add = U.el('button', 'pv-font-chip pv-font-chip--add');
+      add.type = 'button';
+      add.title = T('preview.addFont');
+      add.setAttribute('aria-label', T('preview.addFont'));
+      add.innerHTML = MB.icons.get('plus', 11);
+      add.addEventListener('click', addFontRole);
+      host.appendChild(add);
+    }
+  }
+
+  function syncFontChip(i) {
+    var chip = winEl ? winEl.querySelector('.pv-font-chip[data-f="' + i + '"]') : null;
+    if (chip) chip.style.fontFamily = "'" + fontValueAt(i) + "'";
+  }
+
   /* -------- application des couleurs au site (§18 : CSS vars) -------- */
 
   function applyColors() {
     if (!iframe) return;
-    var css = MB.preview.buildVars(colors);
+    var css = MB.preview.buildVars(colors, fonts);
     var done = false;
     /* voie rapide : document accessible (same-origin web, CEP avec
      * --allow-file-access-from-files) — zéro message, zéro rechargement. */
@@ -602,14 +855,28 @@
     },
     setColors: function (list) {
       /* tolérant (HEX nus ou {value}) — persisté comme toute modification. */
-      var cfg = MB.preview.sanitizeConfig({ colors: list }) || MB.preview.defaultConfig();
+      var cfg = MB.preview.sanitizeConfig({ colors: list, fonts: fonts }) || MB.preview.defaultConfig();
       colors = cfg.colors;
-      MB.preview.saveConfig(colors);
+      fonts = cfg.fonts;
+      MB.preview.saveConfig(colors, fonts);
       if (cfgEl) drawRows();
       if (winEl) drawChips();
       applyColors();
       return colors;
     },
+    /* v1.15 — identité typographique (harnais E2E + édition directe). */
+    fonts: function () {
+      return fonts;
+    },
+    setFonts: function (list) {
+      fonts = MB.preview.sanitizeFonts(list);
+      MB.preview.saveConfig(colors, fonts);
+      if (cfgEl) drawFontRows();
+      if (winEl) drawFontChips();
+      applyColors();
+      return fonts;
+    },
+    setFont: setFont,
     applyColors: applyColors,
     setDevice: setDevice,
     device: function () {

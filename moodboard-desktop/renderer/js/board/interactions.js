@@ -1939,6 +1939,34 @@
       return;
     }
 
+    /* v1.15 — ÉDITER une couleur de la palette : le rond de la rangée
+     * ouvre le sélecteur du projet (nuancier + code hex saisissable +
+     * pipette native hors CEP). La couleur change DANS la palette —
+     * la pastille suit (picked porte les hex, on remplace l'ancien
+     * par le nouveau), l'historique garde le geste. */
+    if (act === 'pal-edit' && el) {
+      var idxEd = parseInt(actNode.getAttribute('data-i'), 10);
+      var colEd = (el.data.colors || [])[idxEd];
+      if (!colEd) return;
+      var curHex = String(colEd.hex || '#000000');
+      MB.ui.controls.colorPopover(actNode, curHex, function (hexPick) {
+        var norm = U.normalizeHex(hexPick);
+        if (!norm || norm === curHex) return;
+        var live = Store.el(el.id);
+        if (!live) return;
+        var nextColors = (live.data.colors || []).map(function (c, k) {
+          return k === idxEd ? { hex: norm, name: c.name } : c;
+        });
+        var nextPicked = Array.isArray(live.data.picked)
+          ? live.data.picked.map(function (h) { return h === curHex ? norm : h; })
+          : nextColors.map(function (c) { return c.hex; });
+        Store.mutate('Modifier la couleur', function () {
+          Store.updateElement(el.id, { data: { colors: nextColors, picked: nextPicked } }, { transaction: true });
+        });
+      });
+      return;
+    }
+
     /* v1.6 — flèche d'ouverture de la carte planche. */
     if (act === 'board-open') {
       var hostB = actNode.closest('.mb-el');

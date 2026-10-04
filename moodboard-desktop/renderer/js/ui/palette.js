@@ -16,7 +16,10 @@
  *                          quitte la pastille — la pastille est le
  *                          « compte-rendu », pas un badge à nombre) ;
  *   code hex (pal-copy)  → copie le code dans le presse-papiers
- *                          (comportement historique de l'outil Palette).
+ *                          (comportement historique de l'outil Palette) ;
+ *   rond (pal-edit)      → édite la couleur (v1.15) : le sélecteur du
+ *                          projet (nuancier + code hex saisissable +
+ *                          pipette native) recolore la palette sur place.
  * ========================================================================= */
 (function () {
   'use strict';
@@ -101,7 +104,9 @@
      * Une rangée par couleur : rond + nom + code hex (le « rôle » de
      * la rangée d'origine) + case cochée quand la couleur est dans la
      * pastille. Le code hex est un bouton : COPIER — le geste utile
-     * d'une palette, celui que les bandes verticales faisaient avant. */
+     * d'une palette, celui que les bandes verticales faisaient avant.
+     * v1.15 — le ROND est un bouton : ÉDITER la couleur (sélecteur +
+     * code hex saisissable) — la palette se recolore sur place. */
     var rows = '';
     colors.forEach(function (c, i) {
       var hex = String(c.hex || '#000000');
@@ -112,7 +117,12 @@
         ' data-i="' + i + '"' +
         ' style="animation-delay:' + (0.04 * i + 0.03).toFixed(2) + 's"' +
         ' title="' + U.escapeHtml(c.name || hex) + '">' +
-        '<span class="pal-av" style="background:' + U.escapeHtml(hex) + '"></span>' +
+        '<button type="button" class="pal-av" data-act="pal-edit" data-i="' + i + '"' +
+        ' data-hex="' + U.escapeHtml(hex) + '"' +
+        ' aria-label="' + U.escapeHtml(MB.i18n ? MB.i18n.t('palette.editHint') : 'Modifier la couleur') + ' — ' + U.escapeHtml(hex) + '"' +
+        ' title="' + U.escapeHtml(MB.i18n ? MB.i18n.t('palette.editHint') : 'Modifier la couleur') + '">' +
+        '<span class="pal-av-in" style="background:' + U.escapeHtml(hex) + '"></span>' +
+        '</button>' +
         '<span class="pik-who">' +
         '<span class="pik-name">' + U.escapeHtml(c.name || hex) + '</span>' +
         '<button type="button" class="pal-hex" data-act="pal-copy" data-hex="' + U.escapeHtml(hex) + '"' +

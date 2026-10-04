@@ -118,6 +118,16 @@
     }
   ];
 
+  /* v1.15 — l'onglet Typo montre CINQ polices par défaut (une base
+   * couvrante : serif, sans, narrow, display, mono) ; TOUTES les polices
+   * de l'ordinateur restent à un clic — le bouton « Ajouter une police »
+   * ouvre le navigateur complet (recherche, aperçu en contexte, ajout).
+   * Les familles ajoutées manuellement restent EN TÊTE ; hiddenFonts
+   * masque n'importe laquelle (ré-ajouter le même nom la fait revenir). */
+  var DEFAULT_FONTS = [
+    'Georgia', 'Arial', 'Times New Roman', 'Verdana', 'Courier New'
+  ];
+
   var FONTS = [
     'Georgia', 'Times New Roman', 'Palatino Linotype', 'Garamond',
     'Arial', 'Verdana', 'Trebuchet MS', 'Tahoma',
@@ -543,13 +553,11 @@
 
   /* ------------------------------------------------------------- TYPOS */
 
-  /* v1.14.1 — TOUTES les polices de l'ordinateur rejoignent l'onglet :
-   * MB.fonts énumère les familles installées (Illustrateur en CEP,
-   * système en application de bureau, liste web en navigateur) —
-   * les familles ajoutées à la main restent EN TÊTE, le filet
-   * web-safe comble les machines pauvres. Dédoublonnage insensible à
-   * la casse ; hiddenFonts masque n'importe laquelle (ré-ajouter le
-   * même nom la fait revenir). */
+  /* v1.15 — CINQ polices par défaut : les familles ajoutées à la main
+   * restent EN TÊTE, la base couvrante complète (plus TOUTE la liste du
+   * système comme en v1.14.1 — elle vit dans le navigateur d'ajout).
+   * Dédoublonnage insensible à la casse ; hiddenFonts masque n'importe
+   * laquelle. */
   function visibleFonts() {
     var seen = {};
     var hidden = {};
@@ -564,14 +572,11 @@
       shown.push(f);
     }
     state.fonts.forEach(push); /* familles ajoutées — en tête */
-    if (MB.fonts && MB.fonts.isReady && MB.fonts.isReady()) {
-      MB.fonts.list().forEach(push); /* l'ordinateur ENTIER */
-    }
-    FONTS.forEach(push); /* filet web-safe */
+    DEFAULT_FONTS.forEach(push); /* la base de cinq */
     return shown;
   }
 
-  function addFont(name) {
+  function addFont(name, stay) {
     var f = String(name || '').trim();
     if (!f || f.length > 64) {
       MB.ui.toast(T('lib.fontNamePh'), 'info');
@@ -588,23 +593,23 @@
         return x.toLowerCase() !== lower;
       });
       persist();
-      if (activeTabId() === 'fonts') renderFonts();
+      if (activeTabId() === 'fonts' && !stay) renderFonts();
       MB.ui.toast(T('lib.addedFont'), 'success');
       return;
     }
     var dup = state.fonts.some(function (x) {
       return x.toLowerCase() === lower;
     });
-    var known = false;
-    if (MB.fonts && MB.fonts.isReady && MB.fonts.isReady()) {
-      known = MB.fonts.list().some(function (x) {
-        return x.toLowerCase() === lower;
-      });
-    }
-    if (!dup && !known) state.fonts.unshift(f);
+    /* v1.15 — le modèle a changé : l'onglet ne montre PLUS toutes les
+     * polices du système, donc tout ajout explicite rejoint la liste
+     * (la vérification « known » de v1.14.1 n'a plus de raison d'être). */
+    if (!dup) state.fonts.unshift(f);
     persist();
-    if (activeTabId() === 'fonts') renderFonts();
-    MB.ui.toast(T('lib.addedFont'), 'success');
+    /* v1.15 — `stay` : le navigateur de polices reste ouvert (le clic
+     * ajoute SANS refermer — l'état « dans la bibliothèque » se met à
+     * jour sur place). */
+    if (activeTabId() === 'fonts' && !stay) renderFonts();
+    MB.ui.toast(dup ? T('lib.fontAlready') : T('lib.addedFont'), dup ? 'info' : 'success');
   }
 
   function removeFont(name) {
@@ -619,79 +624,99 @@
     MB.ui.toast(T('lib.removedFont'), 'success');
   }
 
-  /* Ajout d'une typo : saisie libre + suggestions des polices du
-   * SYSTÈME (MB.fonts — Illustrator / application / liste web). */
+  /* v1.15 — le navigateur de polices : TOUTES les polices du SYSTÈME
+   * (MB.fonts — Illustrator / application / liste web) dans une liste
+   * défilante avec recherche instantanée et aperçu rendu dans chaque
+   * famille. Un clic ajoute la police à la bibliothèque ; les familles
+   * déjà présentes se montrent cochées (re-cliquer les re-masque pas —
+   * le toast le dit). */
   function showFontCreator() {
     var host = document.getElementById('lib-content');
     host.innerHTML = '';
     host.appendChild(U.el('div', 'lib-note', T('lib.fontHint')));
 
-    var box = U.el('div', 'lib-creator');
-    var listId = 'lib-font-list';
-    var nameIn = U.el('input', 'input lib-creator-name');
-    nameIn.type = 'text';
-    nameIn.maxLength = 64;
-    nameIn.placeholder = T('lib.fontNamePh');
-    nameIn.setAttribute('list', listId);
+    var box = U.el('div', 'lib-creator lib-font-picker');
 
-    var datalist = U.el('datalist');
-    datalist.id = listId;
-    function fillDatalist() {
-      var fams = [];
-      if (MB.fonts && MB.fonts.isReady && MB.fonts.isReady()) {
-        fams = MB.fonts.list();
+    var search = U.el('input', 'input lib-font-search');
+    search.type = 'text';
+    search.maxLength = 64;
+    search.placeholder = T('lib.fontSearch');
+    search.setAttribute('aria-label', T('lib.fontSearch'));
+    search.spellcheck = false;
+
+    var list = U.el('div', 'lib-list lib-list--fonts lib-font-all');
+    list.id = 'lib-font-all';
+
+    function fontList() {
+      if (MB.fonts && MB.fonts.isReady && MB.fonts.isReady() && MB.fonts.list().length) {
+        return MB.fonts.list();
       }
-      if (!fams.length) fams = FONTS.slice();
-      var html = '';
-      for (var i = 0; i < fams.length && i < 600; i++) {
-        html += '<option value="' + U.escapeHtml(fams[i]) + '"></option>';
-      }
-      datalist.innerHTML = html;
+      return FONTS.slice();
     }
-    fillDatalist();
-    /* l'énumération système arrive APRÈS l'ouverture : les suggestions
-     * se complètent au premier focus. */
-    nameIn.addEventListener('focus', fillDatalist);
+
+    function renderAll() {
+      var q = U.escapeHtml(search.value).toLowerCase();
+      var fonts = fontList();
+      var shown = 0;
+      list.innerHTML = '';
+      for (var i = 0; i < fonts.length; i++) {
+        var f = fonts[i];
+        if (q && f.toLowerCase().indexOf(q) < 0) continue;
+        shown++;
+        if (shown > 400) break;
+        var inLib = visibleFonts().some(function (x) {
+          return x.toLowerCase() === f.toLowerCase();
+        });
+        var item = U.el('button', 'lib-item lib-font lib-font-add' + (inLib ? ' is-in-lib' : ''));
+        item.type = 'button';
+        item.dataset.font = f;
+        item.innerHTML =
+          '<span class="lib-font-name">' + U.escapeHtml(f) + (inLib ? ' <span class="lib-font-in">' + U.escapeHtml(T('lib.fontInLib')) + '</span>' : '') + '</span>' +
+          '<span class="lib-font-sample" style="font-family:\'' + U.escapeHtml(f) + '\'">Aa Bb Cc</span>';
+        item.addEventListener('click', function () {
+          addFont(this.dataset.font, true);
+          renderAll();
+        });
+        list.appendChild(item);
+      }
+      if (!shown) {
+        list.innerHTML = '<div class="lib-note">' + T('lib.fontNoMatch') + '</div>';
+      }
+    }
+
+    search.addEventListener('input', renderAll);
+    /* l'énumération système arrive APRÈS l'ouverture : la liste se
+     * complète dès qu'elle est prête. */
     if (MB.fonts && MB.fonts.whenReady) {
       MB.fonts.whenReady(function () {
-        setTimeout(fillDatalist, 0);
+        if (document.getElementById('lib-font-all')) renderAll();
       });
     }
 
-    function submit() {
-      var v = nameIn.value.trim();
-      if (!v) {
-        MB.ui.toast(T('lib.fontNamePh'), 'info');
-        nameIn.focus();
-        return;
-      }
-      addFont(v);
+    var back = U.el('button', 'btn btn-ghost lib-font-back', T('dlg.cancel'));
+    back.type = 'button';
+    back.addEventListener('click', function () {
       renderFonts();
+    });
+
+    /* la source des familles (système/Illustrateur/web) se dit en pied */
+    if (MB.fonts && MB.fonts.source) {
+      var src = MB.fonts.source();
+      var srcKey =
+        src === 'host' ? 'lib.fontsSourceHost' :
+        src === 'system' ? 'lib.fontsSourceSystem' :
+        'lib.fontsSourceWeb';
+      box.appendChild(U.el('div', 'lib-note lib-note--dim', T(srcKey)));
     }
-    nameIn.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        submit();
-      }
-    });
 
-    var row = U.el('div', 'lib-creator-row');
-    var ok = U.el('button', 'btn btn-primary', T('lib.create'));
-    ok.type = 'button';
-    ok.addEventListener('click', submit);
-    var no = U.el('button', 'btn btn-ghost', T('dlg.cancel'));
-    no.type = 'button';
-    no.addEventListener('click', function () {
-      renderFonts();
-    });
-    row.appendChild(ok);
-    row.appendChild(no);
-
-    box.appendChild(nameIn);
-    box.appendChild(datalist);
-    box.appendChild(row);
+    box.appendChild(search);
+    box.appendChild(list);
+    box.appendChild(back);
     host.appendChild(box);
-    nameIn.focus();
+    /* premier rendu : quandReady peut avoir été résolu AVANT que la
+     * liste ne soit dans le DOM — on rend ici quoi qu'il en soit. */
+    renderAll();
+    search.focus();
   }
 
   function renderFonts() {

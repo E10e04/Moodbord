@@ -242,6 +242,37 @@ button:focus-visible, input:focus-visible, [contenteditable]:focus-visible {
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-sm);
 }
+/* v1.15 — navigateur de polices : TOUTES les polices du système dans
+   une liste défilante, recherche instantanée, aperçu rendu en contexte.
+   Les familles déjà dans la bibliothèque se marquent d'une pastille. */
+.lib-font-picker .lib-font-all {
+  max-height: 292px;
+  overflow-y: auto;
+  min-height: 120px;
+  background: var(--panel);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+}
+.lib-font-add {
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: background 0.12s;
+}
+.lib-font-add:hover { background: var(--panel2); }
+.lib-font-add .lib-font-sample { margin-left: auto; }
+.lib-font-add.is-in-lib { opacity: 0.62; }
+.lib-font-in {
+  font-size: 9px; font-weight: 600;
+  letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--accent);
+  margin-left: 4px;
+}
+.lib-font-back { justify-content: center; }
 .lib-creator-name { width: 100%; }
 .lib-creator-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .lib-chip {
@@ -581,12 +612,25 @@ button:focus-visible, input:focus-visible, [contenteditable]:focus-visible {
   border-radius: 999px;
 }
 .pal-av {
-  /* le rond de la rangée : la taille de l'avatar du picker (.pik-av),
-   * portant la couleur pure */
+  /* v1.15 — le rond de la rangée est un BOUTON : cliquer ouvre le
+   * sélecteur de couleur (nuancier + code hex saisissable). Le bouton
+   * ne se voit pas — c'est le rond intérieur qui porte la couleur. */
   flex: none;
   width: 32px; height: 32px;
   border-radius: 999px;
   display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  transition: transform 140ms ease;
+}
+.pal-av-in {
+  /* le rond de couleur — la taille de l'avatar du picker (.pik-av),
+   * portant la couleur pure */
+  display: block;
+  width: 100%; height: 100%;
+  border-radius: 999px;
   /* le liseré est la couleur de la CARTE, pas blanc : même règle que
    * l'anneau des visages superposés (.pik-face). Un filet INTÉRIEUR
    * à 14 % garde lisible une couleur sombre sur une carte sombre
@@ -595,6 +639,8 @@ button:focus-visible, input:focus-visible, [contenteditable]:focus-visible {
     0 0 0 2px var(--fill-slab, var(--card)),
     inset 0 0 0 1px rgba(var(--fill-on-rgb, var(--ink-rgb)), 0.14);
 }
+.pal-av:hover { transform: scale(1.08); }
+.pal-av:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .pal-hex {
   /* le code hex : le « rôle » de la rangée (cf. .pik-role) + un geste
    * en plus — COPIER. Le soulignement pointillé dit « ceci se prend »
@@ -1069,6 +1115,16 @@ input[type='range'] { accent-color: var(--accent); width: 100%; }
 .chip { font-size: 10.5px; background: var(--panel2); color: var(--text-dim); border-radius: 20px; padding: 3px 9px; }
 .insp-swatch-row { display: flex; align-items: center; gap: 7px; margin-bottom: 7px; }
 .insp-swatch-dot { width: 20px; height: 20px; border-radius: 5px; flex: 0 0 20px; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.12); }
+/* v1.15 — le rond de couleur du panneau Projet ouvre le sélecteur :
+   le bouton se fond dans la pastille, le survol l'annonce. */
+button.insp-swatch-dot--btn {
+  padding: 0; border: 0; background: none;
+  cursor: pointer;
+  transition: box-shadow 0.15s;
+}
+button.insp-swatch-dot--btn:hover {
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.12), 0 0 0 2px var(--accent);
+}
 .text-controls { display: flex; flex-direction: column; gap: 2px; }
 
 /* ------------------------------------------------------ dialogues */
@@ -2542,23 +2598,93 @@ body.mb-desktop-darwin .pv-head { padding-left: 84px; }
 }
 .pv-chip--add:hover { color: var(--accent); border-color: var(--accent); box-shadow: none; }
 
-.pv-devices {
-  display: flex; gap: 2px; flex-shrink: 0;
+/* v1.15 — onglets du panneau de configuration (Couleurs / Polices).
+ * Le même langage que les onglets de la bibliothèque : deux moitiés,
+ * l'active portée par l'accent. */
+.pv-tabs {
+  display: flex; gap: 4px;
+  padding: 0 18px;
+  margin-bottom: 12px;
+}
+.pv-tab {
+  flex: 1;
+  font-size: 12px; font-weight: 600;
+  color: var(--text-dim);
+  background: var(--panel2);
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  padding: 7px 10px;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+}
+.pv-tab:hover { color: var(--text); }
+.pv-tab.is-active {
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+/* v1.15 — rangées de POLICES du panneau de configuration : l'échantillon
+   « Aa » rendu dans sa famille (le swatch), le nom de la famille, le
+   sélecteur (le même popover que les cartes texte). */
+.pv-font-sample {
+  width: 44px; height: 34px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px; line-height: 1;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: box-shadow 0.15s;
+}
+.pv-font-sample:hover { box-shadow: 0 0 0 2px var(--accent); }
+.pv-font-name {
+  font-size: 11px;
+  color: var(--text-faint);
+  max-width: 150px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.pv-choose {
+  flex-shrink: 0;
+  font-size: 11px; font-weight: 500;
+  color: var(--text-dim);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 5px 9px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.pv-choose:hover { color: var(--accent); border-color: var(--accent); }
+
+/* v1.15 — les POLICES de la fenêtre (à la place des appareils) : une
+   pastille « Aa » par police, rendue dans SA famille. Le même geste
+   que les pastilles de couleurs — cliquer, choisir, le site suit. */
+.pv-fonts {
+  display: flex; align-items: center; gap: 5px;
+  flex-shrink: 0;
+}
+.pv-font-chip {
+  position: relative;
+  min-width: 30px; height: 24px;
+  padding: 0 7px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; line-height: 1;
+  color: var(--text);
   background: var(--panel2);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 2px;
-}
-.pv-dev-btn {
-  display: flex; align-items: center; justify-content: center;
-  width: 30px; height: 26px;
-  color: var(--text-dim);
   border-radius: 6px;
   cursor: pointer;
-  transition: color 0.15s, background 0.15s;
+  transition: box-shadow 0.15s, color 0.15s, border-color 0.15s;
 }
-.pv-dev-btn:hover { color: var(--text); }
-.pv-dev-btn.is-active { background: var(--accent-soft); color: var(--accent); }
+.pv-font-chip:hover { box-shadow: 0 0 0 2px var(--accent); }
+.pv-font-chip .pv-chip-del { top: -6px; right: -6px; }
+.pv-font-chip--add {
+  color: var(--text-dim);
+  border-style: dashed;
+}
+.pv-font-chip--add:hover { color: var(--accent); border-color: var(--accent); box-shadow: none; }
 
 .pv-close:hover { color: var(--danger); }
 

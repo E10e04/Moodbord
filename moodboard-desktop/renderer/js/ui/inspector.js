@@ -505,9 +505,31 @@
       s.appendChild(rowP);
       d.colors.forEach(function (c, idx) {
         var row = U.el('div', 'insp-swatch-row');
-        var dot = U.el('span', 'insp-swatch-dot');
+        /* v1.15 — le ROND ouvre le sélecteur de couleur (nuancier + code
+         * hex saisissable) : le champ reste la saisie directe, le rond
+         * est le geste visuel — même règle que la carte sur le canvas. */
+        var dot = U.el('button', 'insp-swatch-dot insp-swatch-dot--btn');
+        dot.type = 'button';
         dot.style.background = c.hex;
-        dot.title = c.name || '';
+        dot.title = (c.name || '') + ' — ' + T('insp.editColor');
+        dot.setAttribute('aria-label', T('insp.editColor') + ' — ' + c.hex);
+        dot.addEventListener('click', function () {
+          C.colorPopover(dot, c.hex, function (hex) {
+            var live = MB.store.el(el.id);
+            if (!live) return;
+            var norm = U.normalizeHex(hex);
+            if (!norm || norm === c.hex) return;
+            var colors = live.data.colors.map(function (x, i) {
+              return i === idx ? { hex: norm, name: x.name } : x;
+            });
+            var picked = Array.isArray(live.data.picked)
+              ? live.data.picked.map(function (h) { return h === c.hex ? norm : h; })
+              : colors.map(function (cc) { return cc.hex; });
+            C.applyDataTo([live], 'Modifier la couleur', { colors: colors, picked: picked });
+            MB.board.renderContent(live.id);
+            refresh();
+          });
+        });
         row.appendChild(dot);
         /* v1.12 — le CHAMP porte le CODE (normalisé à la saisie) ; le
          * nom de la couleur reste visible en info-bulle du pastillon. */

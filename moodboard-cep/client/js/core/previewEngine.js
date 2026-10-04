@@ -25,6 +25,16 @@
  *   ]
  * Les rôles personnalisés (background, surface, text, success…) restent
  * possibles plus tard : sanitize conserve tout rôle inconnu tel quel.
+ *
+ * v1.15 — LES POLICES rejoignent l'identité : même architecture que les
+ * couleurs — un tableau dynamique de polices à rôles :
+ *   previewFonts: [
+ *     { id, role: 'font1', value: 'Playfair Display' },  → titres
+ *     { id, role: 'font2', value: 'DM Sans' }            → texte
+ *     { id, role: 'font3', value: … }, …
+ *   ]
+ * publiées en variables --preview-font-N et consommées par le template
+ * (font-family: var(--preview-font-1, 'Playfair Display'), serif).
  * ========================================================================= */
 (function () {
   'use strict';
@@ -40,6 +50,16 @@
    * couleurs supplémentaires prennent des rôles génériques color4…N. */
   var CORE_ROLES = ['primary', 'secondary', 'accent'];
   var MAX_COLORS = 12;
+
+  /* v1.15 — polices : deux rôles noyau (font1 = titres, font2 = texte),
+   * au-delà les polices supplémentaires prennent font3…N. Les valeurs
+   * d'origine sont celles du template (Playfair Display / DM Sans). */
+  var CORE_FONTS = ['font1', 'font2'];
+  var MAX_FONTS = 6;
+  var ORIGINAL_FONTS = {
+    font1: 'Playfair Display',
+    font2: 'DM Sans'
+  };
 
   /* Identité d'origine du template : c'est ELLE que montre le premier
    * Preview (le designer voit le site original, puis recolore). */
@@ -198,6 +218,14 @@
     return 'pv-' + Date.now().toString(36) + '-' + Math.floor(Math.random() * 1e6).toString(36);
   }
 
+  /* v1.15 — les polices par défaut : l'identité du template. */
+  function defaultFonts() {
+    return [
+      { id: newId(), role: 'font1', value: ORIGINAL_FONTS.font1 },
+      { id: newId(), role: 'font2', value: ORIGINAL_FONTS.font2 }
+    ];
+  }
+
   function defaultConfig() {
     return {
       template: 'clearwave',
@@ -205,13 +233,42 @@
         { id: newId(), role: 'primary', value: ORIGINAL.primary },
         { id: newId(), role: 'secondary', value: ORIGINAL.secondary },
         { id: newId(), role: 'accent', value: ORIGINAL.accent }
-      ]
+      ],
+      fonts: defaultFonts()
     };
   }
 
   /* Sanitise une configuration lue (prefs.json / localStorage / entrée
    * externe) : HEX valides, rôles reconstruits dans l'ordre, cœur
-   * complété si besoin, doublons d'id réparés. */
+   * complété si besoin, doublons d'id réparés.
+   * v1.15 — sanitise aussi les polices (noms courts, cœur complété) —
+   * une config sans polices (ancien prefs) reçoit l'identité du
+   * template : rien ne casse à la mise à jour. */
+  function sanitizeFonts(rawFonts) {
+    var raw = Array.isArray(rawFonts)
+      ? rawFonts
+        .map(function (f) {
+          var v = f && typeof f === 'object' ? String(f.value || '') : String(f || '');
+          v = v.replace(/[\u0000-\u001f<>"']/g, '').trim().slice(0, 64);
+          return v || null;
+        })
+        .filter(function (v) { return v; })
+        .slice(0, MAX_FONTS)
+      : [];
+    var fonts = [];
+    for (var i = 0; i < CORE_FONTS.length; i++) {
+      fonts.push({
+        id: newId(),
+        role: CORE_FONTS[i],
+        value: raw[i] || ORIGINAL_FONTS[CORE_FONTS[i]]
+      });
+    }
+    for (var j = CORE_FONTS.length; j < raw.length; j++) {
+      fonts.push({ id: newId(), role: 'font' + (j + 1), value: raw[j] });
+    }
+    return fonts;
+  }
+
   function sanitizeConfig(cfg) {
     if (!cfg || typeof cfg !== 'object' || !Array.isArray(cfg.colors)) return null;
     var raw = cfg.colors
@@ -236,7 +293,7 @@
     for (var j = 3; j < raw.length; j++) {
       colors.push({ id: newId(), role: 'color' + (j + 1), value: raw[j].value });
     }
-    return { template: 'clearwave', colors: colors };
+    return { template: 'clearwave', colors: colors, fonts: sanitizeFonts(cfg.fonts) };
   }
 
   function loadConfig() {
@@ -245,8 +302,10 @@
     return cfg || defaultConfig();
   }
 
-  function saveConfig(colors) {
-    var cfg = sanitizeConfig({ colors: colors });
+  /* v1.15 — les polices voyagent AVEC les couleurs : saveConfig(colors,
+   * fonts). Un appel sans polices (compat harnais) garde les défauts. */
+  function saveConfig(colors, fonts) {
+    var cfg = sanitizeConfig({ colors: colors, fonts: fonts });
     if (cfg && MB.storage && MB.storage.setPref) {
       MB.storage.setPref('preview', cfg);
     }
@@ -276,11 +335,32 @@
     return c ? c.r + ',' + c.g + ',' + c.b : '0,0,0';
   }
 
+  /* v1.15 — le nom d'une famille en valeur CSS : les espaces sont
+   * légaux, les guillemets protègent — une famille injectée dans une
+   * variable doit rester une famille, jamais une évasion. */
+  function fontValue(name) {
+    var f = String(name || '').replace(/[\u0000-\u001f"'\\]/g, '').trim().slice(0, 64);
+    return f ? "'" + f + "'" : "'" + ORIGINAL_FONTS.font2 + "'";
+  }
+
+  function fontRolesOf(fonts) {
+    var f = sanitizeFonts(fonts);
+    var out = { core: [], extras: [] };
+    for (var i = 0; i < f.length; i++) {
+      if (i < CORE_FONTS.length) out.core.push(f[i].value);
+      else out.extras.push(f[i].value);
+    }
+    return out;
+  }
+
   /* Construit la feuille :root des --preview-* — c'est TOUT ce que le
    * moteur pousse au template (aucune manipulation du DOM du site,
-   * aucune reconstruction : le recolorage est instantané). */
-  function buildVars(colors) {
+   * aucune reconstruction : le recolorage est instantané).
+   * v1.15 — les polices voyagent dans la même feuille : le site se
+   * restyle d'un seul coup, sans rechargement. */
+  function buildVars(colors, fonts) {
     var r = rolesOf(colors);
+    var fr = fontRolesOf(fonts);
     var d = derivedExtras(r.primary, r.secondary, r.accent);
     var ink = inkTriad(r.primary);
     var sf = surfaces(r.secondary);
@@ -318,6 +398,19 @@
       v('--preview-extra-' + n + '-rgb', rgbTriplet(r.extras[i]));
     }
 
+    /* v1.15 — polices : font1 = titres, font2 = texte, font3…N =
+     * polices supplémentaires (disponibles pour de futurs templates).
+     * --preview-font-accent : les mots en italique des titres suivent la
+     * police PRINCIPALE dès qu'on la change — mais gardent le serif de
+     * l'identité d'origine tant que font1 vaut celle du template. */
+    v('--preview-font-1', fontValue(fr.core[0]));
+    v('--preview-font-2', fontValue(fr.core[1]));
+    v('--preview-font-accent',
+      fontValue(fr.core[0]).toLowerCase() === "'dm sans'" ? "'Playfair Display'" : fontValue(fr.core[0]));
+    for (var k = 0; k < fr.extras.length; k++) {
+      v('--preview-font-' + (k + 3), fontValue(fr.extras[k]));
+    }
+
     v('--preview-ink-rgb', rgbTriplet(ink.text1));
     v('--preview-bg-rgb', rgbTriplet(sf.bg));
 
@@ -340,6 +433,14 @@
     CORE_ROLES: CORE_ROLES,
     MAX_COLORS: MAX_COLORS,
     ORIGINAL: ORIGINAL,
+    /* v1.15 — polices (même architecture que les couleurs) */
+    CORE_FONTS: CORE_FONTS,
+    MAX_FONTS: MAX_FONTS,
+    ORIGINAL_FONTS: ORIGINAL_FONTS,
+    defaultFonts: defaultFonts,
+    sanitizeFonts: sanitizeFonts,
+    fontValue: fontValue,
+    fontRolesOf: fontRolesOf,
     /* math (exposée : tests E2E + future UI de rôles personnalisés) */
     hexToRgb: hexToRgb,
     rgbToHex: rgbToHex,
