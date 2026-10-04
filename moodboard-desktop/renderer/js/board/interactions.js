@@ -33,13 +33,13 @@
     link: 1, checklist: 1, comment: 1, table: 1, image: 1, import: 1,
     board: 1, assignees: 1
   };
-  var RECT_CREATE = { section: 1, column: 1, shape: 1 };
+  var RECT_CREATE = { column: 1, shape: 1 };
 
   var TYPE_NAMES = {
     text: 'texte', note: 'note', comment: 'commentaire', image: 'image',
     color: 'couleur', palette: 'palette', typography: 'typographie',
     link: 'lien', file: 'fichier', line: 'ligne', shape: 'forme',
-    section: 'section', column: 'colonne', table: 'tableau',
+    column: 'colonne', table: 'tableau',
     checklist: 'checklist', sketch: 'croquis', board: 'planche',
     group: 'groupe', import: 'carte d’import', assignees: 'assignées'
   };
@@ -62,11 +62,14 @@
     var o = opts || {};
     var el = MB.factory.create(type, point, extra);
     Store.addElements([el], { label: 'Créer ' + typeName(type) });
-    /* v1.10 — création DANS une colonne / section : la carte rejoint
-     * la pile verticale du mini-canvas sous le curseur — en FIN de
-     * pile (le tri par position ne s'applique qu'aux drags, où
-     * l'utilisateur contrôle réellement l'endroit du dépôt). */
-    var host = Store.topmostSectionAt({ x: el.x + el.w / 2, y: el.y + el.h / 2 }, [el.id]);
+    /* v1.10 — création DANS une colonne : la carte rejoint la pile
+     * verticale du mini-canvas sous le curseur — en FIN de pile (le
+     * tri par position ne s'applique qu'aux drags, où l'utilisateur
+     * contrôle réellement l'endroit du dépôt).
+     * v1.12 — la boîte ENTIÈRE de la carte sert au test (cf.
+     * joinsContainer — dépôt à cheval accepté). */
+    var host = Store.topmostSectionAt({ x: el.x + el.w / 2, y: el.y + el.h / 2 }, [el.id],
+      { x: el.x, y: el.y, w: el.w, h: el.h });
     if (host) {
       el.y = host.y + host.h + 1000; /* tri : toujours en dernier */
       Store.setParent(el.id, host.id);
@@ -399,7 +402,7 @@
    * export, repli). */
   function isRichField(el, field) {
     if (field === 'text' && !!el && (el.type === 'note' || el.type === 'text')) return true;
-    if (field === 'title' && !!el && (el.type === 'section' || el.type === 'column')) return true;
+    if (field === 'title' && !!el && el.type === 'column') return true;
     return false;
   }
 
@@ -704,9 +707,9 @@
     var st = Store.s();
     var selEls = Store.selected();
 
-    // Alt+drag sur une section/colonne : déplacer le conteneur SEUL (§39)
+    // Alt+drag sur une colonne : déplacer le conteneur SEUL (§39)
     var containerOnly = false;
-    if (e.altKey && selEls.length === 1 && (selEls[0].type === 'section' || selEls[0].type === 'column')) {
+    if (e.altKey && selEls.length === 1 && selEls[0].type === 'column') {
       containerOnly = true;
       closureIds = [selEls[0].id];
     }
@@ -799,7 +802,10 @@
     image: { w: 140, h: 110 },
     /* v1.11 — carte Assignees : la pastille seule tient dans ~180×56,
      * la boîte réserve la place de la liste ouverte. */
-    assignees: { w: 180, h: 56 }
+    assignees: { w: 180, h: 56 },
+    /* v1.12 — carte Palette (design picker) : pastille seule ~200×52,
+     * la boîte réserve la place de la liste ouverte. */
+    palette: { w: 200, h: 52 }
   };
 
   function minSizeFor(el) {
@@ -1165,6 +1171,14 @@
         el.w = newW;
         el.h = newH;
         Store.emit('element', { ids: [el.id] });
+        /* v1.12 — COLONNE : les cartes suivent EN DIRECT — le layout
+         * interne reprend leur largeur et les ré-empile à chaque image
+         * du geste (keepHeight : la hauteur en cours d'édition est
+         * celle de la main, le layout ne la conteste pas). Le layout
+         * émet lui-même les ids déplacés (store.js). */
+        if (el.type === 'column' && Store.layoutContainerChildren) {
+          Store.layoutContainerChildren(el.id, { keepHeight: true });
+        }
         var sp2 = localScreen(e);
         showBadge(sp2.x + 14, sp2.y - 30, Math.round(newW) + ' × ' + Math.round(newH));
         break;
@@ -1384,9 +1398,19 @@
           g.el.data.autoH = false;
           Store.nextRev(g.el);
         }
-        /* v1.10 — enfant d'une colonne / section : la pile verticale
-         * se réorganise après le redimensionnement. */
+        /* v1.10 — enfant d'une colonne : la pile verticale
+         * se réorganise après le redimensionnement.
+         * v1.12 — la LARGEUR revient à celle de la colonne (invariant
+         * du mini-canvas : les cartes correspondent à la colonne) ; la
+         * HAUTEUR de la carte reste celle que l'utilisateur vient de
+         * régler — seule sa position se ré-empile. */
         if (g.el && g.el.parentId) Store.relayoutContainersOf([g.el.id]);
+        /* v1.12 — la COLONNE redimensionnée : dernier passage du
+         * layout (hauteur laissée telle quelle — choix manuel ; le
+         * layout émet lui-même les vues enfants). */
+        if (g.el && g.el.type === 'column' && Store.layoutContainerChildren) {
+          Store.layoutContainerChildren(g.el.id, { keepHeight: true });
+        }
         Board.updateViews([g.el.id]);
         break;
       }
@@ -1627,7 +1651,10 @@
       var curPar = el.parentId ? Store.el(el.parentId) : null;
       if (curPar && curPar.type === 'group') return; // l'appartenance aux groupes passe par Cmd+G
       var center = { x: el.x + el.w / 2, y: el.y + el.h / 2 };
-      var target = Store.topmostSectionAt(center, g.movedIds);
+      /* v1.12 — la BOÎTE de la carte compte, pas seulement son centre :
+      * un dépôt à cheval sur le bas d'une colonne rejoint la pile
+      * (cf. joinsContainer dans store.js). */
+      var target = Store.topmostSectionAt(center, g.movedIds, { x: el.x, y: el.y, w: el.w, h: el.h });
       var newParent = target ? target.id : null;
       if (newParent !== el.parentId) {
         if (el.parentId) touchedColumns[el.parentId] = true;
@@ -1818,6 +1845,38 @@
       Store.mutate('Assigner', function () {
         Store.updateElement(el.id, { data: { picked: cur } }, { transaction: true });
       });
+      return;
+    }
+
+    /* v1.12 — carte PALETTE (design « picker » Bencho) : la pastille
+     * bascule la liste, une rangée bascule la couleur dans la pastille
+     * (la palette elle-même garde toutes ses couleurs), le code hex
+     * copie le code — le geste utile, celui des bandes verticales
+     * d'avant v1.12. */
+    if (act === 'pal-pill' && el) {
+      Store.mutate('Ouvrir la liste', function () {
+        Store.updateElement(el.id, { data: { open: !el.data.open } }, { transaction: true });
+      });
+      return;
+    }
+    if (act === 'pal-row' && el) {
+      var hexRow = actNode.getAttribute('data-hex');
+      var curP = Array.isArray(el.data.picked) ? el.data.picked.slice() : [];
+      if (!curP.length && !Array.isArray(el.data.picked)) {
+        /* picked absent (vieille palette) : tout est dedans par défaut */
+        curP = (el.data.colors || []).map(function (c) { return c.hex; });
+      }
+      var atP = curP.indexOf(hexRow);
+      if (atP >= 0) curP.splice(atP, 1);
+      else curP.push(hexRow);
+      Store.mutate('Choisir la couleur', function () {
+        Store.updateElement(el.id, { data: { picked: curP } }, { transaction: true });
+      });
+      return;
+    }
+    if (act === 'pal-copy') {
+      var hexCopy = actNode.getAttribute('data-hex');
+      if (hexCopy) copyText(hexCopy);
       return;
     }
 

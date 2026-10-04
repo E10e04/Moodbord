@@ -34,7 +34,7 @@ Point d'honnêteté : **Adobe recommande UXP pour tout nouveau développement d'
 ### Canvas spatial
 - Canvas infini avec **caméra découplée** : zoom focalisé sur le curseur (molette), zoom 100 % / ajuster à l'écran / zoom sur la sélection, pan (Espace + glisser, bouton milieu, outil Main `H`).
 
-### Objets — 17 types éditables + groupes
+### Objets — 16 types éditables + groupes
 Texte, note, commentaire, image, couleur, palette, typographie, lien, fichier, **ligne attachable** (avec flèches, raccordable aux autres éléments), forme, **section conteneur**, colonne, tableau, checklist, croquis (tracé à main levée), **carte assignées** (composant personnes) — plus le **groupe** (`⌘/Ctrl + G`) comme conteneur logique.
 
 ### Sélection et transformation
@@ -191,7 +191,7 @@ Dézipper l'archive **à la racine** du dossier extensions, de sorte que `CSXS/`
 > 5. relancer Illustrator.
 >
 > **Vérifiez la version installée** : le badge en bas à droite de la barre d'état
-> du panneau doit afficher **v1.11.0**. S'il affiche autre chose, l'ancienne
+> du panneau doit afficher **v1.12.0**. S'il affiche autre chose, l'ancienne
 > installation est encore active.
 
 ### 3. Activer le PlayerDebugMode
@@ -267,6 +267,40 @@ Si un jour les **drags ne répondent plus alors que le zoom molette fonctionne**
 `MB.interact.diag()` retourne le nombre d'événements **réellement livrés** par le moteur de chaque famille (`pointerdown`, `mousedown`, `pointermove`, `mousemove`, `blur`, `pointercancel`…) ainsi que l'état de la machine à gestes (`gesture`, `spaceDown`, `tool`). Depuis la v1.0.1, la couche d'interaction est **adaptive** : elle branche à la fois les Pointer Events et les événements souris, et bascule automatiquement sur la souris si le moteur CEP hôte ne livre pas les Pointer Events (cas observé selon les versions d'Illustrator).
 
 Depuis la **v1.0.2**, les gestes **survivent** aux événements `blur` / `pointercancel` parasites que certains hôtes CEP émettent au milieu d'un drag (symptôme typique : « le zoom marche mais rien ne se déplace ») : le geste continue s'il reçoit encore des événements, et n'est annulé proprement (avec rollback) que si plus rien n'arrive pendant 600 ms.
+
+#### Nouveautés v1.12.0 — palette « picker », section retirée, colonnes réparées, garde de fermeture
+
+1. **Outil Palette — nouveau design « picker » (Bencho)** : la carte
+   adopte le langage du composant Assignees — une **pastille** qui se
+   remplit de **ronds de couleur empilés** et ouvre une **liste
+   cochable** (rond + nom + code hex + coche). La pastille referme et
+   rouvre la liste ; décocher une rangée retire le rond de la
+   pastille (la palette garde toutes ses couleurs) ; **cliquer le code
+   hex le copie** (le geste historique). Boîte 264 px de large,
+   hauteur réservée pour la liste ouverte.
+2. **Panneau Projet — codes couleurs** : les rangées de la palette
+   montrent les **codes hex** (plus les noms) et le champ **modifie la
+   couleur** ; le nom de la palette vit désormais dans le panneau
+   (champ dédié).
+3. **Outil Section retiré** : plus de bouton, plus de création, plus
+   d'icône — la **colonne** reste le seul conteneur à pile verticale.
+   Les **anciens projets sont migrés** au chargement (sections →
+   colonnes, titre et couleurs conservés, rien n'est perdu).
+4. **Colonnes — empilement réparé** : la hauteur d'une colonne ne
+   **rétrécit** plus à la taille exacte de son contenu (le bug : une
+   colonne de 380 px s'effondrait à 220 en recevant une note, et le
+   dépôt suivant visait « là où la colonne n'était plus ») ; un dépôt
+   **à cheval** sur le bord bas rejoint la pile ; les cartes prennent
+   **la largeur de la colonne** dès qu'elles y entrent ; et elles
+   **suivent en direct** le redimensionnement de la colonne.
+5. **Fermeture de l'application** : quitter avec du travail non
+   enregistré propose **« Enregistrer » / « Annuler »** — Enregistrer
+   écrit le projet (chemin connu = écriture directe, sinon choix de
+   l'emplacement) puis ferme ; un dialogue annulé laisse l'application
+   ouverte. *(Application autonome.)*
+
+*Vérifications : 540 assertions E2E (v102→v1120) + 114 simulation, VLM
+conforme, zéro erreur console.*
 
 #### Nouveautés v1.11.0 — images système, bibliothèque persistante, Assignees
 

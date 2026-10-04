@@ -121,20 +121,40 @@ function createWindow() {
           win.close();
           return;
         }
+        /* v1.12 — dialogue « Enregistrer » / « Annuler » (demande
+           utilisateur) : Enregistrer lance l'enregistrement DANS la
+           page (chemin connu = écriture directe, sinon le choix de
+           l'emplacement) et ne ferme que si le travail est réellement
+           enregistré — un dialogue d'emplacement annulé maintient
+           l'application ouverte. Annuler laisse tout en l'état. */
         const choice = dialog.showMessageBoxSync(win, {
           type: 'question',
-          message: 'Des modifications ne sont pas encore enregistrées.',
+          message: 'Enregistrer les modifications avant de quitter ?',
           detail:
-            "L'enregistrement automatique les a conservées — elles seront restaurées " +
-            'au prochain lancement de l’application.',
-          buttons: ['Quitter', 'Annuler'],
+            "Le travail en cours n'a pas encore été enregistré. « Enregistrer » écrit le projet " +
+            'puis ferme l’application ; « Annuler » vous laisse le modifier encore.',
+          buttons: ['Enregistrer', 'Annuler'],
           defaultId: 0,
           cancelId: 1,
           noLink: true
         });
         if (choice === 0) {
-          win.__forceClose = true;
-          win.close();
+          const jsSave =
+            '(window.MB && MB.app && MB.app.saveBeforeClose) ' +
+            '? MB.app.saveBeforeClose() : Promise.resolve(false)';
+          Promise.resolve(win.webContents.executeJavaScript(jsSave, true))
+            .then((saved) => {
+              if (win.isDestroyed()) return;
+              if (saved) {
+                win.__forceClose = true;
+                win.close();
+              }
+              /* false : enregistrement annulé ou échoué — l'application
+                 reste ouverte, l'état est inchangé. */
+            })
+            .catch(() => {
+              /* la page n'a pas répondu : on ne ferme pas à l'aveugle. */
+            });
         }
       })
       .catch(() => {

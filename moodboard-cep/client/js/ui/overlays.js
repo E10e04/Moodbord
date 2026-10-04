@@ -195,7 +195,7 @@
       [en ? 'Empty area + drag' : 'Zone vide + glisser', en ? 'Lasso selection (marquee)' : 'Sélection au lasso (marquee)'],
       [en ? 'Double-click' : 'Double-clic', en ? 'Edit (text, note, cell, image → crop)' : 'Éditer (texte, note, cellule, image → recadrer)'],
       ['Alt + ←', en ? 'Back from the linked board to the parent moodboard (or click its name at the top)' : 'Revenir du planche liée au moodboard parent (ou clic sur son nom en haut)'],
-      [en ? 'Alt + drag' : 'Alt + glisser', en ? 'Duplicate (on a section: move the container alone)' : 'Dupliquer (sur une section : déplacer le conteneur seul)'],
+      [en ? 'Alt + drag' : 'Alt + glisser', en ? 'Duplicate (on a column: move the container alone)' : 'Dupliquer (sur une colonne : déplacer le conteneur seul)'],
       [en ? 'Delete / Backspace' : 'Suppr / Retour arr.', en ? 'Delete the selection' : 'Supprimer la sélection'],
       ['Échap', en ? 'Exit editing → cancel → deselect' : 'Quitter édition → annuler → déselection'],
       ['⌘/Ctrl + Z', en ? 'Undo' : 'Annuler'],

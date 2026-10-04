@@ -39,7 +39,8 @@
       { id: 'shape', icon: 'shape', key: 'R', tKey: 'tool.shape' },
       { id: 'sketch', icon: 'sketch', key: 'B', tKey: 'tool.sketch' },
       { sep: true },
-      { id: 'section', icon: 'section', key: 'S', tKey: 'tool.section' },
+      /* v1.12 — l'outil SECTION est retiré : la colonne reste le seul
+       * conteneur à pile verticale. */
       { id: 'column', icon: 'column', tKey: 'tool.column' },
       { id: 'table', icon: 'table', tKey: 'tool.table' },
       { id: 'board', icon: 'board', key: 'E', tKey: 'tool.board' },

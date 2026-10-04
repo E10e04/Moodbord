@@ -31,11 +31,12 @@
     if (!id) return null;
     var el = MB.store.el(id);
     if (!el) return null;
-    /* v1.11 — la barre s'applique AUSSI aux TITRES des colonnes /
-     * sections (champs riches) : couleur et mise en forme de
-     * l'en-tête (demande utilisateur). */
+    /* v1.11 — la barre s'applique AUSSI aux TITRES des colonnes
+     * (champs riches) : couleur et mise en forme de l'en-tête
+     * (demande utilisateur).
+     * v1.12 — l'outil Section est retiré : colonnes seules. */
     if (el.type === 'note' || el.type === 'text') return el;
-    if (el.type === 'section' || el.type === 'column') return el;
+    if (el.type === 'column') return el;
     return null;
   }
 

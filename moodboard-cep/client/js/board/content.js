@@ -161,32 +161,13 @@
 
   /* ---------------------------------------------------------- PALETTE */
 
-  /* v1.11 — NOUVEAU DESIGN : carte portrait en BANDES VERTICALES
-   * pleine surface (une par couleur, hauteur égale, flexibilité
-   * totale au redimensionnement), code HEX en pied de bande dans
-   * l'encre lisible (blanc/noir selon la luminance), bandeau de nom
-   * sombre au-dessus. Un clic sur une bande copie le HEX (comportement
-   * historique conservé) ; le nom reste éditable au double-clic. */
+  /* v1.12 — REDESIGN d'après le bloc « picker » de Bencho : la carte
+   * est rendue par ui/palette.js (pastille à ronds empilés + liste
+   * cochable, mêmes classes .pik que la carte Assignees). Ici, seul
+   * le branchement du moteur — les couleurs et le « pourquoi » des
+   * nombres vivent dans le module. */
   function renderPalette(el) {
-    var d = el.data;
-    var bands = '';
-    for (var i = 0; i < d.colors.length; i++) {
-      var c = d.colors[i];
-      var ink = U.readableOn(c.hex);
-      bands +=
-        '<button type="button" class="mb-palette-band" data-act="copy" data-hex="' + esc(c.hex) + '"' +
-        ' style="background:' + esc(c.hex) + ';color:' + ink + '"' +
-        ' title="' + esc(c.name) + ' · ' + esc(String(c.hex).toUpperCase()) + '"' +
-        ' aria-label="' + esc(c.name) + ' — copier ' + esc(String(c.hex).toUpperCase()) + '">' +
-        '<span class="mb-palette-hex">' + esc(String(c.hex).toUpperCase()) + '</span>' +
-        '</button>';
-    }
-    return (
-      '<div class="mb-palette-card">' +
-      '<div class="mb-palette-name mb-editable" data-field="name">' + esc(d.name) + '</div>' +
-      '<div class="mb-palette-stripes">' + bands + '</div>' +
-      '</div>'
-    );
+    return MB.ui.paletteCard ? MB.ui.paletteCard.render(el) : '';
   }
 
   /* -------------------------------------------------------- TYPOGRAPHY */
@@ -396,13 +377,16 @@
     );
   }
 
-  /* -------------------------------------------------- SECTION / COLUMN */
+  /* ------------------------------------------------------------ COLUMN */
 
   /* v1.10 — en-tête et corps séparés : couleur d'EN-TÊTE et couleur
    * de CORPS indépendantes + mise en forme du titre (police, taille,
-   * gras, italique, couleur). Les colonnes et sections sont des
+   * gras, italique, couleur). Les colonnes sont des
    * mini-canvas : les cartes enfants s'y empilent verticalement
-   * (cf. store.layoutContainerChildren). */
+   * (cf. store.layoutContainerChildren).
+   * v1.12 — l'outil SECTION est retiré : la colonne reste le seul
+   * conteneur à pile verticale (les anciennes sections sont migrées
+   * en colonnes au chargement — store.loadDocument). */
   function titleStyleOf(d) {
     var st =
       'font-size:' + (d.titleSize || 15) + 'px;' +
@@ -421,23 +405,6 @@
       return MB.rich ? MB.rich.sanitize(d.titleHtml) : d.titleHtml;
     }
     return esc(d.title || '');
-  }
-
-  function renderSection(el) {
-    var d = el.data;
-    var headBg = d.headColor && d.headColor !== 'transparent'
-      ? ' style="background:' + U.escapeHtml(d.headColor) + '"'
-      : '';
-    return (
-      '<div class="mb-section-box" style="background:' + d.color + '">' +
-      (d.showTitle !== false
-        ? '<div class="mb-section-head"' + headBg + '>' +
-          '<div class="mb-section-title mb-editable mb-rich" data-field="title" style="' + titleStyleOf(d) + '">' + richOrPlainTitle(d) + '</div>' +
-          '</div>'
-        : '') +
-      '<div class="mb-section-body"></div>' +
-      '</div>'
-    );
   }
 
   function renderColumn(el) {
@@ -591,7 +558,6 @@
     file: renderFile,
     line: renderLine,
     shape: renderShape,
-    section: renderSection,
     column: renderColumn,
     table: renderTable,
     checklist: renderChecklist,

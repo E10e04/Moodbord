@@ -481,51 +481,57 @@ button:focus-visible, input:focus-visible, [contenteditable]:focus-visible {
 .mb-color-name { font-size: 12.5px; font-weight: 600; outline: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mb-color-hex { font-size: 11px; color: var(--text-dim); font-family: var(--mono); }
 
-/* -- palette (v1.11 — NOUVEAU DESIGN : bandes verticales pleine surface,
-   bandeau de nom au-dessus, hex en pied de bande dans l'encre lisible) */
-.mb-palette-card {
-  display: flex; flex-direction: column;
-  height: 100%;
-  border-radius: 10px;
-  overflow: hidden;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
-  background: var(--panel2);
+/* -- palette (v1.12 — REDESIGN d'après le bloc « picker » de Bencho :
+   la carte réutilise les classes .pik-* du composant Assignees ; seuls
+   les éléments propres aux COULEURS vivent ici : le rond de la rangée,
+   le code hex copiable, le rond de la pastille sans photo). */
+.pik .pal-face-in {
+  /* le rond de couleur de la pastille — même conteneur que le visage
+   * du picker (.pik-face-in), rempli par le fond au lieu d'une photo */
+  display: block;
+  width: 100%; height: 100%;
+  border-radius: 999px;
 }
-.mb-palette-name {
-  flex: 0 0 30px;
-  display: flex; align-items: center;
-  padding: 0 12px;
-  font-size: 13px; font-weight: 700;
-  color: var(--text);
-  background: var(--panel2);
-  outline: none;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+.pal-av {
+  /* le rond de la rangée : la taille de l'avatar du picker (.pik-av),
+   * portant la couleur pure */
+  flex: none;
+  width: 32px; height: 32px;
+  border-radius: 999px;
+  display: block;
+  /* le liseré est la couleur de la CARTE, pas blanc : même règle que
+   * l'anneau des visages superposés (.pik-face). Un filet INTÉRIEUR
+   * à 14 % garde lisible une couleur sombre sur une carte sombre
+   * (Charbon #2B2B2B sur l'ardoise) sans faire de bord neuf. */
+  box-shadow:
+    0 0 0 2px var(--fill-slab, var(--card)),
+    inset 0 0 0 1px rgba(var(--fill-on-rgb, var(--ink-rgb)), 0.14);
 }
-.mb-palette-stripes {
-  flex: 1;
-  display: flex;
-  min-height: 0;
-}
-.mb-palette-band {
-  flex: 1 1 0;
-  min-width: 0;
-  border: 0; padding: 0;
-  position: relative;
-  cursor: copy;
+.pal-hex {
+  /* le code hex : le « rôle » de la rangée (cf. .pik-role) + un geste
+   * en plus — COPIER. Le soulignement pointillé dit « ceci se prend »
+   * sans ajouter de forme nouvelle à la rangée. */
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: rgba(var(--fill-on-rgb, var(--ink-rgb)), 0.45);
   font: inherit;
-  display: flex; align-items: flex-end; justify-content: center;
-  transition: flex 140ms cubic-bezier(0.33, 0.55, 0.2, 1);
-}
-.mb-palette-band:hover { flex: 1.35 1 0; }
-.mb-palette-hex {
-  padding: 0 2px 7px;
+  font-size: 11.5px;
   font-family: var(--mono);
-  font-size: 9.5px; font-weight: 600;
-  letter-spacing: 0.02em;
-  opacity: 0.92;
-  white-space: nowrap;
+  line-height: 1.45;
+  cursor: copy;
+  border-bottom: 1px dotted rgba(var(--fill-on-rgb, var(--ink-rgb)), 0.35);
+  transition: color 140ms ease;
 }
-.mb-palette-band:hover .mb-palette-hex { opacity: 1; }
+.pal-hex:hover { color: rgba(var(--fill-on-rgb, var(--ink-rgb)), 0.9); }
+.pal-hex:focus-visible {
+  outline: none;
+  color: rgba(var(--fill-on-rgb, var(--ink-rgb)), 0.9);
+  box-shadow: 0 0 0 2px rgba(var(--fill-on-rgb, var(--ink-rgb)), 0.45);
+  border-radius: 4px;
+}
+.pal-row { cursor: pointer; }
 
 /* -- typographie */
 .mb-typo-card {
@@ -654,31 +660,13 @@ button:focus-visible, input:focus-visible, [contenteditable]:focus-visible {
 /* -- formes */
 .mb-shape-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 
-/* -- section / colonne */
+/* -- colonne */
 /* v1.10 — en-tête et corps SÉPARÉS : couleurs indépendantes + titre
  * mis en forme (gras, italique, couleur, taille, police). La zone
- * .mb-*-body accueille la pile verticale des cartes enfants
- * (mini-canvas — cf. store.layoutContainerChildren). */
-.mb-section-box {
-  width: 100%; height: 100%;
-  display: flex; flex-direction: column;
-  border-radius: 16px;
-  border: 1px dashed var(--border);
-  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.18);
-  overflow: hidden;
-}
-.mb-section-head {
-  flex: 0 0 auto;
-  padding: 0;
-}
-.mb-section-title {
-  font-size: 15px; font-weight: 400; color: var(--text-dim);
-  padding: 14px 18px; outline: none;
-}
-.mb-section-head[style*="background"] .mb-section-title {
-  color: var(--text);
-}
-.mb-section-body { flex: 1 1 auto; min-height: 0; }
+ * .mb-column-body accueille la pile verticale des cartes enfants
+ * (mini-canvas — cf. store.layoutContainerChildren).
+ * v1.12 — l'outil SECTION est retiré : la colonne reste le seul
+ * conteneur à pile verticale. */
 .mb-column-box {
   width: 100%; height: 100%;
   display: flex; flex-direction: column;

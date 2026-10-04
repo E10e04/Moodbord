@@ -334,8 +334,9 @@
       return;
     }
 
-    if (el.type === 'section' || el.type === 'column') {
-      /* v1.10 — couleurs SÉPARÉES en-tête / corps + renommage. */
+    if (el.type === 'column') {
+      /* v1.10 — couleurs SÉPARÉES en-tête / corps + renommage.
+       * v1.12 — l'outil Section est retiré : la colonne seule. */
       var gs = addGroup();
       gs.appendChild(C.colorButton(function () {
         return d.headColor || '#3A3A3A';

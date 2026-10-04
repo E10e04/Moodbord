@@ -989,6 +989,68 @@
     saveAs();
   }
 
+  /* v1.12 — ENREGISTRER AVANT DE FERMER (demande utilisateur) :
+   * retourne une PROMESSE résolue à true quand le travail est
+   * enregistré, false quand l'enregistrement a été annulé ou a
+   * échoué. Le processus principal de l'application autonome s'en
+   * sert pour son dialogue de fermeture : « Enregistrer » ou
+   * « Annuler ». Chemin connu → écriture directe (résolution
+   * immédiate) ; sinon le dialogue d'emplacement est proposé et son
+   * annulation maintient l'application ouverte. */
+  function saveBeforeClose() {
+    return new Promise(function (resolve) {
+      var st = MB.store.s();
+      if (st.ui.saveState === 'saved') {
+        resolve(true);
+        return;
+      }
+      var done = false;
+      var unwatch = null;
+      function finish(ok) {
+        if (done) return;
+        done = true;
+        if (unwatch) unwatch();
+        resolve(!!ok);
+      }
+      /* succès : l'état passe à 'saved' (markSaved → setUI → événement
+       * 'ui') ; un délai de filet rattrape les écritures synchrones. */
+      function onUi(patch) {
+        if (patch && patch.saveState === 'saved') {
+          setTimeout(function () { finish(true); }, 60);
+        }
+      }
+      if (MB.store.on) {
+        MB.store.on('ui', onUi);
+        unwatch = function () {
+          /* le store n'expose pas de off() : le listener reste mais
+           * done=true le rend inerte */
+        };
+      }
+      var path = st.project && st.project.path;
+      if (isFs() && isAbsPath(path)) {
+        saveToPath(path);
+        /* saveToPath est synchrone (ipc sendSync) : l'état est déjà
+         * celui du résultat ; une erreur laisse 'unsaved'. */
+        setTimeout(function () {
+          finish(MB.store.s().ui.saveState === 'saved');
+        }, 120);
+      } else {
+        saveAs(function (ok) {
+          /* le dialogue d'emplacement : annulé → false ; réussi →
+           * 'saved' est déjà passé par markSaved (onUi l'a vu) — le
+           * filet de 60 ms couvre la course. */
+          setTimeout(function () {
+            finish(ok && MB.store.s().ui.saveState === 'saved');
+          }, 160);
+        });
+      }
+      /* filet de sécurité : jamais de promesse pendante éternelle. */
+      setTimeout(function () {
+        finish(MB.store.s().ui.saveState === 'saved');
+      }, 300000);
+    });
+  }
+
   /* Écrit le projet dans un chemin déjà connu (⌘S sur un fichier
    * ouvert/enregistré) : silencieux, sans dialogue. */
   function saveToPath(target) {
@@ -1022,7 +1084,11 @@
     MB.ui.toast(message || 'Projet enregistré', 'success');
   }
 
-  function saveAs() {
+  function saveAs(onResult) {
+    /* v1.12 — onResult(true|false) : rapport du dialogue à l'appelant
+     * (l'application autonome s'en sert pour fermer après un
+     * « Enregistrer » de fin de session — ou rester ouverte si le
+     * dialogue a été annulé). */
     var st = MB.store.s();
     var prefs = readPrefs();
     /* v1.8 — le nom proposé est TOUJOURS celui du projet (champ de la
@@ -1034,7 +1100,11 @@
     var dir = prefs.lastDir || (st.project.path ? dirname(st.project.path) : '');
 
     function landed(target) {
-      if (!target) return; // annulé
+      if (!target) {
+        /* annulé : le projet reste non enregistré */
+        if (typeof onResult === 'function') onResult(false);
+        return;
+      }
       /* v1.8 — le nom du fichier devient le nom du projet (champ haut,
        * fil d'Ariane, sérialisation) : les deux restent synchrones. */
       var name = basename(target).replace(/\.moodboard$/i, '') || 'Sans titre';
@@ -1043,9 +1113,11 @@
       var w = writeText(target, payload);
       if (w.error) {
         MB.ui.toast('Échec de l‘enregistrement : ' + w.error, 'error');
+        if (typeof onResult === 'function') onResult(false);
         return;
       }
       afterSaved(target, 'Projet enregistré');
+      if (typeof onResult === 'function') onResult(true);
     }
 
     if (isDesktop()) {
@@ -1066,6 +1138,7 @@
       downloadFile(safeName() + '.moodboard', JSON.stringify(serialize()));
       markSaved();
       MB.ui.toast('Projet exporté (.moodboard)', 'success');
+      if (typeof onResult === 'function') onResult(true);
     }
   }
 
@@ -1303,6 +1376,7 @@
     writeLibrary: writeLibrary,
     save: save,
     saveAs: saveAs,
+    saveBeforeClose: saveBeforeClose,
     saveDialog: saveDialog,
     open: open,
     openFile: openFile,

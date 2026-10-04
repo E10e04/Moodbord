@@ -31,12 +31,9 @@
 
   function build() {
     var elements = [
-      E(1, 'section', 80, 120, 940, 580, {
-        title: 'Direction artistique',
-        color: '#2C2C2C',
-        showTitle: true
-      }),
-
+      /* v1.12 — la SECTION de démonstration est retirée avec l'outil :
+       * la dé montre désormais une COLONNE en mini-canvas (avec deux
+       * cartes empilées) + une palette au nouveau design « picker ». */
       E(2, 'image', 110, 176, 300, 300, {
         src: 'assets/demo/demo-texture.png',
         naturalW: 1024,
@@ -49,7 +46,7 @@
         ratioLock: true,
         fit: 'cover',
         crop: null
-      }, id(1)),
+      }),
 
       E(3, 'image', 440, 176, 520, 340, {
         src: 'assets/demo/demo-editorial.png',
@@ -63,15 +60,15 @@
         ratioLock: true,
         fit: 'cover',
         crop: null
-      }, id(1)),
+      }),
 
       E(4, 'note', 440, 540, 300, 140, {
         text: 'Teintes chaudes, papier brut, esprit artisanal — un café qui se lit comme une lettre d‘amour.',
         color: '#F7D46A',
         fontSize: 15
-      }, id(1)),
+      }),
 
-      E(5, 'palette', 1080, 140, 200, 300, {
+      E(5, 'palette', 1080, 140, 264, 306, {
         name: 'Old Copper',
         colors: [
           { hex: '#7A522E', name: 'Old Copper' },
@@ -81,6 +78,28 @@
           { hex: '#F5F1EA', name: 'Ivoire' }
         ]
       }),
+
+      /* v1.12 — colonne de démonstration : le mini-canvas vertical
+       * avec deux cartes enfants qui ont pris sa largeur. */
+      E(18, 'column', 1080, 500, 264, 320, {
+        title: 'Direction artistique',
+        color: '#2A2A2A'
+      }),
+      E(19, 'note', 1092, 549, 240, 120, {
+        text: 'Glissez des cartes dans la colonne — elles s’empilent.',
+        color: '#F7D46A',
+        fontSize: 14,
+        html: ''
+      }, id(18)),
+      E(20, 'checklist', 1092, 679, 240, 136, {
+        title: 'À faire',
+        items: [
+          { id: 'demo-c1', text: 'Choisir la palette', done: true },
+          { id: 'demo-c2', text: 'Photographier les textures', done: false }
+        ],
+        color: '#252525',
+        fontSize: 13
+      }, id(18)),
 
       E(6, 'typography', 1330, 140, 236, 252, {
         fontFamily: 'Georgia',

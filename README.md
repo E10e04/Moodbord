@@ -6,7 +6,7 @@
 
 Moodboard rassemble moodboards de marque, références, palettes, typographies
 et annotations dans un espace libre — avec caméra découplée (zoom focalisé
-sur le curseur, pan Espace+glisser), **18 types d'éléments**, undo/redo
+sur le curseur, pan Espace+glisser), **17 types d'éléments**, undo/redo
 transactionnel et autosave.
 
 Le projet existe sous **deux formes** qui partagent exactement le même moteur
@@ -173,7 +173,7 @@ npm run dist:mac               # → dist/Moodboard-1.4.0-x64.dmg + arm64.dmg (s
 
 - **Canvas infini** : zoom molette focalisé curseur, pan (Espace+glisser,
   bouton milieu, outil Main `H`), Ajuster à l'écran `⇧1`.
-- **18 types d'éléments** : image, texte, note, commentaire, couleur, palette,
+- **17 types d'éléments** : image, texte, note, commentaire, couleur, palette,
   typographie, lien, fichier, ligne attachable (flèches), forme, section
   conteneur, colonne, tableau, checklist, croquis à main levée, carte
   assignées (composant personnes) + groupes.
@@ -218,6 +218,24 @@ npm run dist:mac               # → dist/Moodboard-1.4.0-x64.dmg + arm64.dmg (s
    placeholder générés par IA.
 
 ## 📜 Changelog
+
+## 🆕 v1.12.0 — palette « picker », section retirée, colonnes réparées, garde de fermeture
+
+- **Outil Palette** redessiné d'après le bloc **« picker » de Bencho** :
+  pastille à ronds de couleur empilés + liste cochable (nom + code hex +
+  coche) ; cliquer le **code hex le copie**.
+- **Panneau Projet** : les rangées de palette montrent les **codes
+  couleurs** (plus les noms) et le champ modifie la couleur ; nom de la
+  palette éditable au même endroit.
+- **Outil Section retiré** — la colonne reste le seul conteneur vertical ;
+  les anciens projets sont **migrés** (sections → colonnes, rien de perdu).
+- **Colonnes réparées** : la hauteur ne rétrécit plus (le bug
+  « l'empilement ne marche pas ») ; les cartes prennent **la largeur de la
+  colonne** et **suivent son redimensionnement en direct** ; un dépôt à
+  cheval sur le bord bas rejoint la pile.
+- **Fermeture** : quitter avec du travail non enregistré propose
+  **« Enregistrer » / « Annuler »** (application autonome).
+- 540 assertions E2E (v102→v1120) + 114 simulation, zéro erreur console.
 
 ### v1.11.0 — images système, bibliothèque persistante, composant Assignees
 

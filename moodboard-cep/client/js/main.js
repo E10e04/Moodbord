@@ -172,6 +172,20 @@
     newBoard: newBoard,
     loadDemo: loadDemo,
 
+    /* v1.12 — FERMETURE DE L'APPLICATION (demande utilisateur) :
+     * le processus principal de l'app autonome demande « Enregistrer
+     * les modifications avant de quitter ? » ; « Enregistrer » appelle
+     * CETTE fonction — la promesse dit si le travail est désormais
+     * enregistré (fermer) ou si le dialogue a été annulé (rester).
+     * Voir storage.saveBeforeClose pour les deux chemins (chemin
+     * connu = écriture directe, sinon choix de l'emplacement). */
+    saveBeforeClose: function () {
+      if (MB.storage && typeof MB.storage.saveBeforeClose === 'function') {
+        return MB.storage.saveBeforeClose();
+      }
+      return Promise.resolve(true);
+    },
+
     /* v1.6 — suppression avec garde : une planche liée qui contient du
      * travail mérite une confirmation explicite. */
     deleteSelection: function () {

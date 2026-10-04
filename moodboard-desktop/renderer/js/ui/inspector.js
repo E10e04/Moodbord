@@ -51,6 +51,8 @@
       color: 'insp.color', palette: 'insp.palette', typography: 'insp.typography',
       link: 'insp.link', file: 'insp.image', line: 'insp.line', shape: 'insp.shape',
       section: 'insp.section', column: 'insp.column', table: 'insp.table',
+      /* v1.12 — l'outil Section est retiré : le mapping survit pour les
+       * anciens projets (migrés en colonnes au chargement). */
       checklist: 'insp.checklist', sketch: 'insp.sketch', board: 'insp.board',
       group: 'type.group', import: 'insp.import', assignees: 'insp.assignees'
     }[type];
@@ -108,7 +110,7 @@
       text: 'Texte', note: 'Note', comment: 'Commentaire', image: 'Image',
       color: 'Couleur', palette: 'Palette', typography: 'Typographie',
       link: 'Lien', file: 'Fichier', line: 'Ligne', shape: 'Forme',
-      section: 'Section', column: 'Colonne', table: 'Tableau',
+      column: 'Colonne', table: 'Tableau',
       checklist: 'Checklist', sketch: 'Croquis', board: 'Planche',
       group: 'Groupe', import: 'Carte d’import'
     }[e.type] || e.type;
@@ -466,12 +468,35 @@
       }));
       s.appendChild(rowC);
     } else if (el.type === 'palette') {
+      /* v1.12 — design « picker » : le nom de la palette n'est plus
+       * éditable sur la carte (le composant n'en affiche pas) — il vit
+       * ici. Et les rangées montrent les CODES COULEURS (demande
+       * utilisateur : « au lieu des noms, les codes couleurs ») : le
+       * champ modifie la couleur elle-même. */
       s = section(T('insp.palette'));
+      var nameRow = U.el('div', 'insp-swatch-row');
+      var nameIn = U.el('input', 'input input--inline');
+      nameIn.value = d.name || 'Palette';
+      nameIn.placeholder = 'Palette';
+      nameIn.addEventListener('change', function () {
+        C.applyDataTo([el], 'Renommer la palette', { name: nameIn.value });
+      });
+      var nameLbl = U.el('span', 'insp-kv', 'Nom');
+      nameRow.appendChild(nameLbl);
+      nameRow.appendChild(nameIn);
+      s.appendChild(nameRow);
       var addBtn = C.textButton('+ Ajouter une couleur', function () {
         C.colorPopover(addBtn, '#4C8DFF', function (hex) {
-          var colors = d.colors.concat([{ hex: hex, name: 'Nouvelle' }]);
-          C.applyDataTo([el], 'Ajouter une couleur', { colors: colors });
-          MB.board.renderContent(el.id);
+          var live = MB.store.el(el.id);
+          if (!live) return;
+          var colors = live.data.colors.concat([{ hex: hex, name: 'Nouvelle' }]);
+          var picked = Array.isArray(live.data.picked)
+            ? live.data.picked.concat([hex])
+            : colors.map(function (c) { return c.hex; });
+          var hWant = MB.ui.paletteCard ? MB.ui.paletteCard.heightOf(colors.length) : live.h;
+          C.applyDataTo([live], 'Ajouter une couleur', { colors: colors, picked: picked });
+          live.h = hWant;
+          MB.board.renderContent(live.id);
           refresh();
         });
       });
@@ -482,22 +507,46 @@
         var row = U.el('div', 'insp-swatch-row');
         var dot = U.el('span', 'insp-swatch-dot');
         dot.style.background = c.hex;
+        dot.title = c.name || '';
         row.appendChild(dot);
-        var name = U.el('input', 'input input--inline');
-        name.value = c.name;
-        name.addEventListener('change', function () {
-          var colors = d.colors.map(function (x, i) {
-            return i === idx ? { hex: x.hex, name: name.value } : x;
+        /* v1.12 — le CHAMP porte le CODE (normalisé à la saisie) ; le
+         * nom de la couleur reste visible en info-bulle du pastillon. */
+        var code = U.el('input', 'input input--inline insp-hex-input');
+        code.value = String(c.hex).toUpperCase();
+        code.spellcheck = false;
+        code.placeholder = '#AABBCC';
+        code.addEventListener('change', function () {
+          var live = MB.store.el(el.id);
+          if (!live) return;
+          var norm = U.normalizeHex(code.value);
+          if (!norm) {
+            code.value = String(c.hex).toUpperCase();
+            return;
+          }
+          var colors = live.data.colors.map(function (x, i) {
+            return i === idx ? { hex: norm, name: x.name } : x;
           });
-          C.applyDataTo([el], 'Renommer', { colors: colors });
+          var picked = Array.isArray(live.data.picked)
+            ? live.data.picked.map(function (h) { return h === c.hex ? norm : h; })
+            : colors.map(function (cc) { return cc.hex; });
+          C.applyDataTo([live], 'Modifier la couleur', { colors: colors, picked: picked });
+          MB.board.renderContent(live.id);
+          refresh();
         });
-        row.appendChild(name);
+        row.appendChild(code);
         var del = C.iconButton('x', 'Retirer', function () {
-          var colors = d.colors.filter(function (x, i) {
+          var live = MB.store.el(el.id);
+          if (!live) return;
+          var colors = live.data.colors.filter(function (x, i) {
             return i !== idx;
           });
-          C.applyDataTo([el], 'Retirer une couleur', { colors: colors });
-          MB.board.renderContent(el.id);
+          var picked = Array.isArray(live.data.picked)
+            ? live.data.picked.filter(function (h) { return h !== c.hex; })
+            : [];
+          var hWant = MB.ui.paletteCard ? MB.ui.paletteCard.heightOf(colors.length) : live.h;
+          C.applyDataTo([live], 'Retirer une couleur', { colors: colors, picked: picked });
+          live.h = hWant;
+          MB.board.renderContent(live.id);
           refresh();
         });
         row.appendChild(del);
@@ -747,8 +796,8 @@
         }));
       }
       s.appendChild(rowS2);
-    } else if (el.type === 'section' || el.type === 'column') {
-      s = section(el.type === 'section' ? T('insp.section') : T('insp.column'));
+    } else if (el.type === 'column') {
+      s = section(T('insp.column'));
       /* v1.10 — couleurs SÉPARÉES : en-tête et corps. */
       var rowSec = U.el('div', 'btn-row');
       rowSec.appendChild(C.colorButton(function () {
@@ -809,20 +858,9 @@
         MB.board.renderContent(el.id);
       }, 'Couleur du titre'));
       s.appendChild(rowSecT);
-      if (el.type === 'section') {
-        var rowSec2 = U.el('div', 'btn-row');
-        rowSec2.appendChild(C.toggle('eye', 'Titre visible', function () {
-          return d.showTitle !== false;
-        }, function (v) {
-          C.applyDataTo([el], 'Titre', { showTitle: v });
-          MB.board.renderContent(el.id);
-        }));
-        s.appendChild(rowSec2);
-      }
       var hintSec = U.el('div', 'insp-hint');
       hintSec.innerHTML =
-        'Mini-canvas : glissez des cartes dans ' + (el.type === 'section' ? 'la section' : 'la colonne') +
-        ' — elles s’empilent verticalement.';
+        'Mini-canvas : glissez des cartes dans la colonne — elles s’empilent verticalement et prennent sa largeur.';
       s.appendChild(hintSec);
     } else if (el.type === 'import') {
       s = section(T('insp.import'));

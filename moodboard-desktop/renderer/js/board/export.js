@@ -53,17 +53,6 @@
     }
 
     switch (el.type) {
-      case 'section':
-        t = '<rect x="' + el.x + '" y="' + el.y + '" width="' + el.w + '" height="' + el.h +
-          '" rx="16" fill="' + d.color + '" stroke="#3A3A3A" stroke-width="1"/>' +
-          (d.headColor && d.headColor !== 'transparent'
-            ? '<rect x="' + el.x + '" y="' + el.y + '" width="' + el.w + '" height="' + ((d.titleSize || 15) + 26) +
-              '" rx="16" fill="' + d.headColor + '"/><rect x="' + el.x + '" y="' + (el.y + (d.titleSize || 15) + 12) +
-              '" width="' + el.w + '" height="14" fill="' + d.headColor + '"/>'
-            : '') +
-          multiLineText(el.x + 16, el.y + (d.titleSize || 15) + 12, d.title, 'font-family="' + esc(d.titleFont || 'Georgia') + '" font-size="' + (d.titleSize || 15) + '" font-weight="' + (d.titleBold ? '700' : '400') + '" font-style="' + (d.titleItalic ? 'italic' : 'normal') + '" fill="' + (d.titleColor || '#A8A8A8') + '"', 20);
-        break;
-
       case 'column':
         t = '<rect x="' + el.x + '" y="' + el.y + '" width="' + el.w + '" height="' + el.h +
           '" rx="14" fill="' + d.color + '" stroke="#3A3A3A" stroke-width="1"/>' +
@@ -134,27 +123,38 @@
         break;
 
       case 'palette': {
-        /* v1.11 — NOUVEAU DESIGN : bandeau de nom + bandes verticales
-         * pleine surface, hex en pied de bande dans l'encre lisible
-         * (miroir exact de la carte du canvas). */
-        var nameH = 30;
-        t = '<rect x="' + el.x + '" y="' + el.y + '" width="' + el.w + '" height="' + el.h +
-          '" rx="10" fill="#252525"' + rotAttr() + '/>' +
-          multiLineText(el.x + 12, el.y + 20, d.name, 'font-family="Georgia" font-size="13" font-weight="700" fill="#F5F5F5"', 16);
-        var n = Math.max(1, d.colors.length);
-        var bw = el.w / n;
-        var bandH = el.h - nameH;
-        var clipId = 'pal' + el.id.replace(/[^a-z0-9]/gi, '');
-        t += '<clipPath id="' + clipId + '"><rect x="' + (el.x + 1) + '" y="' + (el.y + nameH) +
-          '" width="' + (el.w - 2) + '" height="' + (bandH - 1) + '" rx="9"/></clipPath>';
-        for (var i = 0; i < n; i++) {
-          var c = d.colors[i];
-          var bx = el.x + i * bw;
-          t += '<rect x="' + bx + '" y="' + (el.y + nameH) + '" width="' + (bw + 0.5) + '" height="' + bandH +
-            '" fill="' + c.hex + '" clip-path="url(#' + clipId + ')"/>' +
-            multiLineText(bx + bw / 2, el.y + el.h - 10, String(c.hex).toUpperCase(),
-              'font-family="Menlo, monospace" font-size="10" fill="' + U.readableOn(c.hex) + '" text-anchor="middle"', 12);
+        /* v1.12 — design « picker » (Bencho) : pastille à ronds
+         * empilés + liste de rangées (rond + nom + code + coche).
+         * Miroir simplifié mais reconnaissable de la carte du canvas. */
+        var pickedSvg = Array.isArray(d.picked)
+          ? d.picked.slice()
+          : (d.colors || []).map(function (c) { return c.hex; });
+        var cardBg = '#2E2E2E';
+        var rowH = 48;
+        var cardTop = el.y + 54;
+        var cardH = Math.max(el.h - 54, 12 + rowH * Math.max(1, (d.colors || []).length));
+        t = '<rect x="' + el.x + '" y="' + cardTop + '" width="' + el.w +
+          '" height="' + (cardH - 6) + '" rx="16" fill="' + cardBg + '"/>';
+        /* la pastille */
+        t += '<rect x="' + el.x + '" y="' + el.y + '" width="' + Math.min(el.w - 8, 48 + pickedSvg.length * 18) +
+          '" height="44" rx="22" fill="' + cardBg + '"/>';
+        var fx = el.x + 8;
+        for (var ip = 0; ip < pickedSvg.length; ip++) {
+          t += '<circle cx="' + (fx + 14) + '" cy="' + (el.y + 22) + '" r="13" fill="' + pickedSvg[ip] +
+            '" stroke="' + cardBg + '" stroke-width="2.5"/>';
+          fx += 18;
         }
+        /* les rangées */
+        (d.colors || []).forEach(function (c, i) {
+          var ry = cardTop + 6 + i * rowH;
+          var on = pickedSvg.indexOf(c.hex) >= 0;
+          t += '<circle cx="' + (el.x + 22) + '" cy="' + (ry + 24) + '" r="15" fill="' + c.hex + '" stroke="' + cardBg + '" stroke-width="2"/>' +
+            multiLineText(el.x + 44, ry + 18, c.name || c.hex, 'font-family="Georgia" font-size="13" fill="#F5F5F5"', 15) +
+            multiLineText(el.x + 44, ry + 34, String(c.hex).toUpperCase(), 'font-family="Menlo, monospace" font-size="11" fill="#9A9A9A"', 13) +
+            '<rect x="' + (el.x + el.w - 30) + '" y="' + (ry + 15) + '" width="18" height="18" rx="5.5" fill="' + (on ? '#F5F5F5' : 'none') +
+            '" stroke="#F5F5F5" stroke-opacity="0.25" stroke-width="1.5"/>' +
+            (on ? '<path d="M' + (el.x + el.w - 26) + ' ' + (ry + 24) + ' l3.5 3.5 l7 -7.5" stroke="#2E2E2E" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>' : '');
+        });
         break;
       }
 
@@ -566,7 +566,7 @@
     var bestScore = -1;
     for (var i = 0; i < list.length; i++) {
       var e = list[i];
-      if (e.type === 'section' || e.type === 'column' || e.type === 'group' || e.type === 'import') continue;
+      if (e.type === 'column' || e.type === 'group' || e.type === 'import') continue;
       var rank = RANK[e.type];
       if (rank === undefined) continue;
       if (e.type === 'image' && !(e.data && e.data.src)) continue;

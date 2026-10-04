@@ -120,13 +120,23 @@
             { hex: '#2B2B2B', name: 'Charbon' },
             { hex: '#F5F1EA', name: 'Ivoire' }
           ];
-          /* v1.11 — NOUVEAU DESIGN (bandes verticales) : carte portrait
-           * 200×300, les bandes s'adaptent à TOUTE hauteur — plus de
-           * formule h = f(nb de couleurs). */
-          var pl = base('palette', p, Object.assign({ w: 200, h: 300 }, extra));
+          /* v1.12 — REDESIGN « picker » (Bencho) : pastille à ronds
+           * empilés + liste cochable — même boîte que la carte Assignees
+           * (264 de large, hauteur réservée pour la liste OUVERTE).
+           * picked = les hex présents dans la pastille (par défaut :
+           * toutes les couleurs). */
+          var pickedDef = (extra && Array.isArray(extra.picked))
+            ? extra.picked.slice()
+            : colors.map(function (c) { return c.hex; });
+          var pl = base('palette', p, Object.assign({
+            w: 264,
+            h: (MB.ui && MB.ui.paletteCard ? MB.ui.paletteCard.heightOf(colors.length) : 66 + colors.length * 48)
+          }, extra));
           pl.data = {
             name: (extra && extra.name) || 'Palette',
-            colors: colors
+            colors: colors,
+            picked: pickedDef,
+            open: (extra && extra.open !== undefined) ? extra.open : true
           };
           return pl;
         }
@@ -223,26 +233,6 @@
             radius: 10
           };
           return sh;
-        }
-
-        case 'section': {
-          var sc = base('section', p, Object.assign({ w: 560, h: 440 }, extra));
-          sc.data = {
-            /* v1.11 — titre honoré à la création (comme la colonne). */
-            title: (extra && extra.title) || 'Section',
-            /* v1.10 — couleur du CORPS + couleur de L'EN-TÊTE (vide =
-             * pas de bandeau) + mise en forme du titre. */
-            color: (extra && extra.color) || '#2C2C2C',
-            headColor: (extra && extra.headColor) || '',
-            showTitle: true,
-            titleFont: (extra && extra.titleFont) || '',
-            titleSize: (extra && extra.titleSize) || 15,
-            /* v1.10 — mise en forme du titre transmise par la création. */
-            titleBold: !!(extra && extra.titleBold),
-            titleItalic: !!(extra && extra.titleItalic),
-            titleColor: (extra && extra.titleColor) || ''
-          };
-          return sc;
         }
 
         case 'column': {

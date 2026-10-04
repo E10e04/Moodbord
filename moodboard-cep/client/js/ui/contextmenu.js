@@ -62,7 +62,10 @@
   }
 
   function titleEditable(el) {
-    return ['note', 'section', 'column', 'checklist', 'palette', 'color', 'typography', 'link', 'board'].indexOf(el.type) >= 0;
+    /* v1.12 — la palette n'a plus de nom éditable SUR la carte (le
+     * design « picker » n'en a pas) : il vit dans le panneau Projet.
+     * La section est retirée avec son outil. */
+    return ['note', 'column', 'checklist', 'color', 'typography', 'link', 'board'].indexOf(el.type) >= 0;
   }
 
   function show(clientX, clientY, hitEl, canvasPt) {
@@ -164,9 +167,6 @@
       }));
       menuEl.appendChild(item((MB.i18n && MB.i18n.lang() === 'en' ? 'New color' : 'Créer une couleur'), function () {
         MB.interact.createAt('color', canvasPt);
-      }));
-      menuEl.appendChild(item((MB.i18n && MB.i18n.lang() === 'en' ? 'New section' : 'Créer une section'), function () {
-        MB.interact.createAt('section', canvasPt);
       }));
       menuEl.appendChild(item((MB.i18n && MB.i18n.lang() === 'en' ? 'New linked board' : 'Créer une planche liée'), function () {
         MB.interact.createAt('board', canvasPt);

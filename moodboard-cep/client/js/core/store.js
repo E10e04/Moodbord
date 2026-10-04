@@ -14,7 +14,10 @@
   var MB = (window.MB = window.MB || {});
   var U = MB.util;
 
-  var CONTAINERS = { section: true, column: true, group: true };
+  /* v1.12 — l'outil SECTION est retiré : la colonne et le groupe
+   * restent les seuls conteneurs (les anciennes sections sont migrées
+   * en colonnes au chargement — voir loadDocument). */
+  var CONTAINERS = { column: true, group: true };
 
   var state = {
     project: { name: 'Sans titre', path: null },
@@ -444,17 +447,31 @@
     emit('elements');
   }
 
-  /* v1.10 — COLONNES / SECTIONS = mini-canvas vertical : les cartes
-   * enfants s'empilent de haut en bas, alignées à gauche avec une
-   * marge ; le conteneur s'agrandit si la pile dépasse (et se
-   * re-compacte après une suppression). L'ordre de la pile suit la
-   * position verticale du dépôt : lâcher une carte AU MILIEU de la
-   * pile l'insère à cette place. */
-  function layoutContainerChildren(parentId) {
+  /* v1.10 — COLONNES = mini-canvas vertical : les cartes enfants
+   * s'empilent de haut en bas, alignées à gauche avec une marge ;
+   * v1.12 — TROIS corrections majeures :
+   *   1. LA TAILLE DES ENFANTS SUIT LA COLONNE : toute carte enfant
+   *      prend la LARGEUR INTÉRIEURE de la colonne (marge de chaque
+   * côté) — à l'ajout, au drag, à la suppression, et quand la
+   * colonne est redimensionnée, les cartes suivent (demande
+   * utilisateur v1.12).
+   *   2. LA HAUTEUR NE FAIT QUE CROÎTRE : l'ancienne formule
+   *      ramenait la colonne à la taille EXACTE de son contenu — une
+   *      colonne de 380 px s'effondrait à 220 en recevant une note, et
+   *      le dépôt suivant visait « là où la colonne n'était plus » →
+   *      l'empilement semblait ne pas marcher. Désormais la colonne
+   *      garde la hauteur choisie et ne fait que grandir si la pile
+   *      dépasse (le redimensionnement manuel reste maître).
+   *   3. keepHeight : le layout peut s'exécuter SANS toucher à la
+   *      hauteur (geste de redimensionnement en cours — il ne doit
+   *      pas se battre avec la main de l'utilisateur).
+   * L'ordre de la pile suit la position verticale du dépôt. */
+  function layoutContainerChildren(parentId, opts) {
     var parent = el(parentId);
-    if (!parent || (parent.type !== 'column' && parent.type !== 'section')) return false;
+    if (!parent || parent.type !== 'column') return [];
     var kids = childrenOf(parentId);
-    if (!kids.length) return false;
+    if (!kids.length) return [];
+    var o = opts || {};
     kids.sort(function (a, b) {
       return a.y - b.y;
     });
@@ -462,17 +479,38 @@
     var headerH = (d.titleSize || 15) + 26;
     var pad = 12;
     var gap = 10;
+    /* Largeur intérieure : chaque enfant correspond à la largeur de
+     * la colonne (plancher 64 — une carte ne devient pas un trait). */
+    var inner = Math.max(64, parent.w - pad * 2);
     var cur = parent.y + headerH + pad - 4;
     kids.forEach(function (k) {
       var b = bboxOf(k);
       translateElement(k, parent.x + pad - k.x, cur - k.y);
+      /* v1.12 — la carte prend la largeur de la colonne (sa hauteur
+       * reste la sienne). */
+      k.w = Math.max(64, inner);
       cur += b.h + gap;
     });
     var needed = cur - gap + pad - parent.y;
-    var minH = parent.type === 'column' ? 220 : 300;
-    parent.h = Math.max(Math.min(parent.h, Math.max(minH, Math.ceil(needed))), Math.max(minH, Math.ceil(needed)));
-    if (parent.h < needed) parent.h = Math.ceil(needed);
-    return true;
+    if (!o.keepHeight) {
+      var minH = 220;
+      /* CROISSANCE SEULE : jamais de rétrécissement automatique (le
+       * bug v1.10/v1.11 : la colonne « disparaissait » sous le
+       * curseur au moment de viser son bas). */
+      if (needed > parent.h) parent.h = Math.ceil(needed);
+      if (parent.h < minH) parent.h = minH;
+    }
+    var ids = kids.map(function (k) {
+      return k.id;
+    });
+    /* v1.12 — les VUES suivent TOUJOURS le layout : la fonction
+     * émet elle-même les ids déplacés/élargis (bug : une carte créée
+     * DANS une colonne restait affichée à sa position d'avant-pile —
+     * le modèle était juste, l'écran non — jusqu'au prochain
+     * événement « elements »). Les appelants qui émettent déjà ne
+     * paient qu'un second passage idempotent. */
+    emit('element', { ids: ids });
+    return ids;
   }
 
   /* Re-compacte les conteneurs (colonnes / sections) concernés par les
@@ -490,13 +528,34 @@
     }
   }
 
-  function topmostSectionAt(point, excludeIds) {
+  /* Conteneur à pile verticale SOUS un point : la colonne la plus
+   * haute dans l'ordre de peinture dont la zone couvre le dépôt.
+   * v1.12 — détection élargie : le centre de la carte lâchée OU une
+   * intersection franche (la moitié de la largeur de la carte couvre
+   * la colonne) compte — un dépôt « à cheval » sur le bord bas d'une
+   * colonne joint la pile au lieu de tomber à côté (bug rapporté :
+   * « la superposition ne marche pas »). */
+  function joinsContainer(box, c) {
+    var cx = box.x + box.w / 2;
+    var cy = box.y + box.h / 2;
+    var inside =
+      cx >= c.x && cx <= c.x + c.w &&
+      cy >= c.y && cy <= c.y + c.h;
+    if (inside) return true;
+    /* intersection : chevauchement horizontal ≥ 50 % de la largeur de
+     * la carte ET chevauchement vertical réel. */
+    var ox = Math.min(box.x + box.w, c.x + c.w) - Math.max(box.x, c.x);
+    var oy = Math.min(box.y + box.h, c.y + c.h) - Math.max(box.y, c.y);
+    return ox > 0 && oy > 0 && ox >= box.w / 2;
+  }
+
+  function topmostSectionAt(point, excludeIds, box) {
     var excl = {};
     for (var i = 0; i < excludeIds.length; i++) excl[excludeIds[i]] = true;
     for (var j = state.elements.length - 1; j >= 0; j--) {
       var e = state.elements[j];
-      if ((e.type === 'section' || e.type === 'column') && !e.hidden && !excl[e.id]) {
-        if (U.rectContainsPoint({ x: e.x, y: e.y, w: e.w, h: e.h }, point.x, point.y)) {
+      if (e.type === 'column' && !e.hidden && !excl[e.id]) {
+        if (joinsContainer(box || { x: point.x, y: point.y, w: 0, h: 0 }, e)) {
           return e;
         }
       }
@@ -851,6 +910,30 @@
     state.elements = doc.elements || [];
     for (var i = 0; i < state.elements.length; i++) {
       if (!state.elements[i]._rev) state.elements[i]._rev = 1;
+      /* v1.12 — MIGRATION : l'outil Section est retiré ; les sections
+       * des anciens projets deviennent des COLONNES (le titre et les
+       * couleurs passent tels quels, showTitle tombe — le mini-canvas
+       * vertical affiche toujours son en-tête). Rien n'est perdu. */
+      var eL = state.elements[i];
+      if (eL.type === 'section') {
+        eL.type = 'column';
+        if (eL.data) delete eL.data.showTitle;
+      }
+      /* v1.12 — MIGRATION palette : la carte est passée au design
+       * « picker » (264 de large, hauteur réservée pour la liste
+       * ouverte, picked par défaut = toutes les couleurs). */
+      if (eL.type === 'palette') {
+        var pc = MB.ui && MB.ui.paletteCard;
+        if (pc) {
+          var nCol = (eL.data && Array.isArray(eL.data.colors)) ? eL.data.colors.length : 0;
+          if (eL.w < 220) eL.w = 264;
+          var hWant = pc.heightOf(Math.max(1, nCol));
+          if (eL.h < hWant - 4) eL.h = hWant;
+        }
+        if (eL.data && !Array.isArray(eL.data.picked) && Array.isArray(eL.data.colors)) {
+          eL.data.picked = eL.data.colors.map(function (c) { return c.hex; });
+        }
+      }
     }
     state.selection.ids = [];
     state.clipboard = null;
