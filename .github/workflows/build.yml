@@ -165,6 +165,22 @@ jobs:
           test -f artifacts/Moodboard-*-arm64.dmg # macOS Apple Silicon
           echo "OK : les 5 installateurs sont présents avant publication."
 
+      - name: Nettoyer les assets obsolètes du Release
+        # v1.13.0 : un re-tag (desktop versionnée après coup, asset renommé)
+        # laissait les ANCIENS fichiers à côté des nouveaux — on repart
+        # d'un Release vierge avant l'upload (overwrite_files ne retire
+        # que les doublons de MÊME nom).
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          rid=$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${GITHUB_REF_NAME}" --jq '.id' 2>/dev/null || true)
+          if [ -n "${rid}" ] && [ "${rid}" != "null" ]; then
+            gh api "repos/${GITHUB_REPOSITORY}/releases/${rid}/assets" --jq '.[].id' | while read -r aid; do
+              echo "Suppression de l'asset obsolète #${aid}"
+              gh api -X DELETE "repos/${GITHUB_REPOSITORY}/releases/assets/${aid}" || true
+            done
+          fi
+
       - name: Créer le Release GitHub
         uses: softprops/action-gh-release@v2
         with:
