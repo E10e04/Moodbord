@@ -173,8 +173,13 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          rid=$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${GITHUB_REF_NAME}" --jq '.id' 2>/dev/null || true)
-          if [ -n "${rid}" ] && [ "${rid}" != "null" ]; then
+          # NB : /releases/tags/{tag} renvoie 404 quand le tag a été supprimé
+          # puis recréé (l'objet tag a changé) — on cherche donc le Release
+          # par SON tag_name dans la liste, ce qui marche dans tous les cas.
+          rid=$(gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=100" \
+            --jq ".[] | select(.tag_name == \"${GITHUB_REF_NAME}\") | .id" | head -1)
+          echo "Release ${GITHUB_REF_NAME} → id=${rid:-aucun}"
+          if [ -n "${rid}" ]; then
             gh api "repos/${GITHUB_REPOSITORY}/releases/${rid}/assets" --jq '.[].id' | while read -r aid; do
               echo "Suppression de l'asset obsolète #${aid}"
               gh api -X DELETE "repos/${GITHUB_REPOSITORY}/releases/assets/${aid}" || true
