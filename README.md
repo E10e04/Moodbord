@@ -219,7 +219,32 @@ npm run dist:mac               # → dist/Moodboard-1.4.0-x64.dmg + arm64.dmg (s
 
 ## 📜 Changelog
 
-## 🆕 v1.12.0 — palette « picker », section retirée, colonnes réparées, garde de fermeture
+## 🆕 v1.13.0 — bibliothèque éditable, note réparée, chargement liquide, cercles parfaits
+
+- **Bibliothèque entièrement éditable** : les quatre onglets — **Médias**,
+  **Couleurs**, **Palettes** et **Typo** — acceptent des **ajouts** (bouton
+  « + » : sélecteur de couleur, créateur de palette à pastilles, saisie de
+  famille avec suggestions des polices du système) et des **retraits**
+  (bouton ✕ au survol). **Même les assets de démo se suppriment** (masqués,
+  restaurables d’un clic) ; couleurs, palettes et typos du canvas rejoignent
+  la bibliothèque par **clic droit**. Format `library.json` v2 persistant,
+  rétrocompatible (aucune image perdue).
+- **Bug Note corrigé** : le texte écrit ne disparaît plus quand on
+  redimensionne la carte pendant l’édition — l’édition est **toujours
+  committée avant tout geste**, et un re-rendu pendant l’édition **préserve
+  la frappe vivante** (double filet).
+- **Barre de chargement « liquid loader »** (uiverse.io/ShaikhWahid99) :
+  piste sombre creusée, remplissage en **dégradé animé**, libellé lumineux
+  aux **points clignotants** — la largeur suit la progression réelle du
+  téléchargement.
+- **Cercles parfaits** : l’ellipse naît **carrée** (160×160), le tracé à
+  main levée suit un **carré** et pose un cercle, le redimensionnement garde
+  le **ratio 1:1** (`Maj` libère pour une ovale), les anciennes ovales
+  redeviennent rondes au retaille.
+- 580 assertions E2E (v102→v1130, dont la nouvelle suite v1130 ×40) +
+  114 simulation, zéro erreur console.
+
+### v1.12.0 — palette « picker », section retirée, colonnes réparées, garde de fermeture
 
 - **Outil Palette** redessiné d'après le bloc **« picker » de Bencho** :
   pastille à ronds de couleur empilés + liste cochable (nom + code hex +

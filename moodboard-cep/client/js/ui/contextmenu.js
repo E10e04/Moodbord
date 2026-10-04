@@ -147,6 +147,16 @@
           }
         }));
       }
+      /* v1.13 — couleurs, palettes et typos du canvas rejoignent la
+       * bibliothèque persistante (ajout + retrait dans chaque onglet). */
+      if (resolved.type === 'color' || resolved.type === 'palette' || resolved.type === 'typography') {
+        menuEl.appendChild(sep());
+        menuEl.appendChild(item(T('menu.lib.' + resolved.type), function () {
+          if (MB.ui.library && MB.ui.library.addFromElement) {
+            MB.ui.library.addFromElement(resolved);
+          }
+        }));
+      }
       if (resolved.type === 'image' && MB.cep.available()) {
         menuEl.appendChild(sep());
         menuEl.appendChild(item(T('menu.cep.place'), function () {

@@ -1,6 +1,12 @@
 /* =========================================================================
  * library.js — Bibliothèque latérale : médias importés, couleurs,
  * palettes, typographies, formes. Chaque item se glisse sur le canvas.
+ *
+ * v1.13 — bibliothèque ÉDITABLE : les quatre onglets (Médias, Couleurs,
+ * Palettes, Typo) acceptent des AJOUTS et des RETRAITS — y compris sur
+ * les entrées intégrées et les ASSETS DE DÉMO (masqués, jamais détruits
+ * : « Restaurer les images de démo » les ramène). L'état complet vit
+ * dans library.json v2 (cf. storage.readLibraryFull/writeLibraryFull).
  * ========================================================================= */
 (function () {
   'use strict';
@@ -124,9 +130,12 @@
   ];
 
   /* Médias de démonstration embarqués (assets/demo) : peuplent
-   * l’onglet Médias au démarrage pour que la bibliothèque offre du
-   * contenu glissable dès l’ouverture — sinon l’onglet par défaut est
-   * vide et « rien ne se dépose » depuis ce panneau. */
+   * l'onglet Médias au démarrage pour que la bibliothèque offre du
+   * contenu glissable dès l'ouverture — sinon l'onglet par défaut est
+   * vide et « rien ne se dépose » depuis ce panneau.
+   * v1.13 — retirables comme les autres (demande utilisateur :
+   * « possibilité de supprimer même s'il s'agit des assets de démo »),
+   * et restaurables d'un clic. */
   var DEMO_MEDIA = [
     { src: 'assets/demo/demo-photo.png', name: 'Photo — démo' },
     { src: 'assets/demo/demo-texture.png', name: 'Texture — démo' },
@@ -135,22 +144,82 @@
     { src: 'assets/demo/demo-packaging.png', name: 'Packaging — démo' }
   ];
 
-  var mediaItems = []; // {src, w, h, name} — utilisateur (persistée)
-  var demoItems = []; // assets de démonstration (session, non supprimables)
+  /* v1.13 — état COMPLET persisté (library.json v2) : ajouts ET retraits
+   * de chaque onglet. `demoItems` reste une liste de session (les assets
+   * se re-sèment au lancement — moins ceux qui sont masqués). */
+  var state = {
+    media: [],
+    colors: [],
+    hiddenColors: [],
+    palettes: [],
+    hiddenPalettes: [],
+    fonts: [],
+    hiddenFonts: [],
+    hiddenDemo: []
+  };
+  var demoItems = []; // {src, w, h, name, demo} — session
 
-  /* v1.11 — la bibliothèque est PERSISTANTE : readLibrary/writeLibrary
-   * (fichier library.json du dossier de données — partagé par
-   * l'application et l'extension —, repli localStorage en web). Les
-   * images ajoutées survivent donc aux projets et aux sessions. */
+  /* v1.11/v1.13 — bibliothèque PERSISTANTE : le fichier library.json du
+   * dossier de données (partagé par l'application et l'extension) porte
+   * tout l'état éditable ; repli localStorage en web. */
   function persist() {
-    var ok = MB.storage.writeLibrary(mediaItems);
+    var ok = MB.storage.writeLibraryFull(state);
     if (!ok) {
       MB.ui.toast('Bibliothèque pleine — les plus anciennes images ont été retirées.', 'info');
     }
   }
 
+  function activeTabId() {
+    var active = document.querySelector('.lib-tab.is-active');
+    return active ? active.dataset.tab : 'media';
+  }
+
+  function rerender() {
+    render();
+  }
+
+  /* Bouton de suppression commun : visible au survol, le clic ne
+   * déclenche NI le drag NI le placement (stopPropagation complet). */
+  function attachDel(item, tip, onDelete) {
+    var del = U.el('button', 'lib-del');
+    del.type = 'button';
+    del.title = tip || T('lib.deleteMedia');
+    del.setAttribute('aria-label', del.title);
+    del.innerHTML = MB.icons.get('x', 11);
+    ['pointerdown', 'mousedown', 'click'].forEach(function (ev) {
+      del.addEventListener(ev, function (e) {
+        e.stopPropagation();
+      });
+    });
+    del.addEventListener('click', function () {
+      onDelete();
+    });
+    item.appendChild(del);
+  }
+
+  /* Barre d'ajout d'un onglet : bouton « + Ajouter… » (le sélecteur
+   * dépend de l'onglet). */
+  function addBar(labelKey, onAdd) {
+    var bar = U.el('div', 'lib-add');
+    var btn = U.el(
+      'button',
+      'lib-add-btn',
+      MB.icons.get('plus', 13) + '<span>' + T(labelKey) + '</span>'
+    );
+    btn.type = 'button';
+    btn.addEventListener('click', function () {
+      onAdd(btn);
+    });
+    bar.appendChild(btn);
+    return bar;
+  }
+
   function seedDemoMedia() {
     DEMO_MEDIA.forEach(function (m) {
+      if (state.hiddenDemo.indexOf(m.src) >= 0) return;
+      for (var i = 0; i < demoItems.length; i++) {
+        if (demoItems[i].src === m.src) return;
+      }
       var img = new Image();
       img.onload = function () {
         demoItems.push({
@@ -160,8 +229,7 @@
           name: m.name,
           demo: true
         });
-        var active = document.querySelector('.lib-tab.is-active');
-        if (active && active.dataset.tab === 'media') renderMedia();
+        if (activeTabId() === 'media') renderMedia();
       };
       img.onerror = function () {
         /* asset absent (installation partielle) : silencieux */
@@ -191,11 +259,67 @@
     });
   }
 
+  /* ------------------------------------------------------------ COULEURS */
+
+  /* v1.13 — retraits : les couleurs intégrées retirées vivent dans
+   * hiddenColors (elles reviennent si l'utilisateur ajoute le même
+   * code). Les couleurs ajoutées arrivent EN TÊTE. */
+  function visibleColors() {
+    var shown = state.colors.slice();
+    COLORS.forEach(function (hex) {
+      if (state.hiddenColors.indexOf(hex) < 0 && shown.indexOf(hex) < 0) shown.push(hex);
+    });
+    return shown;
+  }
+
+  function addColor(hex) {
+    var v = U.normalizeHex(hex);
+    if (!v) return;
+    if (COLORS.indexOf(v) >= 0) {
+      if (state.hiddenColors.indexOf(v) < 0) {
+        MB.ui.toast(T('lib.alreadyLib'), 'info');
+        return;
+      }
+      state.hiddenColors = state.hiddenColors.filter(function (h) {
+        return h !== v;
+      });
+      persist();
+      if (activeTabId() === 'colors') renderColors();
+      MB.ui.toast(T('lib.addedColor'), 'success');
+      return;
+    }
+    if (state.colors.indexOf(v) < 0) state.colors.unshift(v);
+    persist();
+    if (activeTabId() === 'colors') renderColors();
+    MB.ui.toast(T('lib.addedColor'), 'success');
+  }
+
+  function removeColor(hex) {
+    if (COLORS.indexOf(hex) >= 0 && state.hiddenColors.indexOf(hex) < 0) {
+      state.hiddenColors.push(hex);
+    }
+    state.colors = state.colors.filter(function (c) {
+      return c !== hex;
+    });
+    persist();
+    if (activeTabId() === 'colors') renderColors();
+    MB.ui.toast(T('lib.removedColor'), 'success');
+  }
+
   function renderColors() {
     var host = document.getElementById('lib-content');
     host.innerHTML = '<div class="lib-note">' + T('lib.dragColor') + '</div>';
+    host.appendChild(addBar('lib.addColor', function (anchor) {
+      var C = MB.ui.controls;
+      if (C && C.colorPopover) C.colorPopover(anchor, '#4C8DFF', addColor);
+    }));
+    var shown = visibleColors();
+    if (!shown.length) {
+      host.appendChild(U.el('div', 'lib-note', T('lib.emptyTab')));
+      return;
+    }
     var grid = U.el('div', 'lib-grid lib-grid--colors');
-    COLORS.forEach(function (hex) {
+    shown.forEach(function (hex) {
       var item = U.el('div', 'lib-color');
       item.style.background = hex;
       item.dataset.tip = hex.toUpperCase();
@@ -210,6 +334,9 @@
           clientY: window.innerHeight / 2
         });
         MB.interact.createAt('color', center, { hex: hex, name: colorName(hex) });
+      });
+      attachDel(item, T('lib.deleteMedia'), function () {
+        removeColor(hex);
       });
       grid.appendChild(item);
     });
@@ -227,11 +354,173 @@
     return names[String(hex).toUpperCase()] || 'Couleur';
   }
 
+  /* ------------------------------------------------------------ PALETTES */
+
+  /* v1.13 — palettes : les créations de l'utilisateur d'abord, les
+   * intégrées ensuite (moins celles retirées, moins celles écrasées
+   * par une création du même nom). */
+  function visiblePalettes() {
+    var customs = state.palettes.slice();
+    var shown = customs.slice();
+    PALETTES.forEach(function (p) {
+      if (state.hiddenPalettes.indexOf(p.name) >= 0) return;
+      var claimed = false;
+      customs.forEach(function (c) {
+        if (c.name === p.name) claimed = true;
+      });
+      if (!claimed) shown.push(p);
+    });
+    return shown;
+  }
+
+  function addPalette(p) {
+    if (!p || !Array.isArray(p.colors) || !p.colors.length) return;
+    var name = String(p.name || '').trim() || T('lib.paletteDefault');
+    var colors = [];
+    p.colors.forEach(function (c) {
+      var hex = U.normalizeHex(c && c.hex);
+      if (hex) colors.push({ hex: hex, name: (c && c.name) || hex });
+    });
+    colors = colors.slice(0, 12);
+    if (!colors.length) return;
+    var builtin = null;
+    PALETTES.forEach(function (b) {
+      if (b.name === name) builtin = b;
+    });
+    if (builtin) {
+      if (state.hiddenPalettes.indexOf(name) >= 0) {
+        state.hiddenPalettes = state.hiddenPalettes.filter(function (n) {
+          return n !== name;
+        });
+        persist();
+        if (activeTabId() === 'palettes') renderPalettes();
+        MB.ui.toast(T('lib.addedPalette'), 'success');
+        return;
+      }
+      MB.ui.toast(T('lib.alreadyLib'), 'info');
+      return;
+    }
+    var idx = -1;
+    state.palettes.forEach(function (c, i) {
+      if (c.name === name) idx = i;
+    });
+    if (idx >= 0) state.palettes[idx] = { name: name, colors: colors };
+    else state.palettes.unshift({ name: name, colors: colors });
+    persist();
+    if (activeTabId() === 'palettes') renderPalettes();
+    MB.ui.toast(T('lib.addedPalette'), 'success');
+  }
+
+  function removePalette(name) {
+    var builtin = false;
+    PALETTES.forEach(function (b) {
+      if (b.name === name) builtin = true;
+    });
+    if (builtin && state.hiddenPalettes.indexOf(name) < 0) {
+      state.hiddenPalettes.push(name);
+    }
+    state.palettes = state.palettes.filter(function (c) {
+      return c.name !== name;
+    });
+    persist();
+    if (activeTabId() === 'palettes') renderPalettes();
+    MB.ui.toast(T('lib.removedPalette'), 'success');
+  }
+
+  /* Créateur de palette : nom + pastilles ajoutées au colorPopover,
+   * une pastille se retire d'un clic. */
+  function showPaletteCreator() {
+    var host = document.getElementById('lib-content');
+    host.innerHTML = '';
+    host.appendChild(U.el('div', 'lib-note', T('lib.paletteHint')));
+
+    var box = U.el('div', 'lib-creator');
+    var nameIn = U.el('input', 'input lib-creator-name');
+    nameIn.type = 'text';
+    nameIn.maxLength = 40;
+    nameIn.placeholder = T('lib.paletteNamePh');
+
+    var picked = [];
+    var chips = U.el('div', 'lib-creator-chips');
+    function drawChips() {
+      chips.innerHTML = '';
+      picked.forEach(function (hex, i) {
+        var c = U.el('button', 'lib-chip');
+        c.type = 'button';
+        c.style.background = hex;
+        c.dataset.tip = T('lib.removeChip');
+        c.setAttribute('aria-label', T('lib.removeChip') + ' ' + hex);
+        c.addEventListener('click', function () {
+          picked.splice(i, 1);
+          drawChips();
+        });
+        chips.appendChild(c);
+      });
+      var addChip = U.el('button', 'lib-chip lib-chip--add');
+      addChip.type = 'button';
+      addChip.title = T('lib.addColor');
+      addChip.setAttribute('aria-label', T('lib.addColor'));
+      addChip.innerHTML = MB.icons.get('plus', 12);
+      addChip.addEventListener('click', function () {
+        var C = MB.ui.controls;
+        if (C && C.colorPopover) {
+          C.colorPopover(addChip, picked.length ? picked[picked.length - 1] : '#4C8DFF', function (hex) {
+            var v = U.normalizeHex(hex);
+            if (v && picked.indexOf(v) < 0) {
+              picked.push(v);
+              drawChips();
+            }
+          });
+        }
+      });
+      chips.appendChild(addChip);
+    }
+    drawChips();
+
+    var row = U.el('div', 'lib-creator-row');
+    var ok = U.el('button', 'btn btn-primary', T('lib.create'));
+    ok.type = 'button';
+    ok.addEventListener('click', function () {
+      if (!picked.length) {
+        MB.ui.toast(T('lib.paletteNeedsColors'), 'info');
+        return;
+      }
+      addPalette({
+        name: nameIn.value,
+        colors: picked.map(function (hex) {
+          return { hex: hex, name: hex };
+        })
+      });
+      renderPalettes();
+    });
+    var no = U.el('button', 'btn btn-ghost', T('dlg.cancel'));
+    no.type = 'button';
+    no.addEventListener('click', function () {
+      renderPalettes();
+    });
+    row.appendChild(ok);
+    row.appendChild(no);
+
+    box.appendChild(nameIn);
+    box.appendChild(chips);
+    box.appendChild(row);
+    host.appendChild(box);
+    nameIn.focus();
+  }
+
   function renderPalettes() {
     var host = document.getElementById('lib-content');
     host.innerHTML = '<div class="lib-note">' + T('lib.dragPalette') + '</div>';
+    host.appendChild(addBar('lib.addPalette', function () {
+      showPaletteCreator();
+    }));
+    var shown = visiblePalettes();
+    if (!shown.length) {
+      host.appendChild(U.el('div', 'lib-note', T('lib.emptyTab')));
+      return;
+    }
     var list = U.el('div', 'lib-list');
-    PALETTES.forEach(function (p) {
+    shown.forEach(function (p) {
       var item = U.el('div', 'lib-item lib-palette');
       var strip = U.el('div', 'lib-palette-strip');
       p.colors.forEach(function (c) {
@@ -249,16 +538,172 @@
       bindDragItem(item, function () {
         return { colors: U.deepClone(p.colors), name: p.name };
       }, 'palette', 'lib:palette ' + p.name);
+      attachDel(item, T('lib.deleteMedia'), function () {
+        removePalette(p.name);
+      });
       list.appendChild(item);
     });
     host.appendChild(list);
   }
 
+  /* ------------------------------------------------------------- TYPOS */
+
+  /* v1.13 — typos : familles ajoutées en tête, intégrées moins les
+   * retirées ; dédoublonnage insensible à la casse. */
+  function visibleFonts() {
+    var seen = {};
+    var shown = [];
+    state.fonts.forEach(function (f) {
+      var k = f.toLowerCase();
+      if (!seen[k]) {
+        seen[k] = true;
+        shown.push(f);
+      }
+    });
+    FONTS.forEach(function (f) {
+      if (state.hiddenFonts.indexOf(f) >= 0) return;
+      var k = f.toLowerCase();
+      if (!seen[k]) {
+        seen[k] = true;
+        shown.push(f);
+      }
+    });
+    return shown;
+  }
+
+  function addFont(name) {
+    var f = String(name || '').trim();
+    if (!f || f.length > 64) {
+      MB.ui.toast(T('lib.fontNamePh'), 'info');
+      return;
+    }
+    var lower = f.toLowerCase();
+    var builtin = null;
+    FONTS.forEach(function (b) {
+      if (b.toLowerCase() === lower) builtin = b;
+    });
+    if (builtin) {
+      if (state.hiddenFonts.indexOf(builtin) >= 0) {
+        state.hiddenFonts = state.hiddenFonts.filter(function (x) {
+          return x !== builtin;
+        });
+        persist();
+        if (activeTabId() === 'fonts') renderFonts();
+        MB.ui.toast(T('lib.addedFont'), 'success');
+        return;
+      }
+      MB.ui.toast(T('lib.alreadyLib'), 'info');
+      return;
+    }
+    var dup = state.fonts.some(function (x) {
+      return x.toLowerCase() === lower;
+    });
+    if (!dup) state.fonts.unshift(f);
+    persist();
+    if (activeTabId() === 'fonts') renderFonts();
+    MB.ui.toast(T('lib.addedFont'), 'success');
+  }
+
+  function removeFont(name) {
+    if (FONTS.indexOf(name) >= 0 && state.hiddenFonts.indexOf(name) < 0) {
+      state.hiddenFonts.push(name);
+    }
+    state.fonts = state.fonts.filter(function (f) {
+      return f !== name;
+    });
+    persist();
+    if (activeTabId() === 'fonts') renderFonts();
+    MB.ui.toast(T('lib.removedFont'), 'success');
+  }
+
+  /* Ajout d'une typo : saisie libre + suggestions des polices du
+   * SYSTÈME (MB.fonts — Illustrator / application / liste web). */
+  function showFontCreator() {
+    var host = document.getElementById('lib-content');
+    host.innerHTML = '';
+    host.appendChild(U.el('div', 'lib-note', T('lib.fontHint')));
+
+    var box = U.el('div', 'lib-creator');
+    var listId = 'lib-font-list';
+    var nameIn = U.el('input', 'input lib-creator-name');
+    nameIn.type = 'text';
+    nameIn.maxLength = 64;
+    nameIn.placeholder = T('lib.fontNamePh');
+    nameIn.setAttribute('list', listId);
+
+    var datalist = U.el('datalist');
+    datalist.id = listId;
+    function fillDatalist() {
+      var fams = [];
+      if (MB.fonts && MB.fonts.isReady && MB.fonts.isReady()) {
+        fams = MB.fonts.list();
+      }
+      if (!fams.length) fams = FONTS.slice();
+      var html = '';
+      for (var i = 0; i < fams.length && i < 600; i++) {
+        html += '<option value="' + U.escapeHtml(fams[i]) + '"></option>';
+      }
+      datalist.innerHTML = html;
+    }
+    fillDatalist();
+    /* l'énumération système arrive APRÈS l'ouverture : les suggestions
+     * se complètent au premier focus. */
+    nameIn.addEventListener('focus', fillDatalist);
+    if (MB.fonts && MB.fonts.whenReady) {
+      MB.fonts.whenReady(function () {
+        setTimeout(fillDatalist, 0);
+      });
+    }
+
+    function submit() {
+      var v = nameIn.value.trim();
+      if (!v) {
+        MB.ui.toast(T('lib.fontNamePh'), 'info');
+        nameIn.focus();
+        return;
+      }
+      addFont(v);
+      renderFonts();
+    }
+    nameIn.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        submit();
+      }
+    });
+
+    var row = U.el('div', 'lib-creator-row');
+    var ok = U.el('button', 'btn btn-primary', T('lib.create'));
+    ok.type = 'button';
+    ok.addEventListener('click', submit);
+    var no = U.el('button', 'btn btn-ghost', T('dlg.cancel'));
+    no.type = 'button';
+    no.addEventListener('click', function () {
+      renderFonts();
+    });
+    row.appendChild(ok);
+    row.appendChild(no);
+
+    box.appendChild(nameIn);
+    box.appendChild(datalist);
+    box.appendChild(row);
+    host.appendChild(box);
+    nameIn.focus();
+  }
+
   function renderFonts() {
     var host = document.getElementById('lib-content');
     host.innerHTML = '<div class="lib-note">' + T('lib.dragFont') + '</div>';
+    host.appendChild(addBar('lib.addFont', function () {
+      showFontCreator();
+    }));
+    var shown = visibleFonts();
+    if (!shown.length) {
+      host.appendChild(U.el('div', 'lib-note', T('lib.emptyTab')));
+      return;
+    }
     var list = U.el('div', 'lib-list');
-    FONTS.forEach(function (f) {
+    shown.forEach(function (f) {
       var item = U.el('div', 'lib-item lib-font');
       item.innerHTML =
         '<span class="lib-font-name">' + U.escapeHtml(f) + '</span>' +
@@ -267,10 +712,15 @@
       bindDragItem(item, function () {
         return { fontFamily: f };
       }, 'typography', 'lib:typo ' + f);
+      attachDel(item, T('lib.deleteMedia'), function () {
+        removeFont(f);
+      });
       list.appendChild(item);
     });
     host.appendChild(list);
   }
+
+  /* ------------------------------------------------------------ FORMES */
 
   function renderShapes() {
     var host = document.getElementById('lib-content');
@@ -289,6 +739,8 @@
     host.appendChild(grid);
   }
 
+  /* ------------------------------------------------------------- MÉDIAS */
+
   function renderMedia() {
     var host = document.getElementById('lib-content');
     host.innerHTML = '';
@@ -300,9 +752,18 @@
       MB.interact.openImportPicker(null);
     });
     bar.appendChild(btn);
+    /* v1.13 — les assets de démo retirés reviennent d'un clic. */
+    if (state.hiddenDemo.length) {
+      var rest = U.el('button', 'lib-restore', T('lib.restoreDemo'));
+      rest.type = 'button';
+      rest.addEventListener('click', function () {
+        restoreDemoMedia();
+      });
+      bar.appendChild(rest);
+    }
     host.appendChild(bar);
 
-    var all = mediaItems.concat(demoItems);
+    var all = state.media.concat(demoItems);
     if (!all.length) {
       host.appendChild(U.el(
         'div',
@@ -321,26 +782,12 @@
       bindDragItem(item, function () {
         return { src: m.src, naturalW: m.w, naturalH: m.h };
       }, 'image', 'lib:média ' + (m.name || ''));
-      /* v1.11 — SUPPRIMER : chaque image de la bibliothèque (hors
-       * démo) porte son bouton de suppression au survol. */
-      if (!m.demo) {
-        var del = U.el('button', 'lib-thumb-del');
-        del.type = 'button';
-        del.title = T('lib.deleteMedia');
-        del.setAttribute('aria-label', T('lib.deleteMedia'));
-        del.innerHTML = MB.icons.get('x', 11);
-        del.addEventListener('pointerdown', function (e) {
-          e.stopPropagation();
-        });
-        del.addEventListener('mousedown', function (e) {
-          e.stopPropagation();
-        });
-        del.addEventListener('click', function (e) {
-          e.stopPropagation();
-          removeMedia(m.src);
-        });
-        item.appendChild(del);
-      }
+      /* v1.13 — TOUT se retire, images utilisateur ET assets de démo
+       * (les démos sont masquées, « Restaurer » les ramène). */
+      attachDel(item, T('lib.deleteMedia'), function () {
+        if (m.demo) removeDemoMedia(m.src);
+        else removeMedia(m.src);
+      });
       grid.appendChild(item);
     });
     host.appendChild(grid);
@@ -348,37 +795,75 @@
 
   function addMedia(src, w, h, name) {
     /* dédoublonnage par source : ré-ajouter remonte l'image en tête */
-    mediaItems = mediaItems.filter(function (m) {
+    state.media = state.media.filter(function (m) {
       return m.src !== src;
     });
-    mediaItems.unshift({ src: src, w: w, h: h, name: name || 'image' });
-    if (mediaItems.length > 60) mediaItems.pop();
+    state.media.unshift({ src: src, w: w, h: h, name: name || 'image' });
+    if (state.media.length > 60) state.media.pop();
     persist();
-    var active = document.querySelector('.lib-tab.is-active');
-    if (active && active.dataset.tab === 'media') renderMedia();
+    if (activeTabId() === 'media') renderMedia();
   }
 
   function removeMedia(src) {
-    mediaItems = mediaItems.filter(function (m) {
+    state.media = state.media.filter(function (m) {
       return m.src !== src;
     });
     persist();
-    var active = document.querySelector('.lib-tab.is-active');
-    if (active && active.dataset.tab === 'media') renderMedia();
+    if (activeTabId() === 'media') renderMedia();
     MB.ui.toast('Image retirée de la bibliothèque', 'success');
+  }
+
+  function removeDemoMedia(src) {
+    demoItems = demoItems.filter(function (m) {
+      return m.src !== src;
+    });
+    if (state.hiddenDemo.indexOf(src) < 0) state.hiddenDemo.push(src);
+    persist();
+    if (activeTabId() === 'media') renderMedia();
+    MB.ui.toast(T('lib.removedDemo'), 'success');
+  }
+
+  function restoreDemoMedia() {
+    state.hiddenDemo = [];
+    persist();
+    seedDemoMedia();
+    if (activeTabId() === 'media') renderMedia();
+    MB.ui.toast(T('lib.restoredDemo'), 'success');
   }
 
   /* v1.11 — depuis le CANVAS : une image posée devient une entrée de
    * la bibliothèque (menu contextuel « Ajouter à la bibliothèque »). */
   function addFromElement(el) {
-    if (!el || el.type !== 'image' || !el.data || !el.data.src) return;
-    addMedia(el.data.src, el.data.naturalW || 512, el.data.naturalH || 512, el.data.name || 'image du canvas');
-    MB.ui.toast('Ajoutée à la bibliothèque — réutilisable dans tous vos moodboards', 'success');
+    if (!el || !el.data) return;
+    if (el.type === 'image' && el.data.src) {
+      addMedia(el.data.src, el.data.naturalW || 512, el.data.naturalH || 512, el.data.name || 'image du canvas');
+      MB.ui.toast('Ajoutée à la bibliothèque — réutilisable dans tous vos moodboards', 'success');
+      return;
+    }
+    /* v1.13 — couleurs, palettes et typos du canvas rejoignent aussi
+     * la bibliothèque (clic droit ▸ Ajouter à la bibliothèque). */
+    if (el.type === 'color' && el.data.hex) {
+      addColor(el.data.hex);
+      return;
+    }
+    if (el.type === 'palette' && Array.isArray(el.data.colors) && el.data.colors.length) {
+      addPalette({
+        name: el.data.name || T('lib.paletteDefault'),
+        colors: el.data.colors.map(function (c) {
+          return { hex: c.hex, name: c.name || c.hex };
+        })
+      });
+      return;
+    }
+    if (el.type === 'typography' && el.data.fontFamily) {
+      addFont(el.data.fontFamily);
+    }
   }
 
+  /* ------------------------------------------------------------ RENDU */
+
   function render() {
-    var active = document.querySelector('.lib-tab.is-active');
-    var tab = active ? active.dataset.tab : 'media';
+    var tab = activeTabId();
     if (tab === 'colors') renderColors();
     else if (tab === 'palettes') renderPalettes();
     else if (tab === 'fonts') renderFonts();
@@ -438,13 +923,14 @@
       origImport(files, atPoint);
     };
 
-    /* v1.11 — bibliothèque persistante : les images de l'utilisateur
-     * sont relues au démarrage (les assets de démo restent en
-     * session, ils se re-sèment à chaque lancement). */
-    mediaItems = MB.storage.readLibrary();
+    /* v1.13 — bibliothèque complète persistante : images, couleurs,
+     * palettes, typos ET retraits (y compris assets de démo) sont relus
+     * au démarrage. */
+    state = MB.storage.readLibraryFull();
 
-    // Bibliothèque Médias : les assets de démonstration sont chargés
-    // en arrière-plan (le rendu suit l'ajout si l'onglet est actif).
+    // Bibliothèque Médias : les assets de démonstration non masqués
+    // sont chargés en arrière-plan (le rendu suit l'ajout si l'onglet
+    // est actif).
     seedDemoMedia();
 
     render();
@@ -456,6 +942,21 @@
     addMedia: addMedia,
     removeMedia: removeMedia,
     addFromElement: addFromElement,
-    render: render
+    render: render,
+    /* v1.13 — API d'édition complète (tests E2E). */
+    state: function () {
+      return state;
+    },
+    addColor: addColor,
+    removeColor: removeColor,
+    addPalette: addPalette,
+    removePalette: removePalette,
+    addFont: addFont,
+    removeFont: removeFont,
+    removeDemoMedia: removeDemoMedia,
+    restoreDemoMedia: restoreDemoMedia,
+    visibleColors: visibleColors,
+    visiblePalettes: visiblePalettes,
+    visibleFonts: visibleFonts
   };
 })();

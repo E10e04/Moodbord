@@ -810,6 +810,12 @@
 
   function minSizeFor(el) {
     var m = MIN_SIZES[el && el.type] || { w: 28, h: 22 };
+    /* v1.13 — CERCLE PARFAIT : minimum carré pour l'ellipse — le
+     * ratio 1:1 du redimensionnement ne doit jamais produire une
+     * boîte plus haute que large (ou l'inverse). */
+    if (el && el.type === 'shape' && el.data && el.data.shape === 'ellipse') {
+      return { w: 28, h: 28 };
+    }
     return m;
   }
 
@@ -821,6 +827,14 @@
       var nw = el.data.naturalW || el.w;
       var nh = el.data.naturalH || el.h;
       ratio = nh / nw;
+    }
+    /* v1.13 — CERCLE PARFAIT : l'ellipse (le cercle) garde son ratio
+     * 1:1 au redimensionnement — elle reste ronde sous la main. Shift
+     * libère le ratio (ovale libre), comme pour les images. Les
+     * anciennes ovales héritées des versions précédentes redeviennent
+     * rondes dès qu'on les retaille. */
+    else if (el.type === 'shape' && el.data && el.data.shape === 'ellipse') {
+      ratio = 1;
     }
     gesture = {
       mode: 'resize',
@@ -994,6 +1008,24 @@
     }
 
     if (e.target.closest('#empty-hint, [data-act]')) return;
+
+    /* v1.13 — CORRECTIF PERTE DE TEXTE (rapport utilisateur : « quand
+     * je redimensionne la carte Note, parfois le texte écrit
+     * disparaît ») : saisir une POIGNÉE (redimensionner/pivoter), une
+     * extrémité de ligne ou une poignée de recadrage ne passait JAMAIS
+     * par la branche qui commet l'édition ouverte — la frappe vivait
+     * uniquement dans le DOM. Au relâchement, nextRev → renderContent
+     * réinjectait le texte du MODÈLE et tout ce qui n'était pas
+     * encore commité s'évanouissait. On commet donc TOUJOURS
+     * l'édition ouverte avant de démarrer un geste qui ne se passe
+     * pas DANS le champ édité. */
+    var stEdit = Store.s();
+    if (stEdit.ui.editingId) {
+      var edViewEarly = Board.viewOf(stEdit.ui.editingId);
+      if (!edViewEarly || !e.target.closest || e.target.closest('.mb-el') !== edViewEarly.node) {
+        commitEditing();
+      }
+    }
 
     var handle = e.target.closest('.handle');
     if (handle && handle.dataset.h) {
@@ -1225,6 +1257,24 @@
           w: Math.abs(cur5.x - g.startScreen.x),
           h: Math.abs(cur5.y - g.startScreen.y)
         };
+        /* v1.13 — CERCLE PARFAIT : en tracé libre, l'ellipse naît
+         * carrée — le rectangle suiveur est carré AVANT l'affichage
+         * (côté = plus grande dimension, recentré sur le geste) : ce
+         * que la main voit à l'écran est exactement le cercle qui
+         * sera posé au relâchement. */
+        if (
+          g.type === 'shape' &&
+          MB.ui.toolbar &&
+          MB.ui.toolbar.currentShape() === 'ellipse'
+        ) {
+          var side5 = Math.max(rect5.w, rect5.h);
+          rect5 = {
+            x: rect5.x + rect5.w / 2 - side5 / 2,
+            y: rect5.y + rect5.h / 2 - side5 / 2,
+            w: side5,
+            h: side5
+          };
+        }
         Board.showMarquee(rect5);
         document.getElementById('marquee').classList.add('is-create');
         g.rect = rect5;

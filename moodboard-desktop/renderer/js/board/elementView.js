@@ -44,6 +44,15 @@
         var x = e || view.el;
         if (!x) return;
         var wasEditing = node.querySelector('.is-editing');
+        /* v1.13 — CORRECTIF PERTE DE TEXTE (2e couche, cf.
+         * interactions.js pour la 1re) : la frappe en cours vit dans
+         * le DOM (commitée à la sortie d'édition) ; un re-rendu
+         * pendant l'édition (inspecteur, autoH, autre nextRev…)
+         * réinjectait le contenu du MODÈLE et effaçait la frappe. Le
+         * contenu VIVANT du champ édité est capturé avant le
+         * re-rendu, puis réinjecté tel quel — la source de vérité
+         * reste le champ tant que l'édition est ouverte. */
+        var wasHtml = wasEditing ? wasEditing.innerHTML : null;
         var cropMode = MB.store.s().ui.cropId === x.id;
         node.innerHTML = MB.content.render(x);
         view.rev = x._rev;
@@ -53,6 +62,7 @@
           var again = node.querySelector('[data-field="' + field + '"]');
           if (again && MB.store.s().ui.editingId === x.id) {
             again.classList.add('is-editing');
+            if (wasHtml !== null) again.innerHTML = wasHtml;
             /* v1.8 — les champs riches (corps des notes/textes) repassent
              * en contenteditable HTML, les autres en texte brut. */
             var rich = field === 'text' && (x.type === 'note' || x.type === 'text');

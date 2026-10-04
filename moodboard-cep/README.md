@@ -35,7 +35,7 @@ Point d'honnêteté : **Adobe recommande UXP pour tout nouveau développement d'
 - Canvas infini avec **caméra découplée** : zoom focalisé sur le curseur (molette), zoom 100 % / ajuster à l'écran / zoom sur la sélection, pan (Espace + glisser, bouton milieu, outil Main `H`).
 
 ### Objets — 16 types éditables + groupes
-Texte, note, commentaire, image, couleur, palette, typographie, lien, fichier, **ligne attachable** (avec flèches, raccordable aux autres éléments), forme, **section conteneur**, colonne, tableau, checklist, croquis (tracé à main levée), **carte assignées** (composant personnes) — plus le **groupe** (`⌘/Ctrl + G`) comme conteneur logique.
+Texte, note, commentaire, image, couleur, palette, typographie, lien, fichier, **ligne attachable** (avec flèches, raccordable aux autres éléments), forme, **colonne conteneur** (mini-canvas vertical), tableau, checklist, croquis (tracé à main levée), **carte assignées** (composant personnes) — plus le **groupe** (`⌘/Ctrl + G`) comme conteneur logique.
 
 ### Sélection et transformation
 - Sélection multiple, **marquee** (lasso sur zone vide), `Maj + clic` pour ajouter/retirer.
@@ -49,7 +49,7 @@ Texte, note, commentaire, image, couleur, palette, typographie, lien, fichier, *
 - Presse-papiers (copier / couper / coller), `⌘/Ctrl + D` pour dupliquer.
 - `Alt + glisser` = **duplication rapide** ; sur une section/colonne, `Alt + glisser` déplace **le conteneur seul** (sans son contenu).
 - **Alignement / distribution** de la sélection ; **disposition automatique** d'un lot d'images : grille, masonry ou collage.
-- **Bibliothèque latérale** (images importées dans la session) avec **drag-out** vers le canvas.
+- **Bibliothèque latérale ÉDITABLE** (v1.13) : Médias, Couleurs, Palettes et Typo acceptent des **ajouts** et des **retraits** — même les assets de démo (masqués, restaurables d'un clic) ; tout est persistant (`library.json`) et les couleurs, palettes et typos du canvas y retournent par clic droit. Drag-out vers le canvas depuis chaque entrée.
 - **Import par drop multi-fichiers** : déposez plusieurs images d'un coup, elles arrivent en cascade depuis le curseur.
 - Double-clic : édition (texte, note, cellule de tableau, image → recadrage).
 
@@ -191,7 +191,7 @@ Dézipper l'archive **à la racine** du dossier extensions, de sorte que `CSXS/`
 > 5. relancer Illustrator.
 >
 > **Vérifiez la version installée** : le badge en bas à droite de la barre d'état
-> du panneau doit afficher **v1.12.0**. S'il affiche autre chose, l'ancienne
+> du panneau doit afficher **v1.13.0**. S'il affiche autre chose, l'ancienne
 > installation est encore active.
 
 ### 3. Activer le PlayerDebugMode
@@ -267,6 +267,38 @@ Si un jour les **drags ne répondent plus alors que le zoom molette fonctionne**
 `MB.interact.diag()` retourne le nombre d'événements **réellement livrés** par le moteur de chaque famille (`pointerdown`, `mousedown`, `pointermove`, `mousemove`, `blur`, `pointercancel`…) ainsi que l'état de la machine à gestes (`gesture`, `spaceDown`, `tool`). Depuis la v1.0.1, la couche d'interaction est **adaptive** : elle branche à la fois les Pointer Events et les événements souris, et bascule automatiquement sur la souris si le moteur CEP hôte ne livre pas les Pointer Events (cas observé selon les versions d'Illustrator).
 
 Depuis la **v1.0.2**, les gestes **survivent** aux événements `blur` / `pointercancel` parasites que certains hôtes CEP émettent au milieu d'un drag (symptôme typique : « le zoom marche mais rien ne se déplace ») : le geste continue s'il reçoit encore des événements, et n'est annulé proprement (avec rollback) que si plus rien n'arrive pendant 600 ms.
+
+#### Nouveautés v1.13.0 — bibliothèque éditable, note réparée, chargement liquide, cercles parfaits
+
+1. **Bibliothèque entièrement éditable** : les quatre onglets — **Médias**,
+   **Couleurs**, **Palettes** et **Typo** — acceptent désormais des **ajouts**
+   (bouton « + », sélecteur de couleur / créateur de palette avec pastilles /
+   saisie de famille avec suggestions des polices du système) et des
+   **retraits** (bouton ✕ au survol de chaque entrée). **Même les assets de
+   démo se suppriment** — ils sont masqués, pas détruits, et « Restaurer les
+   images de démo » les ramène. Couleurs, palettes et typographies posées
+   sur le canvas rejoignent la bibliothèque par **clic droit ▸ Ajouter à la
+   bibliothèque**. Tout vit dans `library.json` v2 (rétrocompatible avec la
+   v1 : aucune image n'est perdue à la migration).
+2. **Bug Note corrigé** : redimensionner une carte **pendant l'édition** ne
+   fait plus disparaître le texte écrit — l'édition ouverte est **toujours
+   committée avant tout geste** (poignée, pivot, extrémité, recadrage), et un
+   re-rendu pendant l'édition **préserve la frappe vivante** au lieu de
+   réinjecter le modèle (double filet de sécurité).
+3. **Barre de chargement repensée** : la progression des mises à jour adopte
+   le design « liquid loader » (uiverse.io/ShaikhWahid99) — piste sombre
+   creusée, remplissage en **dégradé animé** (hue-rotate), libellé lumineux
+   aux **points clignotants** ; la largeur suit la progression réelle du
+   téléchargement.
+4. **Cercles parfaits** : l'outil Forme en mode cercle naît **carré** (160×160
+   — l'ancien 170×130 produisait une ovale écrasée) ; le tracé à main levée
+   **montre un carré** pendant le geste et pose un cercle ; le
+   redimensionnement **garde le ratio 1:1** (`Maj` le libère pour une ovale
+   libre) ; les anciennes ovales redeviennent rondes dès qu'on les retaille.
+
+Vérifié par **580 assertions E2E** (14 suites : v102→v1130, dont la nouvelle
+suite v1130 ×40) + **114 assertions de simulation de stockage**, zéro erreur
+console.
 
 #### Nouveautés v1.12.0 — palette « picker », section retirée, colonnes réparées, garde de fermeture
 

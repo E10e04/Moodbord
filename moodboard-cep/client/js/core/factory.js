@@ -220,7 +220,16 @@
         }
 
         case 'shape': {
-          var sh = base('shape', p, Object.assign({ w: 170, h: 130 }, extra));
+          /* v1.13 — CERCLE PARFAIT : la carte d'une ELLIPSE naît CARRÉE.
+           * Le rendu étire le viewBox 100×100 sur la carte
+           * (preserveAspectRatio="none") : seule une boîte carrée
+           * donne un cercle bien rond — 170×130 produisait une ovale
+           * écrasée dès la création. */
+          var isEllipse = (extra && extra.shape) === 'ellipse';
+          var sh = base('shape', p, Object.assign(
+            isEllipse ? { w: 160, h: 160 } : { w: 170, h: 130 },
+            extra
+          ));
           sh.data = {
             shape: (extra && extra.shape) || 'rect',
             /* v1.9 — triangle = polygone régulier : nombre de branches

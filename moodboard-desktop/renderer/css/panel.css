@@ -199,11 +199,80 @@ button:focus-visible, input:focus-visible, [contenteditable]:focus-visible {
 .lib-content { padding: 0 10px 14px; }
 .lib-note { color: var(--text-faint); font-size: 11.5px; line-height: 1.5; padding: 8px 2px 10px; }
 
+/* v1.13 — bibliothèque ÉDITABLE : barre d'ajout (bouton « + … » de
+   chaque onglet), créateurs (palette, typo), bouton de suppression
+   universel au survol et lien de restauration des images de démo. */
+.lib-add { display: flex; padding: 0 0 10px; }
+.lib-add-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  width: 100%; justify-content: center;
+  padding: 6px 10px;
+  background: var(--panel2);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+  font-size: 11.5px; font-weight: 600;
+  cursor: pointer;
+  transition: border-color .12s ease, color .12s ease, background .12s ease;
+}
+.lib-add-btn:hover { color: var(--text); border-color: var(--accent); background: var(--elev); }
+.lib-creator {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 10px;
+  background: var(--panel2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+}
+.lib-creator-name { width: 100%; }
+.lib-creator-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.lib-chip {
+  width: 24px; height: 24px;
+  border-radius: 999px;
+  border: none; cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.18), 0 1px 3px rgba(0,0,0,0.35);
+}
+.lib-chip:hover { box-shadow: inset 0 0 0 2px var(--danger), 0 1px 3px rgba(0,0,0,0.35); }
+.lib-chip--add {
+  background: var(--elev);
+  color: var(--text-dim);
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px dashed var(--border);
+  box-shadow: none;
+}
+.lib-chip--add:hover { color: var(--accent); border-color: var(--accent); box-shadow: none; }
+.lib-creator-row { display: flex; gap: 8px; justify-content: flex-end; }
+.lib-del {
+  position: absolute; top: 4px; right: 4px; z-index: 2;
+  display: none;
+  width: 20px; height: 20px;
+  align-items: center; justify-content: center;
+  border: none; border-radius: 999px;
+  background: rgba(30, 30, 30, 0.85);
+  color: var(--text);
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+.lib-del:hover { background: var(--danger); color: #fff; }
+.lib-color:hover .lib-del,
+.lib-item:hover .lib-del,
+.lib-thumb:hover .lib-del { display: inline-flex; }
+.lib-restore {
+  background: none; border: none; cursor: pointer;
+  color: var(--text-faint);
+  font-size: 11px;
+  padding: 2px 0 2px 10px;
+  text-align: left;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+.lib-restore:hover { color: var(--text); }
+
 .lib-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .lib-grid--shapes { grid-template-columns: repeat(3, 1fr); }
 .lib-grid--media { grid-template-columns: repeat(2, 1fr); }
 
 .lib-color {
+  position: relative;
   aspect-ratio: 1; border-radius: var(--radius-sm); cursor: grab;
   box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
   transition: transform 0.1s ease;
@@ -213,6 +282,7 @@ button:focus-visible, input:focus-visible, [contenteditable]:focus-visible {
 
 .lib-list { display: flex; flex-direction: column; gap: 8px; }
 .lib-item {
+  position: relative;
   background: var(--panel2); border: 1px solid var(--border-soft); border-radius: var(--radius-sm);
   padding: 8px 10px; cursor: grab; transition: border-color 0.12s ease;
 }
@@ -230,16 +300,15 @@ button:focus-visible, input:focus-visible, [contenteditable]:focus-visible {
   color: var(--text-dim); cursor: grab;
 }
 .lib-shape:hover { color: var(--text); border-color: var(--border); }
-.lib-import { padding: 4px 0 12px; }
+.lib-import { display: flex; align-items: center; gap: 4px; padding: 4px 0 12px; }
 .lib-thumb {
   aspect-ratio: 1; border-radius: var(--radius-sm); background-size: cover; background-position: center;
   background-color: var(--panel2); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06); cursor: grab;
   position: relative;
 }
 .lib-thumb:hover { box-shadow: inset 0 0 0 2px var(--accent); }
-/* v1.11 — bibliothèque persistante : suppression au survol (les
-   images de DÉMO ne portent pas le bouton — elles se re-sèment au
-   lancement). */
+/* v1.11 — bibliothèque persistante : suppression au survol ; v1.13,
+   le bouton est .lib-del (partagé par tous les onglets, démos comprises). */
 .lib-thumb-del {
   position: absolute; top: 4px; right: 4px; z-index: 2;
   display: none;
@@ -1078,6 +1147,85 @@ input[type='range'] { accent-color: var(--accent); width: 100%; }
   white-space: pre-wrap; word-break: break-word;
 }
 .upd-detail { font-size: 12.5px; color: var(--text-dim); margin-bottom: 10px; word-break: break-all; }
+/* v1.13 — barre de chargement LIQUIDE : d'après le composant « Loader »
+   de ShaikhWahid99 (uiverse.io/warm-emu-89, design demandé par
+   l'utilisateur) — piste sombre creusée, remplissage en dégradé animé
+   (hue-rotate), libellé lumineux aux points clignotants. La largeur du
+   remplissage est pilotée par la progression RÉELLE du téléchargement
+   (le cycle automatique 0→100 % de l'original devient la vraie avancée),
+   d'où le léger transition ease-out qui donne le côté « liquide ». */
+.liquid-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 4px 2px;
+}
+.liquid-loader .loader-track {
+  position: relative;
+  width: 100%;
+  max-width: 240px;
+  height: 32px;
+  background: linear-gradient(135deg, #2a2a2a, #1a1a1a);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.6),
+    0 1px 3px rgba(255, 255, 255, 0.1);
+}
+.liquid-loader .liquid-fill {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  height: calc(100% - 4px);
+  width: 0px;
+  background: linear-gradient(90deg, #4f46e5, #7c3aed, #ec4899, #f59e0b);
+  border-radius: 14px;
+  animation: liquidColorShift 3s linear infinite;
+  box-shadow:
+    0 0 12px rgba(124, 58, 237, 0.4),
+    inset 0 1px 2px rgba(255, 255, 255, 0.2);
+  transition: width 0.25s ease-out;
+}
+.liquid-loader .loading-text {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-align: center;
+  word-break: break-all;
+  animation: liquidTextGlow 1s ease-in-out infinite;
+}
+.liquid-loader .dot {
+  margin-left: 3px;
+  animation: liquidBlink 1.5s infinite;
+}
+.liquid-loader span.dot:nth-of-type(1) { animation-delay: 0s; }
+.liquid-loader span.dot:nth-of-type(2) { animation-delay: 0.3s; }
+.liquid-loader span.dot:nth-of-type(3) { animation-delay: 0.6s; }
+.liquid-loader .upd-meta { margin-top: -2px; }
+@keyframes liquidColorShift {
+  0% { filter: hue-rotate(0deg) brightness(1); }
+  33% { filter: hue-rotate(120deg) brightness(1.1); }
+  66% { filter: hue-rotate(240deg) brightness(0.9); }
+  100% { filter: hue-rotate(360deg) brightness(1); }
+}
+@keyframes liquidTextGlow {
+  0%, 100% {
+    opacity: 0.7;
+    text-shadow: 0 0 8px rgba(139, 92, 246, 0.3);
+  }
+  50% {
+    opacity: 1;
+    text-shadow: 0 0 16px rgba(139, 92, 246, 0.6);
+  }
+}
+@keyframes liquidBlink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+/* Ancienne barre plate (v1.7) — conservée pour le repli des rendus
+   existants qui l'appellent encore par classe. */
 .upd-bar {
   height: 10px; border-radius: 6px;
   background: #2A2A2A;

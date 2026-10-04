@@ -368,20 +368,30 @@
 
   /* --------------------------------------------- progression à l'écran */
 
-  /* Dialogue de progression piloté par update() : barre + libellés. */
+  /* Dialogue de progression piloté par update() : barre + libellés.
+   * v1.13 — design « liquid loader » (uiverse.io/ShaikhWahid99/
+   * warm-emu-89, demandé par l'utilisateur) : libellé lumineux aux
+   * points clignotants, piste sombre creusée, remplissage en dégradé
+   * animé — la largeur suit la progression RÉELLE du téléchargement
+   * (le cycle automatique de l'original devient l'avancée vraie). */
   function progressDialog(opts) {
     /* opts: { title, label } — update(p) : { pct, detail, sub } */
     var box = null;
 
     function update(p) {
       if (!box) return;
-      var fill = box.querySelector('.upd-fill');
+      var fill = box.querySelector('.liquid-fill');
       var pct = Math.max(0, Math.min(100, Math.round(p.pct || 0)));
-      if (fill) fill.style.width = pct + '%';
+      if (fill) {
+        /* inset de 2 px de chaque côté, comme le design : la pastille
+         * de remplissage garde ses coins ronds jusqu'au bout. */
+        fill.style.width = pct <= 0 ? '0px' : 'calc(' + pct + '% - 4px)';
+        fill.style.minWidth = pct > 0 ? '8px' : '0px';
+      }
       var pctEl = box.querySelector('.upd-pct');
       if (pctEl) pctEl.textContent = pct + ' %';
-      var d = box.querySelector('.upd-detail');
-      if (d && p.detail !== undefined) d.textContent = p.detail;
+      var lbl = box.querySelector('.lt-label');
+      if (lbl && p.detail !== undefined) lbl.textContent = p.detail;
       var s = box.querySelector('.upd-sub');
       if (s && p.sub !== undefined) s.textContent = p.sub;
     }
@@ -411,10 +421,13 @@
       var dlg = MB.ui.dialog(
         '<div class="dialog-title">' + U.escapeHtml(opts.title) + '</div>' +
         '<div class="dialog-body">' +
-        '<p class="upd-detail">' + U.escapeHtml(opts.label) + '</p>' +
-        '<div class="upd-bar"><div class="upd-fill"></div></div>' +
+        '<div class="liquid-loader">' +
+        '<div class="loading-text"><b class="lt-label">' + U.escapeHtml(opts.label) + '</b>' +
+        '<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span></div>' +
+        '<div class="loader-track"><div class="liquid-fill"></div></div>' +
         '<div class="upd-meta"><span class="upd-pct">0 %</span>' +
         '<span class="upd-sub"></span></div>' +
+        '</div>' +
         '</div>',
         [],
         {

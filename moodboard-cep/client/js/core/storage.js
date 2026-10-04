@@ -710,6 +710,138 @@
     return false;
   }
 
+  /* ------------------------------------------- bibliothèque COMPLÈTE (v1.13)
+   * Quatre onglets persistants : Médias (v1.11) + Couleurs, Palettes
+   * et Typo. Chaque onglet sait ce que l'utilisateur a AJOUTÉ (ses
+   * propres entrées) et ce qu'il a RETIRÉ (les entrées intégrées et
+   * les ASSETS DE DÉMO sont MASQUÉS, pas détruits : retirer l'entrée
+   * de la liste de masquage les fait revenir).
+   * Format library.json v2 :
+   *   { version: 2, media: [...], colors: [...], hiddenColors: [...],
+   *     palettes: [...], hiddenPalettes: [...], fonts: [...],
+   *     hiddenFonts: [...], hiddenDemo: [...] }
+   * Rétro-compatibilité : un library.json v1 (tableau d'images) est
+   * lu comme { media: [...] } ; en web, la clé mb.library.v2 prend
+   * la suite de mb.library.v1 (migration silencieuse au premier
+   * enregistrement). */
+
+  var LIBRARY_V2_KEY = 'mb.library.v2';
+
+  function emptyLibraryFull() {
+    return {
+      version: 2,
+      media: [],
+      colors: [],
+      hiddenColors: [],
+      palettes: [],
+      hiddenPalettes: [],
+      fonts: [],
+      hiddenFonts: [],
+      hiddenDemo: []
+    };
+  }
+
+  function validHexStr(x) {
+    return typeof x === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(x);
+  }
+
+  function validPaletteEntry(x) {
+    if (!x || typeof x !== 'object' || typeof x.name !== 'string' || !x.name) return false;
+    if (!Array.isArray(x.colors) || !x.colors.length || x.colors.length > 12) return false;
+    for (var i = 0; i < x.colors.length; i++) {
+      var c = x.colors[i];
+      if (!c || typeof c !== 'object' || !validHexStr(c.hex)) return false;
+    }
+    return true;
+  }
+
+  function validFontEntry(x) {
+    return typeof x === 'string' && x.trim().length > 0 && x.length <= 64;
+  }
+
+  function sanitizeLibraryFull(raw) {
+    var out = emptyLibraryFull();
+    if (Array.isArray(raw)) {
+      /* v1 : tableau d'images → média uniquement. */
+      out.media = raw.filter(validLibraryItem).slice(0, LIBRARY_MAX);
+      return out;
+    }
+    if (!raw || typeof raw !== 'object') return out;
+    if (Array.isArray(raw.media)) {
+      out.media = raw.media.filter(validLibraryItem).slice(0, LIBRARY_MAX);
+    }
+    if (Array.isArray(raw.colors)) out.colors = raw.colors.filter(validHexStr);
+    if (Array.isArray(raw.hiddenColors)) out.hiddenColors = raw.hiddenColors.filter(validHexStr);
+    if (Array.isArray(raw.palettes)) out.palettes = raw.palettes.filter(validPaletteEntry).slice(0, 40);
+    if (Array.isArray(raw.hiddenPalettes)) {
+      out.hiddenPalettes = raw.hiddenPalettes.filter(function (n) {
+        return typeof n === 'string' && n.length <= 80;
+      });
+    }
+    if (Array.isArray(raw.fonts)) out.fonts = raw.fonts.filter(validFontEntry);
+    if (Array.isArray(raw.hiddenFonts)) out.hiddenFonts = raw.hiddenFonts.filter(validFontEntry);
+    if (Array.isArray(raw.hiddenDemo)) {
+      out.hiddenDemo = raw.hiddenDemo.filter(function (s) {
+        return typeof s === 'string' && s.length <= 400;
+      });
+    }
+    return out;
+  }
+
+  function readLibraryFull() {
+    var parsed = null;
+    if (isFs()) {
+      var r = readText(dataDir + '/' + LIBRARY_FILE);
+      if (!r.error && r.text) {
+        try {
+          parsed = JSON.parse(r.text);
+        } catch (e) {
+          parsed = null; /* fichier illisible : repart à vide */
+        }
+      }
+      return sanitizeLibraryFull(parsed);
+    }
+    try {
+      var raw = localStorage.getItem(LIBRARY_V2_KEY);
+      if (!raw) {
+        /* migration : la bibliothèque v1 (images) devient la partie
+         * média de la v2 — aucun import n'est perdu. */
+        var old = localStorage.getItem('mb.library.v1');
+        if (old) parsed = JSON.parse(old);
+      } else {
+        parsed = JSON.parse(raw);
+      }
+    } catch (e) {
+      parsed = null;
+    }
+    return sanitizeLibraryFull(parsed);
+  }
+
+  /* Même repli anti-quota que writeLibrary : les images sont les
+   * seules entrées volumineuses, ce sont elles qui sautent. */
+  function writeLibraryFull(state) {
+    var clean = sanitizeLibraryFull(state);
+    if (isFs()) {
+      writeText(dataDir + '/' + LIBRARY_FILE, JSON.stringify(clean));
+      return true;
+    }
+    try {
+      localStorage.setItem(LIBRARY_V2_KEY, JSON.stringify(clean));
+      return true;
+    } catch (e) {
+      while (clean.media.length) {
+        clean.media.pop();
+        try {
+          localStorage.setItem(LIBRARY_V2_KEY, JSON.stringify(clean));
+          return false; /* écrit, mais amputé des plus anciennes images */
+        } catch (e2) {
+          /* continuer à dégraisser */
+        }
+      }
+      return false;
+    }
+  }
+
   /* ------------------------------------------------- dossier de données (v1.7)
    * Préférence « fichiers temporaires et autosaves » : la valeur vit
    * dans prefs.json DU DOSSIER PAR DÉFAUT (baseDir) — les deux
@@ -1374,6 +1506,9 @@
     setPref: setPref,
     readLibrary: readLibrary,
     writeLibrary: writeLibrary,
+    /* v1.13 — bibliothèque complète (quatre onglets éditables). */
+    readLibraryFull: readLibraryFull,
+    writeLibraryFull: writeLibraryFull,
     save: save,
     saveAs: saveAs,
     saveBeforeClose: saveBeforeClose,
