@@ -250,7 +250,10 @@
           multiLineText(el.x + 14, el.y + 26, d.fontFamily, 'font-family=\'' + esc(d.fontFamily) + '\' font-size="15" font-weight="700" fill="#F5F5F5"', 19);
         var yy = el.y + 84;
         for (var s = 0; s < d.sizes.length; s++) {
-          t += multiLineText(el.x + 14, yy, d.sampleText, 'font-family=\'' + esc(d.fontFamily) + '\' font-size="' + d.sizes[s] + '" fill="#E8E8E8"', d.sizes[s] * 1.3);
+          /* v1.19.1 — la graisse du spécimen (sélecteur « Graisse ») est
+           * enfin respectée dans l'export (le canvas l'appliquait déjà). */
+          t += multiLineText(el.x + 14, yy, d.sampleText, 'font-family=\'' + esc(d.fontFamily) + '\' font-size="' + d.sizes[s] + '"' +
+            (d.fontWeight ? ' font-weight="' + Number(d.fontWeight) + '"' : '') + ' fill="#E8E8E8"', d.sizes[s] * 1.3);
           yy += d.sizes[s] * 1.3 + 8;
         }
         break;
@@ -336,7 +339,7 @@
         }
         var lTitleColor = U.readableOn(lBg) === '#1E1E1E' ? '#B4530A' : '#F97316';
         t +=
-          multiLineText(el.x + 16, urlY + 22, d.title, 'font-family="' + esc(d.titleFont || 'Georgia') + '" font-size="14" font-weight="600" text-decoration="underline" fill="' + lTitleColor + '"', 17) +
+          multiLineText(el.x + 16, urlY + 22, d.title, 'font-family="' + esc(d.titleFont || 'Georgia') + '" font-size="14" font-weight="' + (d.titleWeight || 600) + '" text-decoration="underline" fill="' + lTitleColor + '"', 17) +
           (d.desc
             ? multiLineText(el.x + 16, urlY + 44, String(d.desc).slice(0, 130), 'font-family="Georgia" font-size="11.5" fill="#E5E7EB"', 15)
             : '') +
@@ -402,7 +405,10 @@
         var ckBg = d.color && d.color !== 'transparent' ? d.color : '#252525';
         var ckInk = U.readableOn(ckBg);
         t = '<rect x="' + el.x + '" y="' + el.y + '" width="' + el.w + '" height="' + el.h + '" rx="10" fill="' + ckBg + '"/>' +
-          multiLineText(el.x + 14, el.y + 24, d.title, 'font-family="' + esc(ckFont) + '" font-size="14" font-weight="700" fill="' + ckInk + '"', 18);
+          /* v1.19.1 — le titre suit la taille ET la graisse de la carte
+           * (700 fixe : le sélecteur « Graisse » était perdu à l'export). */
+          multiLineText(el.x + 14, el.y + 24, d.title, 'font-family="' + esc(ckFont) + '" font-size="' + (d.fontSize || 14) +
+            '" font-weight="' + (d.fontWeight || 700) + '" fill="' + ckInk + '"', 18);
         var ry = el.y + 46;
         for (var k = 0; k < d.items.length; k++) {
           var it = d.items[k];
@@ -410,7 +416,10 @@
           if (it.done) {
             t += '<path d="M' + (el.x + 18) + ' ' + (ry + 8) + ' l3 3 l5 -6" stroke="#fff" stroke-width="2" fill="none"/>';
           }
-          t += multiLineText(el.x + 42, ry + 12, it.text, 'font-family="' + esc(ckFont) + '" font-size="' + (d.fontSize || 13) + '" fill="' + (it.done ? '#A8A8A8' : ckInk) + '"' + (it.done ? ' text-decoration="line-through"' : ''), 16);
+          t += multiLineText(el.x + 42, ry + 12, it.text, 'font-family="' + esc(ckFont) + '" font-size="' + (d.fontSize || 13) + '"' +
+            /* v1.19.1 — graisse des tâches (canvas déjà conforme). */
+            (d.fontWeight ? ' font-weight="' + Number(d.fontWeight) + '"' : '') +
+            ' fill="' + (it.done ? '#A8A8A8' : ckInk) + '"' + (it.done ? ' text-decoration="line-through"' : ''), 16);
           ry += 38;
         }
         break;
@@ -435,7 +444,9 @@
             var fg = head ? (d.headColor || '#F5F5F5') : d.textColor || '#F5F5F5';
             t += '<rect x="' + (el.x + c2 * colW) + '" y="' + (el.y + r * rowH) + '" width="' + colW + '" height="' + rowH +
               '" fill="' + bg + '" stroke="#1E1E1E"/>';
-            t += multiLineText(el.x + c2 * colW + 8, el.y + r * rowH + rowH / 2 + 4, v, 'font-family="' + esc(tbFont) + '" font-size="' + tbSize + '" fill="' + fg + '"' + (head ? ' font-weight="700"' : ''), 15);
+            /* v1.19.1 — les cellules hors en-tête portent la graisse de
+             * la carte (tableCellStyle du canvas la posait déjà). */
+            t += multiLineText(el.x + c2 * colW + 8, el.y + r * rowH + rowH / 2 + 4, v, 'font-family="' + esc(tbFont) + '" font-size="' + tbSize + '" fill="' + fg + '"' + (head ? ' font-weight="700"' : (d.fontWeight ? ' font-weight="' + Number(d.fontWeight) + '"' : '')), 15);
           }
         }
         break;
@@ -478,7 +489,12 @@
         t =
           '<rect x="' + el.x + '" y="' + el.y + '" width="' + el.w + '" height="' + el.h +
           '" rx="12" fill="#232323" stroke="#3A3A3A" stroke-width="1.5"' + rotAttr() + '/>' +
-          multiLineText(el.x + el.w / 2, bodyCy, d.title || 'Planche', 'font-family="' + esc(bdFont) + '" font-size="16" font-weight="700" fill="#F5F5F5" text-anchor="middle"', 19) +
+          multiLineText(el.x + el.w / 2, bodyCy, d.title || 'Planche',
+            /* v1.19.1 — la graisse du titre de planche (sélecteur
+             * « Graisse du titre ») est enfin respectée à l'export
+             * (700 fixe = le défaut CSS du canvas). */
+            'font-family="' + esc(bdFont) + '" font-size="16" font-weight="' + (d.titleWeight || 700) +
+            '" fill="#F5F5F5" text-anchor="middle"', 19) +
           '<line x1="' + (el.x + 1) + '" y1="' + (el.y + el.h - footH) + '" x2="' + (el.x + el.w - 1) + '" y2="' + (el.y + el.h - footH) + '" stroke="#2E2E2E" stroke-width="1"/>' +
           multiLineText(el.x + 12, el.y + el.h - 12, bCount + ' élément' + (bCount > 1 ? 's' : ''), 'font-family="Georgia" font-size="11" fill="#B4B4B4"', 14) +
           '<text x="' + (el.x + el.w - 28) + '" y="' + (el.y + el.h - 13) + '" font-family="Georgia" font-size="16" font-weight="700" fill="#4C8DFF">\u2192</text>';

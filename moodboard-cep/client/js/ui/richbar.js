@@ -48,6 +48,34 @@
     return node ? node.getAttribute('data-field') : null;
   }
 
+  /* v1.19.1 — VRAIE graisse de la sélection : le popover marquait
+   * toujours « 400 » (valeur codée en dur), même sur une sélection en
+   * gras 700 ou en 600 — l'utilisateur ne voyait jamais quelle graisse
+   * s'appliquait. On lit la graisse calculée du nœud au DÉBUT de la
+   * sélection (les <span style="font-weight"> et le gras ⌘B compris),
+   * avec repli sur la graisse de base du champ. */
+  function selectionWeight(el) {
+    try {
+      var host = document.querySelector('.is-editing');
+      var sel = window.getSelection();
+      var node = null;
+      if (sel && sel.rangeCount) {
+        var sc = sel.getRangeAt(0).startContainer;
+        node = sc.nodeType === 1 ? sc : sc.parentElement;
+      } else if (host) {
+        node = host;
+      }
+      while (node && host && !host.contains(node)) node = node.parentElement;
+      if (node && host && host.contains(node)) {
+        var w = parseInt(window.getComputedStyle(node).fontWeight, 10);
+        if (w >= 100 && w <= 900) return w;
+      }
+    } catch (e) {
+      /* repli ci-dessous */
+    }
+    return (el && el.data && (el.data.fontWeight || (el.data.bold ? 700 : 400))) || 400;
+  }
+
   /* v1.11 — couleurs du TEXTE (bouton « A » de la barre) : palette
    * complète de l'application + saisie hex. */
   var TEXT_COLORS = [
@@ -220,7 +248,10 @@
       MB.ui.controls.weightPopover(wBtn, function () {
         return cur || (el && el.data.fontFamily) || 'Georgia';
       }, function () {
-        return 400;
+        /* v1.19.1 — la vraie graisse de la sélection (400 codé en
+         * dur : la ligne « courante » du popover était toujours
+         * « Normal », même sur du gras). */
+        return selectionWeight(el);
       }, function (w) {
         MB.rich.applyWeight(w);
       });
