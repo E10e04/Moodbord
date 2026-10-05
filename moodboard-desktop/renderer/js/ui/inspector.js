@@ -1258,6 +1258,21 @@
       C.applyDataTo([el], 'Graisse du titre', { titleWeight: w });
       MB.board.renderContent(el.id);
     }));
+    /* v1.19 — TAILLE du titre, indépendante de celle du corps : un
+     * stepper qui pose data.titleFontSize (px) ; « Défaut » revient à
+     * la taille dérivée du corps (rendu historique). */
+    rowF.appendChild(C.sizeControl(function () {
+      return d.titleFontSize ? Number(d.titleFontSize) : MB.content.titleFontSizeOf(d);
+    }, function (v) {
+      C.applyDataTo([el], 'Taille du titre', { titleFontSize: U.clamp(Math.round(v), 8, 200) });
+      MB.board.renderContent(el.id);
+      refresh();
+    }));
+    rowF.appendChild(C.textButton('Défaut', function () {
+      C.applyDataTo([el], 'Taille du titre', { titleFontSize: '' });
+      MB.board.renderContent(el.id);
+      refresh();
+    }, 'Taille de titre automatique (déduite du corps)'));
     box.appendChild(rowF);
     return box;
   }

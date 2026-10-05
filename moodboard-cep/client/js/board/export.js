@@ -119,7 +119,11 @@
         var bandSvg = '';
         var bodyBgSvg = '';
         if (d.title || d.titleHtml) {
-          var tSize = Math.max(14, Math.round((d.fontSize || 24) * 0.85));
+          /* v1.19 — taille dédiée du titre (titleFontSize) ; sinon la
+           * dérivation historique de l'export (inchangée). */
+          var tsz = Number(d.titleFontSize);
+          var tSize = (isFinite(tsz) && tsz > 0) ? Math.min(Math.round(tsz), 400)
+            : Math.max(14, Math.round((d.fontSize || 24) * 0.85));
           var tAnchor = d.titleAlign === 'left' ? ' text-anchor="start"'
             : d.titleAlign === 'right' ? ' text-anchor="end"'
             : ' text-anchor="middle"';
@@ -157,7 +161,11 @@
         var noteBandSvg = '';
         var noteDy = 0;
         if (d.title || d.titleHtml) {
-          var ntSize = Math.max(14, Math.round((d.fontSize || 15) * 1.05));
+          /* v1.19 — taille dédiée du titre (titleFontSize) ; sinon la
+           * dérivation historique de l'export (inchangée). */
+          var ntsz = Number(d.titleFontSize);
+          var ntSize = (isFinite(ntsz) && ntsz > 0) ? Math.min(Math.round(ntsz), 400)
+            : Math.max(14, Math.round((d.fontSize || 15) * 1.05));
           /* v1.18 — titre : police/graisse/couleur dédiées comme sur
            * le canvas (titleFont/titleWeight/titleColor). */
           noteTitleSvg = multiLineText(el.x + el.w / 2, el.y + ntSize + 6, d.title,

@@ -60,6 +60,18 @@
     return !!(d && d.titleBg && d.titleBg !== 'transparent');
   }
 
+  /* v1.19 — TAILLE de police du TITRE, réglable indépendamment du corps
+   * (data.titleFontSize, px, posée par l'inspecteur). Sans valeur (ou
+   * valeur invalide) : la taille dérivée historique — 0.85 du corps,
+   * plancher 14 — pour un rendu identique aux versions antérieures. */
+  function titleFontSizeOf(d) {
+    if (d && d.titleFontSize) {
+      var v = Number(d.titleFontSize);
+      if (isFinite(v) && v > 0) return Math.min(Math.round(v), 400);
+    }
+    return Math.max(14, Math.round(((d && d.fontSize) || 24) * 0.85));
+  }
+
   function titleAlignOf(d) {
     return d.titleAlign === 'left' || d.titleAlign === 'right' ? d.titleAlign : 'center';
   }
@@ -97,7 +109,8 @@
   /* v1.17 — le titre RICHE réutilise la mécanique des en-têtes de
    * colonnes : data.titleHtml (sanitisé) sinon repli texte brut. */
   function renderCardTitle(d, colorStyle, topR) {
-    var size = Math.max(14, Math.round((d.fontSize || 24) * 0.85));
+    /* v1.19 — taille dédiée du titre (titleFontSize) sinon dérivée. */
+    var size = titleFontSizeOf(d);
     var st = 'font-size:' + size + 'px;font-weight:' + (d.titleWeight || 700) +
       ';text-align:' + titleAlignOf(d) + ';' + (colorStyle || '');
     /* v1.18 — police dédiée du titre (sinon celle de la carte),
@@ -788,6 +801,9 @@
     },
     afterMount: afterMount,
     /* v1.9 — réutilisé par l'export SVG (polygones réguliers). */
-    polygonPoints: polygonPoints
+    polygonPoints: polygonPoints,
+    /* v1.19 — taille effective du titre (dédiée ou dérivée), pour
+     * l'inspecteur (affichage du stepper) et les exports. */
+    titleFontSizeOf: titleFontSizeOf
   };
 })();
