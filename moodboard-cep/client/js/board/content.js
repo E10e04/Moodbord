@@ -36,12 +36,31 @@
     );
   }
 
+  /* v1.17 — TITRE des cartes Texte et Note : une ligne dédiée EN HAUT
+   * de la carte, éditable au double-clic comme le corps, positionnable
+   * (gauche / centre / droite) via data.titleAlign. Rétrocompatible :
+   * sans titre (cartes antérieures), le rendu reste EXACTEMENT celui
+   * de v1.16 — aucun bloc vide, aucune hauteur fantôme. */
+  function hasTitle(d) {
+    return !!(d && (d.title || d.titleHtml));
+  }
+
+  function titleAlignOf(d) {
+    return d.titleAlign === 'left' || d.titleAlign === 'right' ? d.titleAlign : 'center';
+  }
+
   function renderText(el) {
     var d = el.data;
-    return (
+    var body =
       '<div class="mb-text-body mb-editable mb-rich" data-field="text" style="' + textStyle(d) +
       (d.bg && d.bg !== 'transparent' ? 'background:' + d.bg + ';padding:6px 10px;border-radius:6px;' : '') +
-      '">' + richOrPlain(d) + '</div>'
+      '">' + richOrPlain(d) + '</div>';
+    if (!hasTitle(d)) return body;
+    return (
+      '<div class="mb-text-stack">' +
+      renderCardTitle(d, 'color:' + d.color + ';') +
+      body +
+      '</div>'
     );
   }
 
@@ -55,14 +74,39 @@
     return nl2br(d.text || '');
   }
 
+  /* v1.17 — le titre RICHE réutilise la mécanique des en-têtes de
+   * colonnes : data.titleHtml (sanitisé) sinon repli texte brut. */
+  function renderCardTitle(d, colorStyle) {
+    var size = Math.max(14, Math.round((d.fontSize || 24) * 0.85));
+    var st = 'font-size:' + size + 'px;font-weight:700;text-align:' + titleAlignOf(d) + ';' +
+      (colorStyle || '');
+    if (d.fontFamily) st += "font-family:'" + U.escapeHtml(d.fontFamily) + "';";
+    return (
+      '<div class="mb-card-title mb-editable mb-rich" data-field="title" style="' + st + '">' +
+      richOrPlainTitle(d) + '</div>'
+    );
+  }
+
   function renderNote(el) {
     var d = el.data;
     var ink = U.readableOn(d.color);
+    var font = d.fontFamily ? ';font-family:\'' + U.escapeHtml(d.fontFamily) + '\'' : '';
+    if (!hasTitle(d)) {
+      return (
+        '<div class="mb-note-body mb-editable mb-rich" data-field="text" style="background:' + d.color +
+        ';color:' + ink + ';font-size:' + d.fontSize + 'px' + font +
+        '">' + richOrPlain(d) + '</div>'
+      );
+    }
+    /* v1.17 — avec titre : le PAPIER (fond + ombre) monte sur la pile,
+     * le titre vit dessus (encre adaptée, séparateur discret), le corps
+     * reste éditable et riche en dessous. */
     return (
-      '<div class="mb-note-body mb-editable mb-rich" data-field="text" style="background:' + d.color +
-      ';color:' + ink + ';font-size:' + d.fontSize + 'px' +
-      (d.fontFamily ? ';font-family:\'' + U.escapeHtml(d.fontFamily) + '\'' : '') +
-      '">' + richOrPlain(d) + '</div>'
+      '<div class="mb-note-stack" style="background:' + d.color + '">' +
+      renderCardTitle(d, 'color:' + ink + ';') +
+      '<div class="mb-note-body mb-editable mb-rich" data-field="text" style="color:' + ink +
+      ';font-size:' + d.fontSize + 'px' + font + '">' + richOrPlain(d) + '</div>' +
+      '</div>'
     );
   }
 
@@ -481,12 +525,16 @@
     for (var i = 0; i < d.items.length; i++) {
       var it = d.items[i];
       if (it.done) doneCount++;
+      /* v1.17 — CROIX de suppression par tâche : invisible au repos,
+       * révélée au survol de la ligne, rouge au survol d'elle-même. */
       rows +=
         '<div class="mb-check-item' + (it.done ? ' is-done' : '') + '">' +
         '<button class="mb-check-box" data-act="toggle" data-item="' + it.id + '" role="checkbox" ' +
         'aria-checked="' + (it.done ? 'true' : 'false') + '" aria-label="Terminer"></button>' +
         '<span class="mb-check-text mb-editable" data-field="item" data-item="' + it.id + '"' +
         (fStyleItem ? ' style="' + fStyleItem + '"' : '') + '>' + esc(it.text) + '</span>' +
+        '<button class="mb-check-del" data-act="del-item" data-item="' + it.id + '"' +
+        ' title="Supprimer la tâche" aria-label="Supprimer la tâche">&times;</button>' +
         '</div>';
     }
     var footer =
@@ -625,7 +673,11 @@
       text: el.data.autoH !== false,
       note: el.data.autoH !== false,
       checklist: el.data.autoH !== false,
-      comment: el.data.autoH !== false
+      comment: el.data.autoH !== false,
+      /* v1.17 — TABLEAU à hauteur vivante : un texte long qui passe sur
+       * plusieurs lignes dans une cellule fait grandir la carte au lieu
+       * d'être coupé (même mécanique que notes/checklist). */
+      table: true
     };
     if (autoTypes[el.type]) {
       /* BUG CORRIGÉ (v1.1.3) : à la CRÉATION, afterMount est appelé
@@ -667,7 +719,8 @@
       text: el.data.autoH !== false,
       note: el.data.autoH !== false,
       checklist: el.data.autoH !== false,
-      comment: el.data.autoH !== false
+      comment: el.data.autoH !== false,
+      table: true /* v1.17 — le tableau suit son contenu */
     };
     if (!autoTypes[el.type]) return;
     var body = view.node.firstElementChild;

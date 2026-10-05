@@ -1,6 +1,6 @@
 {
   "name": "moodboard-cep",
-  "version": "1.16.0",
+  "version": "1.17.0",
   "private": true,
   "description": "Moodboard — extension Adobe Illustrator (CEP) : canvas spatial pour designers.",
   "main": "client/index.html",

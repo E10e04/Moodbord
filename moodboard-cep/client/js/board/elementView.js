@@ -64,8 +64,13 @@
             again.classList.add('is-editing');
             if (wasHtml !== null) again.innerHTML = wasHtml;
             /* v1.8 — les champs riches (corps des notes/textes) repassent
-             * en contenteditable HTML, les autres en texte brut. */
-            var rich = field === 'text' && (x.type === 'note' || x.type === 'text');
+             * en contenteditable HTML, les autres en texte brut.
+             * v1.17 — les TITRES des cartes texte/note sont riches
+             * eux aussi (comme les en-têtes de colonnes). */
+            var rich =
+              (field === 'text' && (x.type === 'note' || x.type === 'text')) ||
+              (field === 'title' &&
+                (x.type === 'text' || x.type === 'note' || x.type === 'column'));
             again.setAttribute('contenteditable', rich ? 'true' : 'plaintext-only');
           }
         }

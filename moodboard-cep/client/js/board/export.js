@@ -91,16 +91,45 @@
           ' fill="' + d.color + '"';
         var anchor = d.align === 'center' ? ' text-anchor="middle"' : d.align === 'right' ? ' text-anchor="end"' : '';
         var x = d.align === 'center' ? el.x + el.w / 2 : d.align === 'right' ? el.x + el.w : el.x + 4;
-        t = multiLineText(x, el.y + d.fontSize, d.text, a + anchor, d.fontSize * d.lineHeight) + rotAttrWrap(rotAttr());
+        /* v1.17 — TITRE en haut de la carte : rendu SVG avec le même
+         * alignement que sur le canvas ; le corps descend d'autant. */
+        var titleSvg = '';
+        var bodyDy = 0;
+        if (d.title || d.titleHtml) {
+          var tSize = Math.max(14, Math.round((d.fontSize || 24) * 0.85));
+          var tAnchor = d.titleAlign === 'left' ? ' text-anchor="start"'
+            : d.titleAlign === 'right' ? ' text-anchor="end"'
+            : ' text-anchor="middle"';
+          var tX = d.titleAlign === 'left' ? el.x + 8
+            : d.titleAlign === 'right' ? el.x + el.w - 8
+            : el.x + el.w / 2;
+          titleSvg = multiLineText(tX, el.y + tSize + 4, d.title,
+            'font-family="' + esc(d.fontFamily || 'Georgia') + '" font-size="' + tSize +
+            '" font-weight="700" fill="' + d.color + '"' + tAnchor, tSize * 1.25);
+          bodyDy = tSize * 1.25 + 4;
+        }
+        t = titleSvg +
+          multiLineText(x, el.y + d.fontSize + bodyDy, d.text, a + anchor, d.fontSize * d.lineHeight) + rotAttrWrap(rotAttr());
         break;
       }
 
       case 'note': {
         var ink = U.readableOn(d.color);
         var noteFont = d.fontFamily || 'Georgia';
+        /* v1.17 — titre de la note dans l'export : séparé du corps. */
+        var noteTitleSvg = '';
+        var noteDy = 0;
+        if (d.title || d.titleHtml) {
+          var ntSize = Math.max(14, Math.round((d.fontSize || 15) * 1.05));
+          noteTitleSvg = multiLineText(el.x + el.w / 2, el.y + ntSize + 6, d.title,
+            'font-family="' + esc(noteFont) + '" font-size="' + ntSize +
+            '" font-weight="700" fill="' + ink + '" text-anchor="middle"', ntSize * 1.25);
+          noteDy = ntSize * 1.25 + 4;
+        }
         t = '<rect x="' + el.x + '" y="' + el.y + '" width="' + el.w + '" height="' + el.h +
           '" rx="4" fill="' + d.color + '"' + rotAttr() + '/>' +
-          multiLineText(el.x + 14, el.y + 24, d.text, 'font-family="' + esc(noteFont) + '" font-size="' + d.fontSize + '" fill="' + ink + '"', d.fontSize * 1.4);
+          noteTitleSvg +
+          multiLineText(el.x + 14, el.y + 24 + noteDy, d.text, 'font-family="' + esc(noteFont) + '" font-size="' + d.fontSize + '" fill="' + ink + '"', d.fontSize * 1.4);
         break;
       }
 

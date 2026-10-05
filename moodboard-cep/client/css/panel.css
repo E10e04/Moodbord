@@ -465,14 +465,11 @@ button:focus-visible, input:focus-visible, [contenteditable]:focus-visible {
 #empty-hint strong { color: var(--text-dim); font-size: 16px; }
 .empty-kbd { margin-top: 14px; font-size: 11.5px; color: #555; }
 .empty-icon {
-  width: 54px; height: 54px; margin-bottom: 14px; border-radius: 16px;
-  background: var(--panel2);
-  box-shadow: inset 0 0 0 1px var(--border);
-  position: relative;
-}
-.empty-icon::after {
-  content: ''; position: absolute; inset: 16px; border-radius: 6px;
-  background: conic-gradient(from 210deg, #7A522E, #B0673F, #E4D0B8, #7A522E);
+  /* v1.17 — LE LOGO de Moodbord remplace l'icône abstraite du canvas
+   * vide (rond dégradé) : image assets/logo.png, ombre portée douce. */
+  width: 84px; height: 84px; margin-bottom: 14px;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.35));
 }
 
 .edge-tab {
@@ -545,6 +542,23 @@ button:focus-visible, input:focus-visible, [contenteditable]:focus-visible {
   outline: none;
 }
 
+/* v1.17 — pile titre + corps des cartes Texte : le bloc titre est une
+ * ligne dédiée en haut (alignement piloté en inline), le corps prend
+ * le reste. Sans titre, le rendu mono-bloc d'origine est conservé. */
+.mb-text-stack {
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column; min-height: 0;
+}
+.mb-text-stack .mb-text-body {
+  height: auto; flex: 1 1 auto; min-height: 0;
+}
+.mb-card-title {
+  flex: 0 0 auto;
+  padding: 6px 8px 3px;
+  white-space: pre-wrap; word-break: break-word;
+  outline: none;
+}
+
 /* -- note */
 .mb-note-body {
   width: 100%; height: 100%;
@@ -554,6 +568,25 @@ button:focus-visible, input:focus-visible, [contenteditable]:focus-visible {
   box-shadow: 0 6px 18px rgba(0,0,0,0.38), inset 0 0 0 1px rgba(0,0,0,0.06);
   outline: none;
   overflow: hidden;
+}
+
+/* v1.17 — pile titre + corps des Notes : le PAPIER (fond inline +
+ * ombre) monte sur la pile, le titre respire au-dessus du corps. */
+.mb-note-stack {
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column; min-height: 0;
+  border-radius: 3px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.38), inset 0 0 0 1px rgba(0,0,0,0.06);
+}
+.mb-note-stack .mb-note-body {
+  height: auto; flex: 1 1 auto; min-height: 0;
+  padding: 4px 14px 14px;
+  border-radius: 0 0 3px 3px;
+  box-shadow: none;
+}
+.mb-note-stack .mb-card-title {
+  padding: 10px 14px 7px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.14);
 }
 
 /* -- commentaire */
@@ -829,16 +862,26 @@ button:focus-visible, input:focus-visible, [contenteditable]:focus-visible {
 
 /* -- tableau */
 .mb-table-grid {
-  width: 100%; height: 100%;
+  /* v1.17 — min-height (et non height) : quand une cellule exige plus
+   * de place, la grille MESURE son contenu réel au lieu d'écraser les
+   * lignes voisines — la carte grandit (hauteur vivante) et tout reste
+   * lisible ; quand le contenu est plus court, la grille remplit la
+   * carte comme avant (min-height 100 %). */
+  width: 100%; min-height: 100%;
   display: grid;
   background: var(--panel2); border-radius: 10px; overflow: hidden;
   box-shadow: inset 0 0 0 1px var(--border-soft);
 }
 .mb-table-cell {
-  display: flex; align-items: center; padding: 4px 9px;
+  /* v1.17 — texte CENTRÉ (horizontal + vertical) et passant à la
+   * ligne : tout ce qui est écrit reste visible dans sa cellule — la
+   * carte grandit avec le contenu (hauteur vivante, cf. content.js). */
+  display: flex; align-items: center; justify-content: center; text-align: center;
+  padding: 4px 9px;
   font-size: 12.5px; color: var(--text);
   border-right: 1px solid var(--border-soft);
   border-bottom: 1px solid var(--border-soft);
+  white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere;
   overflow: hidden; outline: none;
 }
 .mb-table-cell--head { background: var(--elev); font-weight: 700; font-size: 12px; }
@@ -871,6 +914,19 @@ button:focus-visible, input:focus-visible, [contenteditable]:focus-visible {
 }
 .mb-check-text { font-size: 12.5px; line-height: 1.4; outline: none; word-break: break-word; }
 .mb-check-item.is-done .mb-check-text { opacity: .62; text-decoration: line-through; }
+.mb-check-del {
+  /* v1.17 — croix de suppression par tâche : révélée au survol de la
+   * ligne, rouge pleine au survol d'elle-même. */
+  flex: 0 0 18px; width: 18px; height: 18px; margin-left: auto; margin-top: 1px;
+  border: none; border-radius: 4px; background: none; cursor: pointer; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--mb-check-ink, #8A8A8A); font-size: 14px; line-height: 1;
+  opacity: 0; transition: opacity .12s ease;
+}
+.mb-check-item:hover .mb-check-del { opacity: .7; }
+.mb-check-del:hover {
+  opacity: 1; color: #fff; background: var(--danger, #E5534B);
+}
 .mb-check-foot { display: flex; gap: 8px; margin-top: 6px; }
 .mb-check-add {
   border: none; background: none; color: var(--mb-check-ink, var(--text-faint));

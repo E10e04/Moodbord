@@ -42,6 +42,9 @@
           var t = base('text', p, Object.assign({ w: 280, h: 64 }, extra));
           t.data = {
             text: 'Texte',
+            /* v1.17 — TITRE en haut de la carte, positionnable. */
+            title: (extra && extra.title !== undefined) ? extra.title : 'Titre',
+            titleAlign: (extra && extra.titleAlign) || 'center',
             fontFamily: (extra && extra.fontFamily) || (MB.fonts ? MB.fonts.default() : 'Georgia'),
             fontSize: 26,
             bold: false,
@@ -62,6 +65,9 @@
           var n = base('note', p, Object.assign({ w: 220, h: 180 }, extra));
           n.data = {
             text: 'Double-cliquez pour écrire…',
+            /* v1.17 — TITRE en haut de la carte, positionnable. */
+            title: (extra && extra.title !== undefined) ? extra.title : 'Titre',
+            titleAlign: (extra && extra.titleAlign) || 'center',
             color: '#F7D46A',
             fontSize: 15,
             fontFamily: (extra && extra.fontFamily) || (MB.fonts ? MB.fonts.default() : 'Georgia'),

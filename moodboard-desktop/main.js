@@ -174,6 +174,29 @@ function send(action) {
   if (win && !win.isDestroyed()) win.webContents.send('menu-action', action);
 }
 
+/* v1.17 — CORRECTIF ⌘X / Ctrl+X (couper) : les RÔLES natifs du menu
+ * Édition enregistraient les accélérateurs ⌘Z/⌘X/⌘C/⌘V/⌘A et AVAIENT
+ * la frappe AVANT la page — le rôle natif ne cible que le champ édité
+ * focalisé, donc COUPER ne faisait JAMAIS rien sur les éléments du
+ * canvas (idem copier/coller d'éléments, annuler applicatif). Chaque
+ * entrée déclenche désormais LES DEUX couches, dans le bon ordre :
+ *  1) l'action native (webContents.cut/copy/paste/undo/redo/selectAll)
+ *     — indispensable sur macOS où ⌘C/⌘V n'atteignent jamais les
+ *     champs sans dispatch de menu — no-op s'il n'y a pas de champ ;
+ *  2) l'action applicative ('edit:…' → desktop.js) qui regarde où est
+ *     le focus : dans un champ elle ne fait rien (la couche native a
+ *     déjà agi), sinon elle s'applique aux ÉLÉMENTS sélectionnés. */
+function editRole(action) {
+  if (win && !win.isDestroyed()) {
+    try {
+      win.webContents[action]();
+    } catch (e) {
+      /* pas de champ focalisé côté natif : no-op attendu */
+    }
+    send('edit:' + action);
+  }
+}
+
 function buildMenu() {
   const template = [];
 
@@ -220,17 +243,21 @@ function buildMenu() {
    * (sans menu d'édition, ⌘C/⌘X/⌘V/⌘A n'atteignent jamais le renderer —
    * comportement documenté d'Electron). Les rôles ciblent l'élément
    * focalisé (champ d'inspecteur, édition canvas) et fonctionnent aussi
-   * sur Windows/Linux. */
+   * sur Windows/Linux.
+   * v1.17 — les RÔLES deviennent des entrées explicites (mêmes
+   * effets natifs via webContents.*) : l'accélérateur déclenche
+   * AUSSI l'action applicative sur la sélection du canvas — le couper
+   * (⌘X) des éléments fonctionne enfin dans l'application. */
   template.push({
     label: 'Édition',
     submenu: [
-      { role: 'undo', label: 'Annuler' },
-      { role: 'redo', label: 'Rétablir' },
+      { label: 'Annuler', accelerator: 'CmdOrCtrl+Z', click: () => editRole('undo') },
+      { label: 'Rétablir', accelerator: 'Shift+CmdOrCtrl+Z', click: () => editRole('redo') },
       { type: 'separator' },
-      { role: 'cut', label: 'Couper' },
-      { role: 'copy', label: 'Copier' },
-      { role: 'paste', label: 'Coller' },
-      { role: 'selectAll', label: 'Tout sélectionner' }
+      { label: 'Couper', accelerator: 'CmdOrCtrl+X', click: () => editRole('cut') },
+      { label: 'Copier', accelerator: 'CmdOrCtrl+C', click: () => editRole('copy') },
+      { label: 'Coller', accelerator: 'CmdOrCtrl+V', click: () => editRole('paste') },
+      { label: 'Tout sélectionner', accelerator: 'CmdOrCtrl+A', click: () => editRole('selectAll') }
     ]
   });
 

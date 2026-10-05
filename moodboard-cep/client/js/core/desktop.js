@@ -29,6 +29,14 @@
     }
   }
 
+  /* v1.17 — le focus est-il dans un champ éditable ? Utilisé par les
+   * actions du menu natif Édition : la couche native (webContents.*) a
+   * déjà agi côté champ, l'app ne doit pas DOUBLER l'opération. */
+  function isTyping() {
+    var t = document.activeElement;
+    return !!(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable));
+  }
+
   /* Actions du menu natif de l'application → exactement les mêmes fonctions
    * que les menus de la barre supérieure (topbar.js). Aucun raccourci
    * natif n'est déclaré côté Electron : le clavier reste géré par la page. */
@@ -70,6 +78,41 @@
       },
       'help:about': function () {
         MB.ui.aboutDialog();
+      },
+      /* v1.17 — menu Édition (⌘Z/⌘X/⌘C/⌘V/⌘A) : l'action NATIVE a déjà
+       * tourné pour le champ focalisé ; ici on ne traite que le CAS
+       * CANVAS (focus hors champ) — c'est le maillon qui manquait : le
+       * rôle natif avalait ⌘X et le couper d'éléments ne faisait rien
+       * dans l'application. */
+      'edit:undo': function () {
+        if (isTyping()) return;
+        if (MB.hist) MB.hist.undo();
+      },
+      'edit:redo': function () {
+        if (isTyping()) return;
+        if (MB.hist) MB.hist.redo();
+      },
+      'edit:cut': function () {
+        if (isTyping()) return;
+        if (MB.store.selectedIds().length) MB.store.cutSelection();
+      },
+      'edit:copy': function () {
+        if (isTyping()) return;
+        if (MB.store.selectedIds().length) MB.store.copySelection();
+      },
+      'edit:paste': function () {
+        if (isTyping()) return;
+        if (MB.store.s().clipboard && MB.store.s().clipboard.length) {
+          MB.store.pasteClipboard();
+        } else if (MB.imaging) {
+          MB.imaging.readClipboardImage().then(function (dataUrl) {
+            if (dataUrl) MB.imaging.pasteImageAt(dataUrl, null);
+          });
+        }
+      },
+      'edit:selectAll': function () {
+        if (isTyping()) return;
+        MB.store.selectAll();
       }
     };
     var fn = table[action];

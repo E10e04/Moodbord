@@ -236,6 +236,8 @@
       s.appendChild(textControls(el));
     } else if (el.type === 'note') {
       s = section(T('insp.note'));
+      /* v1.17 — titre de la note : saisie + position. */
+      s.appendChild(titleControls(el, d));
       var rowN = U.el('div', 'btn-row');
       rowN.appendChild(C.fontButton(function () {
         return d.fontFamily || 'Georgia';
@@ -1108,9 +1110,49 @@
     return s;
   }
 
+  /* v1.17 — TITRE des cartes Texte/Note : champ de saisie + position
+   * (gauche / centre / droite). Le bloc disparaît si le titre est vidé
+   * (rendu rétrocompatible mono-bloc). */
+  function titleControls(el, d) {
+    var box = U.el('div');
+    var rowT = U.el('div', 'field');
+    rowT.appendChild(U.el('label', 'field-label', 'Titre'));
+    var wrap = U.el('div', 'num-input');
+    var input = U.el('input');
+    input.type = 'text';
+    input.value = d.title || '';
+    input.placeholder = 'Aucun titre';
+    input.addEventListener('change', function () {
+      C.applyDataTo([el], 'Titre', { title: input.value });
+      MB.board.renderContent(el.id);
+      refresh();
+    });
+    wrap.appendChild(input);
+    rowT.appendChild(wrap);
+    box.appendChild(rowT);
+    var rowA = U.el('div', 'btn-row');
+    rowA.appendChild(C.seg(
+      [
+        { id: 'left', icon: 'alignTextLeft', label: 'Titre à gauche' },
+        { id: 'center', icon: 'alignTextCenter', label: 'Titre centré' },
+        { id: 'right', icon: 'alignTextRight', label: 'Titre à droite' }
+      ],
+      function () {
+        return d.titleAlign || 'center';
+      },
+      function (v) {
+        C.applyDataTo([el], 'Position du titre', { titleAlign: v });
+        MB.board.renderContent(el.id);
+      }
+    ));
+    box.appendChild(rowA);
+    return box;
+  }
+
   function textControls(el) {
     var d = el.data;
     var box = U.el('div', 'text-controls');
+    box.appendChild(titleControls(el, d));
     var row1 = U.el('div', 'btn-row');
     row1.appendChild(C.fontButton(function () {
       return d.fontFamily;

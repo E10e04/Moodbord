@@ -402,7 +402,11 @@
    * export, repli). */
   function isRichField(el, field) {
     if (field === 'text' && !!el && (el.type === 'note' || el.type === 'text')) return true;
-    if (field === 'title' && !!el && el.type === 'column') return true;
+    /* v1.17 — le TITRE des cartes Texte/Note est riche lui aussi
+     * (gras, italique, couleur via la barre de mise en forme), comme
+     * l'en-tête des colonnes : data.titleHtml sanitisé. */
+    if (field === 'title' && !!el &&
+        (el.type === 'column' || el.type === 'text' || el.type === 'note')) return true;
     return false;
   }
 
@@ -1838,6 +1842,21 @@
         Store.updateElement(el.id, {
           data: { items: el.data.items.filter(function (it) {
             return !it.done;
+          }) }
+        }, { transaction: true });
+      });
+      return;
+    }
+
+    /* v1.17 — SUPPRIMER une tâche : la croix au survol de la ligne
+     * (bouton .mb-check-del) retire l'entrée de la liste — transaction
+     * annulable comme les autres gestes de la carte. */
+    if (act === 'del-item' && el) {
+      var delId = actNode.getAttribute('data-item');
+      Store.mutate('Supprimer la tâche', function () {
+        Store.updateElement(el.id, {
+          data: { items: el.data.items.filter(function (it) {
+            return it.id !== delId;
           }) }
         }, { transaction: true });
       });
