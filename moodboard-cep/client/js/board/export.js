@@ -43,6 +43,27 @@
     return out;
   }
 
+  /* v1.18.1 — rect aux coins arrondis D'UN SEUL CÔTÉ (l'astuce des
+   * deux rects de même fill déjà utilisée pour les en-têtes de
+   * colonnes, sans <path> fragile) : side 'top' = coins supérieurs
+   * arrondis et base CARRÉE, side 'bottom' = sommet CARRÉ et coins
+   * inférieurs arrondis. extra porte l'attribut transform éventuel. */
+  function halfRoundRect(x, y, w, h, r, fill, side, extra) {
+    if (h <= 0 || w <= 0) return '';
+    r = Math.max(0, Math.min(r, h / 2, w / 2));
+    var a = extra || '';
+    if (side === 'top') {
+      return '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + U.round(Math.min(h, r * 2), 1) +
+        '" rx="' + r + '" fill="' + fill + '"' + a + '/>' +
+        (h > r ? '<rect x="' + x + '" y="' + U.round(y + r, 1) + '" width="' + w + '" height="' + U.round(h - r, 1) +
+          '" fill="' + fill + '"' + a + '/>' : '');
+    }
+    return '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + U.round(h - r, 1) +
+      '" fill="' + fill + '"' + a + '/>' +
+      '<rect x="' + x + '" y="' + U.round(y + h - r * 2, 1) + '" width="' + w + '" height="' + U.round(Math.min(h, r * 2), 1) +
+      '" rx="' + r + '" fill="' + fill + '"' + a + '/>';
+  }
+
   function elementSvg(el) {
     var d = el.data || {};
     var t = '';
@@ -95,6 +116,8 @@
          * alignement que sur le canvas ; le corps descend d'autant. */
         var titleSvg = '';
         var bodyDy = 0;
+        var bandSvg = '';
+        var bodyBgSvg = '';
         if (d.title || d.titleHtml) {
           var tSize = Math.max(14, Math.round((d.fontSize || 24) * 0.85));
           var tAnchor = d.titleAlign === 'left' ? ' text-anchor="start"'
@@ -109,8 +132,19 @@
             'font-family="' + esc(d.titleFont || d.fontFamily || 'Georgia') + '" font-size="' + tSize +
             '" font-weight="' + (d.titleWeight || 700) + '" fill="' + (d.titleColor || d.color) + '"' + tAnchor, tSize * 1.25);
           bodyDy = tSize * 1.25 + 4;
+          /* v1.18.1 — le fond du titre (titleBg) existe enfin dans
+           * l'export : bandeau pleine largeur, coins SUPÉRIEURS
+           * arrondis, base CARRÉE ; le fond du corps (d.bg) s'y soude
+           * avec le sommet CARRÉ et la base arrondie — un seul bloc,
+           * à l'image du canvas. */
+          if (d.titleBg && d.titleBg !== 'transparent') {
+            bandSvg = halfRoundRect(el.x, el.y, el.w, bodyDy, 6, esc(d.titleBg), 'top', rotAttr());
+            if (d.bg && d.bg !== 'transparent') {
+              bodyBgSvg = halfRoundRect(el.x, el.y + bodyDy, el.w, Math.max(0, el.h - bodyDy), 6, esc(d.bg), 'bottom', rotAttr());
+            }
+          }
         }
-        t = titleSvg +
+        t = bandSvg + bodyBgSvg + titleSvg +
           multiLineText(x, el.y + d.fontSize + bodyDy, d.text, a + anchor, d.fontSize * d.lineHeight) + rotAttrWrap(rotAttr());
         break;
       }
@@ -120,6 +154,7 @@
         var noteFont = d.fontFamily || 'Georgia';
         /* v1.17 — titre de la note dans l'export : séparé du corps. */
         var noteTitleSvg = '';
+        var noteBandSvg = '';
         var noteDy = 0;
         if (d.title || d.titleHtml) {
           var ntSize = Math.max(14, Math.round((d.fontSize || 15) * 1.05));
@@ -129,9 +164,17 @@
             'font-family="' + esc(d.titleFont || noteFont) + '" font-size="' + ntSize +
             '" font-weight="' + (d.titleWeight || 700) + '" fill="' + (d.titleColor || ink) + '" text-anchor="middle"', ntSize * 1.25);
           noteDy = ntSize * 1.25 + 4;
+          /* v1.18.1 — le fond du titre se dessine SUR le papier :
+           * coins supérieurs arrondis au rayon du papier (4 px), base
+           * CARRÉE — un seul bloc, la frontière titre/corps étant la
+           * simple frontière des deux fonds. */
+          if (d.titleBg && d.titleBg !== 'transparent') {
+            noteBandSvg = halfRoundRect(el.x, el.y, el.w, ntSize * 1.25 + 8, 4, esc(d.titleBg), 'top', rotAttr());
+          }
         }
         t = '<rect x="' + el.x + '" y="' + el.y + '" width="' + el.w + '" height="' + el.h +
           '" rx="4" fill="' + d.color + '"' + rotAttr() + '/>' +
+          noteBandSvg +
           noteTitleSvg +
           multiLineText(el.x + 14, el.y + 24 + noteDy, d.text, 'font-family="' + esc(noteFont) + '" font-size="' + d.fontSize +
             (d.fontWeight ? '" font-weight="' + Number(d.fontWeight) : '') + '" fill="' + ink + '"', d.fontSize * 1.4);

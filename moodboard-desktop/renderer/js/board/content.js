@@ -45,9 +45,19 @@
    * de v1.16 — aucun bloc vide, aucune hauteur fantôme.
    * v1.18 — le titre se personnalise : COULEUR du texte (titleColor),
    * FOND (titleBg, pastille arrondie), POLICE (titleFont, sinon celle
-   * de la carte) et GRAISSE (titleWeight, sinon le gras 700 d'origine). */
+   * de la carte) et GRAISSE (titleWeight, sinon le gras 700 d'origine).
+   * v1.18.1 — UN SEUL BLOC titre + corps : le bandeau du fond de titre
+   * garde ses coins SUPÉRIEURS arrondis (au rayon de la carte : 6 px
+   * Texte, 3 px Note) mais sa base devient CARRÉE, et le fond du corps
+   * prend des coins supérieurs CARRÉS quand le titre est coloré — les
+   * deux fonds se soudent en un seul bloc d'un seul tenant. */
   function hasTitle(d) {
     return !!(d && (d.title || d.titleHtml));
+  }
+
+  /* v1.18.1 — le titre porte-t-il un fond ? (bandeau pleine largeur) */
+  function hasTitleBg(d) {
+    return !!(d && d.titleBg && d.titleBg !== 'transparent');
   }
 
   function titleAlignOf(d) {
@@ -56,14 +66,19 @@
 
   function renderText(el) {
     var d = el.data;
+    /* v1.18.1 — quand le titre porte un fond, le fond du corps (d.bg)
+     * épouse le bloc : coins SUPÉRIEURS carrés (la base carrée du
+     * bandeau s'y soude), coins inférieurs arrondis. Sans fond de
+     * titre, le bloc corps d'origine reste intact (coins 6 px). */
+    var flushBody = hasTitle(d) && hasTitleBg(d);
     var body =
       '<div class="mb-text-body mb-editable mb-rich" data-field="text" style="' + textStyle(d) +
-      (d.bg && d.bg !== 'transparent' ? 'background:' + d.bg + ';padding:6px 10px;border-radius:6px;' : '') +
+      (d.bg && d.bg !== 'transparent' ? 'background:' + d.bg + ';padding:6px 10px;border-radius:' + (flushBody ? '0 0 6px 6px' : '6px') + ';' : '') +
       '">' + richOrPlain(d) + '</div>';
     if (!hasTitle(d)) return body;
     return (
       '<div class="mb-text-stack">' +
-      renderCardTitle(d, 'color:' + d.color + ';') +
+      renderCardTitle(d, 'color:' + d.color + ';', 6) +
       body +
       '</div>'
     );
@@ -81,17 +96,23 @@
 
   /* v1.17 — le titre RICHE réutilise la mécanique des en-têtes de
    * colonnes : data.titleHtml (sanitisé) sinon repli texte brut. */
-  function renderCardTitle(d, colorStyle) {
+  function renderCardTitle(d, colorStyle, topR) {
     var size = Math.max(14, Math.round((d.fontSize || 24) * 0.85));
     var st = 'font-size:' + size + 'px;font-weight:' + (d.titleWeight || 700) +
       ';text-align:' + titleAlignOf(d) + ';' + (colorStyle || '');
     /* v1.18 — police dédiée du titre (sinon celle de la carte),
-     * couleur d'encre dédiée, fond pastille arrondi. */
+     * couleur d'encre dédiée, fond pastille arrondi.
+     * v1.18.1 — le bandeau du fond s'arrondit en HAUT au rayon de la
+     * carte (topR : 6 px Texte, 3 px Note) et sa base est CARRÉE ; le
+     * séparateur de la Note s'efface — la frontière titre/corps devient
+     * la simple frontière des deux fonds. */
     var fam = d.titleFont || d.fontFamily;
     if (fam) st += "font-family:'" + U.escapeHtml(fam) + "';";
     if (d.titleColor) st += 'color:' + U.escapeHtml(d.titleColor) + ';';
-    if (d.titleBg && d.titleBg !== 'transparent') {
-      st += 'background:' + U.escapeHtml(d.titleBg) + ';padding:2px 8px;border-radius:6px;';
+    if (hasTitleBg(d)) {
+      var r = Math.max(0, topR || 6);
+      st += 'background:' + U.escapeHtml(d.titleBg) +
+        ';padding:2px 8px;border-radius:' + r + 'px ' + r + 'px 0 0;border-bottom:0;';
     }
     return (
       '<div class="mb-card-title mb-editable mb-rich" data-field="title" style="' + st + '">' +
@@ -117,7 +138,7 @@
      * reste éditable et riche en dessous. */
     return (
       '<div class="mb-note-stack" style="background:' + d.color + '">' +
-      renderCardTitle(d, 'color:' + ink + ';') +
+      renderCardTitle(d, 'color:' + ink + ';', 3) +
       '<div class="mb-note-body mb-editable mb-rich" data-field="text" style="color:' + ink +
       ';font-size:' + d.fontSize + 'px' + font + '">' + richOrPlain(d) + '</div>' +
       '</div>'
