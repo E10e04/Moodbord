@@ -862,7 +862,12 @@ button:focus-visible, input:focus-visible, [contenteditable]:focus-visible {
 
 /* -- tableau */
 .mb-table-grid {
-  width: 100%; height: 100%;
+  /* v1.17 — min-height (et non height) : quand une cellule exige plus
+   * de place, la grille MESURE son contenu réel au lieu d'écraser les
+   * lignes voisines — la carte grandit (hauteur vivante) et tout reste
+   * lisible ; quand le contenu est plus court, la grille remplit la
+   * carte comme avant (min-height 100 %). */
+  width: 100%; min-height: 100%;
   display: grid;
   background: var(--panel2); border-radius: 10px; overflow: hidden;
   box-shadow: inset 0 0 0 1px var(--border-soft);
@@ -2796,3 +2801,36 @@ body.mb-desktop-darwin .pv-head { padding-left: 84px; }
 @media (prefers-reduced-motion: reduce) {
   .pv-cfg, .pv-card, .pv-win, .pv-frame { animation: none; transition-duration: 1ms; }
 }
+
+/* =========================================================================
+   v1.18 — SÉLECTEUR DE GRAISSE (popover posé à côté de chaque sélecteur
+   de police, outil Preview excepté). Réutilise .font-pop/.font-item ;
+   n'ajoutent ici que les touches propres au popover de graisses.
+   ========================================================================= */
+.weight-pop .font-tools {
+  padding: 0 2px;
+}
+.weight-pop-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted, #9A9A9A);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.weight-list { max-height: 264px; }
+.weight-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  cursor: pointer;
+}
+.weight-item .font-item-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.weight-item-num {
+  font-family: Menlo, Consolas, monospace;
+  font-size: 11px;
+  color: var(--muted, #9A9A9A);
+  flex: none;
+}
+.weight-item.is-current .weight-item-num { color: var(--accent, #F97316); }

@@ -343,6 +343,11 @@
      MB.clip) — le comportement devient identique partout.
      Les flèches (navigation paragraphe) et le collage restent natifs. */
   function attachEditingKeys(node, multiline) {
+    /* v1.18 — UN SEUL écouteur par nœud : startEditing est réentrant
+     * (chaque double-clic repasse ici) et l'ancien code empilait les
+     * listeners — ⌘X déclenchait alors cutSelection N fois. */
+    if (node.__mbEditKeys) return;
+    node.__mbEditKeys = true;
     node.addEventListener('keydown', function (e) {
       var mod = e.metaKey || e.ctrlKey;
       var k = e.key ? e.key.toLowerCase() : '';
@@ -513,6 +518,10 @@
       if (now !== editingOriginal || (rich && nowHtml !== editingOriginalHtml)) {
         Store.nextRev(el);
         MB.storage.markDirty();
+        /* v1.18 — la session d'édition devient une VRAIE entrée
+         * d'historique : sans commit, ⌘Z ne restaurait jamais le texte
+         * (le cas du ⌘X réparé — le texte coupé doit revenir). */
+        MB.hist.commit();
       } else {
         MB.hist.cancel();
       }
@@ -576,6 +585,8 @@
       if (changed) {
         Store.nextRev(el);
         MB.storage.markDirty();
+        /* v1.18 — commit de la transaction ouverte à startEditingItem. */
+        MB.hist.commit();
       } else {
         MB.hist.cancel();
       }
@@ -627,6 +638,8 @@
         el.data.cells[ref.r][ref.c] = text;
         Store.nextRev(el);
         MB.storage.markDirty();
+        /* v1.18 — commit de la transaction ouverte à startEditingCell. */
+        MB.hist.commit();
       } else {
         MB.hist.cancel();
       }

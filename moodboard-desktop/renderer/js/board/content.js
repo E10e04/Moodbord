@@ -26,7 +26,9 @@
     return (
       'font-family:' + d.fontFamily + ';' +
       'font-size:' + d.fontSize + 'px;' +
-      'font-weight:' + (d.bold ? '700' : '400') + ';' +
+      /* v1.18 — graisse explicite (sélecteur « Graisse ») sinon le
+       * couple gras/normal historique. */
+      'font-weight:' + (d.fontWeight || (d.bold ? '700' : '400')) + ';' +
       'font-style:' + (d.italic ? 'italic' : 'normal') + ';' +
       (deco.length ? 'text-decoration:' + deco.join(' ') + ';' : '') +
       'text-align:' + d.align + ';' +
@@ -40,7 +42,10 @@
    * de la carte, éditable au double-clic comme le corps, positionnable
    * (gauche / centre / droite) via data.titleAlign. Rétrocompatible :
    * sans titre (cartes antérieures), le rendu reste EXACTEMENT celui
-   * de v1.16 — aucun bloc vide, aucune hauteur fantôme. */
+   * de v1.16 — aucun bloc vide, aucune hauteur fantôme.
+   * v1.18 — le titre se personnalise : COULEUR du texte (titleColor),
+   * FOND (titleBg, pastille arrondie), POLICE (titleFont, sinon celle
+   * de la carte) et GRAISSE (titleWeight, sinon le gras 700 d'origine). */
   function hasTitle(d) {
     return !!(d && (d.title || d.titleHtml));
   }
@@ -78,9 +83,16 @@
    * colonnes : data.titleHtml (sanitisé) sinon repli texte brut. */
   function renderCardTitle(d, colorStyle) {
     var size = Math.max(14, Math.round((d.fontSize || 24) * 0.85));
-    var st = 'font-size:' + size + 'px;font-weight:700;text-align:' + titleAlignOf(d) + ';' +
-      (colorStyle || '');
-    if (d.fontFamily) st += "font-family:'" + U.escapeHtml(d.fontFamily) + "';";
+    var st = 'font-size:' + size + 'px;font-weight:' + (d.titleWeight || 700) +
+      ';text-align:' + titleAlignOf(d) + ';' + (colorStyle || '');
+    /* v1.18 — police dédiée du titre (sinon celle de la carte),
+     * couleur d'encre dédiée, fond pastille arrondi. */
+    var fam = d.titleFont || d.fontFamily;
+    if (fam) st += "font-family:'" + U.escapeHtml(fam) + "';";
+    if (d.titleColor) st += 'color:' + U.escapeHtml(d.titleColor) + ';';
+    if (d.titleBg && d.titleBg !== 'transparent') {
+      st += 'background:' + U.escapeHtml(d.titleBg) + ';padding:2px 8px;border-radius:6px;';
+    }
     return (
       '<div class="mb-card-title mb-editable mb-rich" data-field="title" style="' + st + '">' +
       richOrPlainTitle(d) + '</div>'
@@ -91,6 +103,8 @@
     var d = el.data;
     var ink = U.readableOn(d.color);
     var font = d.fontFamily ? ';font-family:\'' + U.escapeHtml(d.fontFamily) + '\'' : '';
+    /* v1.18 — graisse de la police (sélecteur dédié de l'inspecteur). */
+    if (d.fontWeight) font += ';font-weight:' + Number(d.fontWeight);
     if (!hasTitle(d)) {
       return (
         '<div class="mb-note-body mb-editable mb-rich" data-field="text" style="background:' + d.color +
@@ -115,6 +129,7 @@
   function renderComment(el) {
     var d = el.data;
     var f = d.fontFamily ? ';font-family:\'' + U.escapeHtml(d.fontFamily) + '\'' : '';
+    if (d.fontWeight) f += ';font-weight:' + Number(d.fontWeight);
     return (
       '<div class="mb-comment-body" style="border-top-color:' + d.color + '">' +
       '<div class="mb-comment-author">' + esc(d.author) + '</div>' +
@@ -218,17 +233,19 @@
 
   function renderTypography(el) {
     var d = el.data;
+    /* v1.18 — graisse du spécimen (sélecteur dédié). */
+    var w = d.fontWeight ? ';font-weight:' + Number(d.fontWeight) : '';
     var lines = '';
     for (var i = 0; i < d.sizes.length; i++) {
       lines +=
-        '<div class="mb-typo-line" style="font-size:' + d.sizes[i] + 'px">' +
+        '<div class="mb-typo-line" style="font-size:' + d.sizes[i] + 'px' + w + '">' +
         esc(d.sampleText) + '</div>';
     }
     return (
       '<div class="mb-typo-card">' +
       '<div class="mb-typo-name mb-editable" data-field="name">' + esc(d.fontFamily) + '</div>' +
-      '<div class="mb-typo-sample" style="font-family:\'' + esc(d.fontFamily) + '\'">Aa</div>' +
-      '<div class="mb-typo-lines" style="font-family:\'' + esc(d.fontFamily) + '\'">' + lines + '</div>' +
+      '<div class="mb-typo-sample" style="font-family:\'' + esc(d.fontFamily) + '\'' + w + '">Aa</div>' +
+      '<div class="mb-typo-lines" style="font-family:\'' + esc(d.fontFamily) + '\'' + w + '">' + lines + '</div>' +
       '</div>'
     );
   }
@@ -238,7 +255,10 @@
   function renderBoard(el) {
     var d = el.data;
     var count = d && d.doc && Array.isArray(d.doc.elements) ? d.doc.elements.length : d.elCount || 0;
-    var tf = d.titleFont ? ' style="font-family:\'' + U.escapeHtml(d.titleFont) + '\';font-size:' + (d.titleSize || 19) + 'px"' : '';
+    var tf = (d.titleFont || d.titleWeight) ? ' style="' +
+      (d.titleFont ? "font-family:'" + U.escapeHtml(d.titleFont) + "';" : '') +
+      (d.titleWeight ? 'font-weight:' + Number(d.titleWeight) + ';' : '') +
+      'font-size:' + (d.titleSize || 19) + 'px"' : '';
     /* v1.7 — design demandé : grande zone principale où le NOM de la
      * planche est centré au milieu de son conteneur ; barre du bas avec
      * le compteur d'éléments à gauche et la flèche d'ouverture à droite
@@ -307,9 +327,10 @@
     /* Fond personnalisé clair : le titre passe à un orange foncé
      * lisible (sinon orange vif sur fond sombre, comme l'image). */
     var titleColor = U.readableOn(metaBg) === '#1E1E1E' ? '#B4530A' : '#F97316';
-    /* UN SEUL attribut style : couleur + police éventuelle du titre. */
+    /* UN SEUL attribut style : couleur + police + graisse du titre. */
     var titleStyle = 'color:' + titleColor + ';';
     if (d.titleFont) titleStyle += "font-family:'" + U.escapeHtml(d.titleFont) + "';";
+    if (d.titleWeight) titleStyle += 'font-weight:' + Number(d.titleWeight) + ';';
     return (
       '<div class="mb-link-card">' +
       '<div class="mb-link-hero">' +
@@ -434,7 +455,8 @@
   function titleStyleOf(d) {
     var st =
       'font-size:' + (d.titleSize || 15) + 'px;' +
-      'font-weight:' + (d.titleBold ? '700' : '400') + ';' +
+      /* v1.18 — graisse du titre explicite sinon le couple gras/normal. */
+      'font-weight:' + (d.titleWeight || (d.titleBold ? '700' : '400')) + ';' +
       'font-style:' + (d.titleItalic ? 'italic' : 'normal') + ';';
     if (d.titleFont) st += "font-family:'" + U.escapeHtml(d.titleFont) + "';";
     if (d.titleColor) st += 'color:' + U.escapeHtml(d.titleColor) + ';';
@@ -484,6 +506,8 @@
     var st = 'background:' + bg + ';color:' + fg + ';';
     if (d.fontFamily) st += "font-family:'" + U.escapeHtml(d.fontFamily) + "';";
     if (d.fontSize) st += 'font-size:' + d.fontSize + 'px;';
+    /* v1.18 — graisse du texte du tableau (l'en-tête garde son gras CSS). */
+    if (d.fontWeight && !head) st += 'font-weight:' + Number(d.fontWeight) + ';';
     return st;
   }
 
@@ -516,10 +540,12 @@
     var cardBg = d.color && d.color !== 'transparent' ? d.color : '';
     var ink = cardBg ? U.readableOn(cardBg) : '';
     var fSize = d.fontSize ? 'font-size:' + d.fontSize + 'px;' : '';
-    var fStyleTitle = fSize;
+    /* v1.18 — graisse de la police de la checklist (titre + tâches). */
+    var fWeight = d.fontWeight ? 'font-weight:' + Number(d.fontWeight) + ';' : '';
+    var fStyleTitle = fSize + fWeight;
     if (d.fontFamily) fStyleTitle += "font-family:'" + U.escapeHtml(d.fontFamily) + "';";
     if (ink) fStyleTitle += 'color:' + ink + ';';
-    var fStyleItem = '';
+    var fStyleItem = fWeight;
     if (d.fontFamily) fStyleItem += "font-family:'" + U.escapeHtml(d.fontFamily) + "';";
     if (ink) fStyleItem += 'color:' + ink + ';';
     for (var i = 0; i < d.items.length; i++) {

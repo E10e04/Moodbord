@@ -61,7 +61,7 @@
               '" rx="14" fill="' + d.headColor + '"/><rect x="' + el.x + '" y="' + (el.y + (d.titleSize || 15) + 12) +
               '" width="' + el.w + '" height="14" fill="' + d.headColor + '"/>'
             : '') +
-          multiLineText(el.x + 14, el.y + (d.titleSize || 15) + 10, d.title, 'font-family="' + esc(d.titleFont || 'Georgia') + '" font-size="' + (d.titleSize || 14) + '" font-weight="' + (d.titleBold ? '700' : '400') + '" font-style="' + (d.titleItalic ? 'italic' : 'normal') + '" fill="' + (d.titleColor || '#A8A8A8') + '"', 18);
+          multiLineText(el.x + 14, el.y + (d.titleSize || 15) + 10, d.title, 'font-family="' + esc(d.titleFont || 'Georgia') + '" font-size="' + (d.titleSize || 14) + '" font-weight="' + (d.titleWeight || (d.titleBold ? '700' : '400')) + '" font-style="' + (d.titleItalic ? 'italic' : 'normal') + '" fill="' + (d.titleColor || '#A8A8A8') + '"', 18);
         break;
 
       case 'image': {
@@ -85,7 +85,7 @@
         if (d.underline) deco.push('underline');
         if (d.strike) deco.push('line-through');
         var a = 'font-family="' + esc(d.fontFamily) + '" font-size="' + d.fontSize +
-          '" font-weight="' + (d.bold ? '700' : '400') +
+          '" font-weight="' + (d.fontWeight || (d.bold ? '700' : '400')) +
           '" font-style="' + (d.italic ? 'italic' : 'normal') + '"' +
           (deco.length ? ' text-decoration="' + deco.join(' ') + '"' : '') +
           ' fill="' + d.color + '"';
@@ -103,9 +103,11 @@
           var tX = d.titleAlign === 'left' ? el.x + 8
             : d.titleAlign === 'right' ? el.x + el.w - 8
             : el.x + el.w / 2;
+          /* v1.18 — titre : police/graisse/couleur dédiées comme sur
+           * le canvas (titleFont/titleWeight/titleColor). */
           titleSvg = multiLineText(tX, el.y + tSize + 4, d.title,
-            'font-family="' + esc(d.fontFamily || 'Georgia') + '" font-size="' + tSize +
-            '" font-weight="700" fill="' + d.color + '"' + tAnchor, tSize * 1.25);
+            'font-family="' + esc(d.titleFont || d.fontFamily || 'Georgia') + '" font-size="' + tSize +
+            '" font-weight="' + (d.titleWeight || 700) + '" fill="' + (d.titleColor || d.color) + '"' + tAnchor, tSize * 1.25);
           bodyDy = tSize * 1.25 + 4;
         }
         t = titleSvg +
@@ -121,15 +123,18 @@
         var noteDy = 0;
         if (d.title || d.titleHtml) {
           var ntSize = Math.max(14, Math.round((d.fontSize || 15) * 1.05));
+          /* v1.18 — titre : police/graisse/couleur dédiées comme sur
+           * le canvas (titleFont/titleWeight/titleColor). */
           noteTitleSvg = multiLineText(el.x + el.w / 2, el.y + ntSize + 6, d.title,
-            'font-family="' + esc(noteFont) + '" font-size="' + ntSize +
-            '" font-weight="700" fill="' + ink + '" text-anchor="middle"', ntSize * 1.25);
+            'font-family="' + esc(d.titleFont || noteFont) + '" font-size="' + ntSize +
+            '" font-weight="' + (d.titleWeight || 700) + '" fill="' + (d.titleColor || ink) + '" text-anchor="middle"', ntSize * 1.25);
           noteDy = ntSize * 1.25 + 4;
         }
         t = '<rect x="' + el.x + '" y="' + el.y + '" width="' + el.w + '" height="' + el.h +
           '" rx="4" fill="' + d.color + '"' + rotAttr() + '/>' +
           noteTitleSvg +
-          multiLineText(el.x + 14, el.y + 24 + noteDy, d.text, 'font-family="' + esc(noteFont) + '" font-size="' + d.fontSize + '" fill="' + ink + '"', d.fontSize * 1.4);
+          multiLineText(el.x + 14, el.y + 24 + noteDy, d.text, 'font-family="' + esc(noteFont) + '" font-size="' + d.fontSize +
+            (d.fontWeight ? '" font-weight="' + Number(d.fontWeight) : '') + '" fill="' + ink + '"', d.fontSize * 1.4);
         break;
       }
 
@@ -139,7 +144,8 @@
         t = '<rect x="' + el.x + '" y="' + el.y + '" width="' + el.w + '" height="' + el.h +
           '" rx="10" fill="#2C2C2C" stroke="' + d.color + '" stroke-width="2"' + rotAttr() + '/>' +
           multiLineText(el.x + 12, el.y + 20, d.author, 'font-family="' + esc(cmFont) + '" font-size="11" font-weight="700" fill="' + d.color + '"', 14) +
-          multiLineText(el.x + 12, el.y + 38, d.text, 'font-family="' + esc(cmFont) + '" font-size="' + (d.fontSize || 13) + '" fill="' + ink2 + '"', 17);
+          multiLineText(el.x + 12, el.y + 38, d.text, 'font-family="' + esc(cmFont) + '" font-size="' + (d.fontSize || 13) +
+            (d.fontWeight ? '" font-weight="' + Number(d.fontWeight) : '') + '" fill="' + ink2 + '"', 17);
         break;
       }
 

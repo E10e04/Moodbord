@@ -356,6 +356,70 @@
     return b;
   }
 
+  /* v1.18 — SÉLECTEUR DE GRAISSE : posé À CÔTÉ de chaque sélecteur de
+   * police (sauf l'outil Preview). Le popover liste les graisses RÉELLES
+   * de la famille choisie (faces énumérées par l'hôte — Electron,
+   * Illustrator) ; côté web, la gamme CSS standard 100…900 est proposée.
+   * Chaque ligne est rendue DANS la police et À la graisse proposée. */
+  var WEIGHT_LABELS = {
+    100: 'Thin', 200: 'Extra Light', 300: 'Light', 400: 'Normal',
+    500: 'Medium', 600: 'Semi Bold', 700: 'Bold', 800: 'Extra Bold', 900: 'Black'
+  };
+
+  function weightButton(getFont, getWeight, onPick) {
+    var b = U.el('button', 'ctx-btn ctx-font-btn ctx-weight-btn');
+    b.type = 'button';
+    b.setAttribute('data-tip', 'Graisse de la police');
+    b.setAttribute('aria-label', 'Graisse de la police');
+    b.innerHTML = '<span class="font-btn-label">Graisse</span>' + MB.icons.get('chevronDown', 12);
+    b.addEventListener('click', function () {
+      weightPopover(b, getFont, getWeight, onPick);
+    });
+    return b;
+  }
+
+  function weightPopover(anchor, getFont, getWeight, onPick) {
+    MB.fonts.whenReady(function () {
+      var fam = String(getFont() || 'Georgia');
+      var real = MB.fonts.weightsFor(fam);
+      var weights = real || [100, 200, 300, 400, 500, 600, 700, 800, 900];
+      var cur = Number(getWeight() || 400);
+      var html =
+        '<div class="font-pop weight-pop">' +
+        '<div class="font-tools"><span class="weight-pop-title">Graisse — ' + U.escapeHtml(fam) + '</span></div>' +
+        '<div class="font-list weight-list" role="listbox" aria-label="Graisses disponibles">';
+      for (var i = 0; i < weights.length; i++) {
+        var w = weights[i];
+        var label = WEIGHT_LABELS[w] || String(w);
+        html +=
+          '<div class="font-item weight-item' + (w === cur ? ' is-current' : '') + '" data-weight="' + w + '" role="button" tabindex="0" ' +
+          'style="font-family:\'' + U.escapeHtml(fam) + '\';font-weight:' + w + '" ' +
+          'title="' + U.escapeHtml(label) + ' (' + w + ')">' +
+          '<span class="font-item-name">' + U.escapeHtml(label) + '</span>' +
+          '<span class="weight-item-num">' + w + '</span>' +
+          '</div>';
+      }
+      html += '</div></div>';
+      MB.ui.popover(anchor, html, {
+        bind: function (p) {
+          p.querySelectorAll('.weight-item').forEach(function (item) {
+            function pick() {
+              onPick(Number(item.dataset.weight));
+              MB.ui.closePopover();
+            }
+            item.addEventListener('click', pick);
+            item.addEventListener('keydown', function (ev) {
+              if (ev.key === 'Enter' || ev.key === ' ') {
+                ev.preventDefault();
+                pick();
+              }
+            });
+          });
+        }
+      });
+    });
+  }
+
   /* --------------------------------------------------------- diverse */
 
   function textButton(label, onClick, tip) {
@@ -424,6 +488,11 @@
     colorButton: colorButton,
     fontPopover: fontPopover,
     fontButton: fontButton,
+    weightButton: weightButton,
+    weightPopover: weightPopover,
+    weightFromStyle: function (s) {
+      return MB.fonts.weightFromStyle(s);
+    },
     textButton: textButton,
     sizeControl: sizeControl,
     opacityControl: opacityControl,

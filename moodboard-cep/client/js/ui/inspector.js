@@ -245,6 +245,15 @@
         C.applyDataTo([el], 'Police', { fontFamily: f });
         MB.board.renderContent(el.id);
       }));
+      /* v1.18 — graisse à côté du sélecteur de police. */
+      rowN.appendChild(C.weightButton(function () {
+        return d.fontFamily || 'Georgia';
+      }, function () {
+        return d.fontWeight || 400;
+      }, function (w) {
+        C.applyDataTo([el], 'Graisse', { fontWeight: w });
+        MB.board.renderContent(el.id);
+      }));
       rowN.appendChild(C.sizeControl(function () {
         return d.fontSize;
       }, function (v) {
@@ -289,6 +298,15 @@
         return d.fontFamily || 'Georgia';
       }, function (f) {
         C.applyDataTo([el], 'Police', { fontFamily: f });
+        MB.board.renderContent(el.id);
+      }));
+      /* v1.18 — graisse à côté du sélecteur de police. */
+      rowCm.appendChild(C.weightButton(function () {
+        return d.fontFamily || 'Georgia';
+      }, function () {
+        return d.fontWeight || 400;
+      }, function (w) {
+        C.applyDataTo([el], 'Graisse', { fontWeight: w });
         MB.board.renderContent(el.id);
       }));
       rowCm.appendChild(C.sizeControl(function () {
@@ -585,6 +603,15 @@
         C.applyDataTo([el], 'Police', { fontFamily: f });
         MB.board.renderContent(el.id);
       }));
+      /* v1.18 — graisse à côté du sélecteur de police. */
+      rowT.appendChild(C.weightButton(function () {
+        return d.fontFamily || 'Georgia';
+      }, function () {
+        return d.fontWeight || 400;
+      }, function (w) {
+        C.applyDataTo([el], 'Graisse', { fontWeight: w });
+        MB.board.renderContent(el.id);
+      }));
       s.appendChild(rowT);
     } else if (el.type === 'assignees') {
       /* v1.11 — carte Assignees : le panneau Projet donne le même
@@ -700,6 +727,15 @@
         C.applyDataTo([el], 'Police du titre', { titleFont: f });
         MB.board.renderContent(el.id);
       }));
+      /* v1.18 — graisse du titre du lien. */
+      rowLkF.appendChild(C.weightButton(function () {
+        return d.titleFont || 'Georgia';
+      }, function () {
+        return d.titleWeight || 400;
+      }, function (w) {
+        C.applyDataTo([el], 'Graisse du titre', { titleWeight: w });
+        MB.board.renderContent(el.id);
+      }));
       s.appendChild(rowLkF);
     } else if (el.type === 'board') {
       s = section(T('insp.board'));
@@ -722,6 +758,15 @@
         return d.titleFont || 'Georgia';
       }, function (f) {
         C.applyDataTo([el], 'Police du titre', { titleFont: f });
+        MB.board.renderContent(el.id);
+      }));
+      /* v1.18 — graisse du titre de la planche. */
+      rowBf.appendChild(C.weightButton(function () {
+        return d.titleFont || 'Georgia';
+      }, function () {
+        return d.titleWeight || 400;
+      }, function (w) {
+        C.applyDataTo([el], 'Graisse du titre', { titleWeight: w });
         MB.board.renderContent(el.id);
       }));
       rowBf.appendChild(C.sizeControl(function () {
@@ -853,6 +898,15 @@
         return d.titleFont || 'Georgia';
       }, function (f) {
         C.applyDataTo([el], 'Police du titre', { titleFont: f });
+        MB.board.renderContent(el.id);
+      }));
+      /* v1.18 — graisse du titre de la colonne. */
+      rowSecF.appendChild(C.weightButton(function () {
+        return d.titleFont || 'Georgia';
+      }, function () {
+        return d.titleWeight || 400;
+      }, function (w) {
+        C.applyDataTo([el], 'Graisse du titre', { titleWeight: w });
         MB.board.renderContent(el.id);
       }));
       rowSecF.appendChild(C.sizeControl(function () {
@@ -1037,6 +1091,15 @@
         C.applyDataTo([el], 'Police', { fontFamily: f });
         MB.board.renderContent(el.id);
       }));
+      /* v1.18 — graisse à côté du sélecteur de police. */
+      rowTbF.appendChild(C.weightButton(function () {
+        return d.fontFamily || 'Georgia';
+      }, function () {
+        return d.fontWeight || 400;
+      }, function (w) {
+        C.applyDataTo([el], 'Graisse', { fontWeight: w });
+        MB.board.renderContent(el.id);
+      }));
       rowTbF.appendChild(C.sizeControl(function () {
         return d.fontSize || 12;
       }, function (v) {
@@ -1082,6 +1145,15 @@
         C.applyDataTo([el], 'Police', { fontFamily: f });
         MB.board.renderContent(el.id);
       }));
+      /* v1.18 — graisse à côté du sélecteur de police. */
+      rowCkF.appendChild(C.weightButton(function () {
+        return d.fontFamily || 'Georgia';
+      }, function () {
+        return d.fontWeight || 400;
+      }, function (w) {
+        C.applyDataTo([el], 'Graisse', { fontWeight: w });
+        MB.board.renderContent(el.id);
+      }));
       rowCkF.appendChild(C.sizeControl(function () {
         return d.fontSize || 13;
       }, function (v) {
@@ -1112,7 +1184,9 @@
 
   /* v1.17 — TITRE des cartes Texte/Note : champ de saisie + position
    * (gauche / centre / droite). Le bloc disparaît si le titre est vidé
-   * (rendu rétrocompatible mono-bloc). */
+   * (rendu rétrocompatible mono-bloc).
+   * v1.18 — personnalisation complète : COULEUR du texte du titre,
+   * FOND du titre (pastille), POLICE du titre + GRAISSE dédiée. */
   function titleControls(el, d) {
     var box = U.el('div');
     var rowT = U.el('div', 'field');
@@ -1146,6 +1220,45 @@
       }
     ));
     box.appendChild(rowA);
+    /* v1.18 — COULEUR du texte du titre (sinon encre de la carte) et
+     * FOND du titre (pastille arrondie derrière le texte). */
+    var rowC = U.el('div', 'btn-row');
+    rowC.appendChild(C.colorButton(function () {
+      return d.titleColor || '#F5F5F5';
+    }, function (hex) {
+      C.applyDataTo([el], 'Couleur du titre', { titleColor: hex });
+      MB.board.renderContent(el.id);
+    }, 'Couleur du texte du titre'));
+    rowC.appendChild(C.colorButton(function () {
+      return d.titleBg && d.titleBg !== 'transparent' ? d.titleBg : '#2D2D2D';
+    }, function (hex) {
+      C.applyDataTo([el], 'Fond du titre', { titleBg: hex });
+      MB.board.renderContent(el.id);
+    }, 'Fond du titre'));
+    rowC.appendChild(C.textButton('Défaut', function () {
+      C.applyDataTo([el], 'Fond du titre', { titleBg: '' });
+      MB.board.renderContent(el.id);
+      refresh();
+    }, 'Retirer le fond du titre'));
+    box.appendChild(rowC);
+    /* v1.18 — POLICE du titre (indépendante de celle du corps) et sa
+     * GRAISSE (sinon le gras 700 historique). */
+    var rowF = U.el('div', 'btn-row');
+    rowF.appendChild(C.fontButton(function () {
+      return d.titleFont || d.fontFamily || 'Georgia';
+    }, function (f) {
+      C.applyDataTo([el], 'Police du titre', { titleFont: f });
+      MB.board.renderContent(el.id);
+    }));
+    rowF.appendChild(C.weightButton(function () {
+      return d.titleFont || d.fontFamily || 'Georgia';
+    }, function () {
+      return d.titleWeight || 700;
+    }, function (w) {
+      C.applyDataTo([el], 'Graisse du titre', { titleWeight: w });
+      MB.board.renderContent(el.id);
+    }));
+    box.appendChild(rowF);
     return box;
   }
 
@@ -1158,6 +1271,15 @@
       return d.fontFamily;
     }, function (f) {
       C.applyDataTo([el], 'Police', { fontFamily: f });
+      MB.board.renderContent(el.id);
+    }));
+    /* v1.18 — graisse à côté du sélecteur de police. */
+    row1.appendChild(C.weightButton(function () {
+      return d.fontFamily || 'Georgia';
+    }, function () {
+      return d.fontWeight || (d.bold ? 700 : 400);
+    }, function (w) {
+      C.applyDataTo([el], 'Graisse', { fontWeight: w });
       MB.board.renderContent(el.id);
     }));
     row1.appendChild(C.sizeControl(function () {

@@ -76,12 +76,15 @@
     }
   }
 
-  function deleteDomSelection() {
-    var sel = window.getSelection();
-    if (!sel || sel.isCollapsed || sel.rangeCount === 0) return false;
+  /* v1.18 — supprime une PLAGE MÉMORISÉE (capturée AVANT toute écriture
+   * presse-papiers). L'ancienne deleteDomSelection relisait la sélection
+   * courante : quand le repli textarea de copyViaExecCommand l'avait
+   * détruite (select() du champ fantôme), la suppression ne se faisait
+   * JAMAIS — c'est le bug « ⌘X ne coupe pas » des notes et textes. */
+  function deleteRange(rng) {
     try {
-      var rng = sel.getRangeAt(0);
       rng.deleteContents();
+      var sel = window.getSelection();
       sel.removeAllRanges();
       sel.addRange(rng);
       return true;
@@ -101,25 +104,52 @@
     return true;
   }
 
+  /* v1.18 — COUPER RÉPARÉ (notes & textes) : trois environnements,
+   * trois comportements du presse-papiers —
+   *  1) execCommand('cut') NATIF d'abord : geste ATOMIQUE (copie +
+   *     suppression + événement input), conserve le format riche ;
+   *  2) sinon chemin manuel : la PLAGE est capturée puis supprimée
+   *     SYNCHRONE — AVANT l'écriture asynchrone du presse-papiers.
+     L'ancien ordre (copier PUIS supprimer seulement si la copie
+     réussissait) cassait partout où writeText est refusé (CEP,
+     iframes, permissions) : le repli textarea détruisait la sélection
+     DOM, deleteDomSelection échouait et le texte restait en place. */
   function cutSelection(node) {
-    var text = currentSelectionText();
-    if (!text) return false;
+    var sel = window.getSelection();
+    if (!sel || sel.isCollapsed || sel.rangeCount === 0) return false;
+    var text = String(sel.toString());
+    var rng = sel.getRangeAt(0).cloneRange();
+
+    /* 1) natif d'abord (Chrome/Firefox/Electron avec permissions). */
+    var nativeOk = false;
+    try {
+      nativeOk = !!(document.execCommand && document.execCommand('cut'));
+    } catch (e) {
+      nativeOk = false;
+    }
+    if (nativeOk) return true;
+
+    /* 2) manuel : suppression immédiate de la plage mémorisée,
+     *    écriture presse-papiers au mieux (la sélection est déjà
+     *    commitée dans le DOM — le repli textarea ne peut plus rien
+     *    détruire ; en cas d'échec total, ⌘Z restaure). */
+    var deleted = deleteRange(rng);
+    if (node) {
+      try {
+        node.dispatchEvent(new Event('input', { bubbles: true }));
+      } catch (e) {
+        /* vieux moteurs : Event constructor */
+        var ev = document.createEvent('Event');
+        ev.initEvent('input', true, true);
+        node.dispatchEvent(ev);
+      }
+    }
     copyText(text).then(function (ok) {
-      if (ok && deleteDomSelection()) {
-        /* notifier l'auto-hauteur vivante + le commit d'édition */
-        try {
-          node.dispatchEvent(new Event('input', { bubbles: true }));
-        } catch (e) {
-          /* vieux moteurs : Event constructor */
-          var ev = document.createEvent('Event');
-          ev.initEvent('input', true, true);
-          node.dispatchEvent(ev);
-        }
-      } else if (!ok && MB.ui && MB.ui.toast) {
-        MB.ui.toast('Couper impossible — utilisez le clic droit.', 'error');
+      if (!ok && MB.ui && MB.ui.toast) {
+        MB.ui.toast('Couper : le presse-papiers a refusé la copie (⌘Z pour annuler).', 'error');
       }
     });
-    return true;
+    return deleted;
   }
 
   /* ---- lecture ---- */

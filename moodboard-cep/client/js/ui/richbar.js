@@ -200,6 +200,32 @@
       });
     });
     g3.appendChild(fBtn);
+    /* v1.18 — GRAISSE de la sélection : posée à côté du sélecteur de
+     * police de la barre de mise en forme. Applique un
+     * <span style="font-weight:…"> via MB.rich.applyWeight. */
+    var wBtn = U.el('button', 'ctx-btn ctx-font-btn ctx-weight-btn rich-btn');
+    wBtn.type = 'button';
+    wBtn.innerHTML = '<span class="font-btn-label">Graisse</span>' + MB.icons.get('chevronDown', 12);
+    wBtn.setAttribute('data-tip', 'Graisse de la sélection');
+    wBtn.setAttribute('aria-label', 'Graisse de la sélection');
+    wBtn.addEventListener('click', function () {
+      var cur = '';
+      try {
+        cur = document.queryCommandValue('fontName') || '';
+      } catch (e) {
+        cur = '';
+      }
+      cur = String(cur).replace(/^["']|["']$/g, '');
+      var el = editingEl();
+      MB.ui.controls.weightPopover(wBtn, function () {
+        return cur || (el && el.data.fontFamily) || 'Georgia';
+      }, function () {
+        return 400;
+      }, function (w) {
+        MB.rich.applyWeight(w);
+      });
+    });
+    g3.appendChild(wBtn);
     g3.appendChild(btn('eraser', 'Effacer la mise en forme', function () {
       MB.rich.exec('removeFormat');
     }));

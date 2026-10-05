@@ -2801,3 +2801,36 @@ body.mb-desktop-darwin .pv-head { padding-left: 84px; }
 @media (prefers-reduced-motion: reduce) {
   .pv-cfg, .pv-card, .pv-win, .pv-frame { animation: none; transition-duration: 1ms; }
 }
+
+/* =========================================================================
+   v1.18 — SÉLECTEUR DE GRAISSE (popover posé à côté de chaque sélecteur
+   de police, outil Preview excepté). Réutilise .font-pop/.font-item ;
+   n'ajoutent ici que les touches propres au popover de graisses.
+   ========================================================================= */
+.weight-pop .font-tools {
+  padding: 0 2px;
+}
+.weight-pop-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted, #9A9A9A);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.weight-list { max-height: 264px; }
+.weight-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  cursor: pointer;
+}
+.weight-item .font-item-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.weight-item-num {
+  font-family: Menlo, Consolas, monospace;
+  font-size: 11px;
+  color: var(--muted, #9A9A9A);
+  flex: none;
+}
+.weight-item.is-current .weight-item-num { color: var(--accent, #F97316); }

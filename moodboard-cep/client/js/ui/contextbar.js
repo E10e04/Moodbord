@@ -65,6 +65,15 @@
         C.applyDataTo([el], 'Police', { fontFamily: f });
         MB.board.renderContent(el.id);
       }));
+      /* v1.18 — graisse à côté du sélecteur de police. */
+      g1.appendChild(C.weightButton(function () {
+        return d.fontFamily || 'Georgia';
+      }, function () {
+        return d.fontWeight || (d.bold ? 700 : 400);
+      }, function (w) {
+        C.applyDataTo([el], 'Graisse', { fontWeight: w });
+        MB.board.renderContent(el.id);
+      }));
       g1.appendChild(C.sizeControl(function () {
         return d.fontSize;
       }, function (v) {
@@ -417,6 +426,15 @@
         return d.fontFamily;
       }, function (f) {
         C.applyDataTo([el], 'Police', { fontFamily: f });
+        MB.board.renderContent(el.id);
+      }));
+      /* v1.18 — graisse à côté du sélecteur de police. */
+      gty.appendChild(C.weightButton(function () {
+        return d.fontFamily || 'Georgia';
+      }, function () {
+        return d.fontWeight || 400;
+      }, function (w) {
+        C.applyDataTo([el], 'Graisse', { fontWeight: w });
         MB.board.renderContent(el.id);
       }));
       addCommonEnd();

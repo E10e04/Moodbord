@@ -173,6 +173,46 @@
     }
   }
 
+  /* v1.18 — GRAISSE ARBITRAIRE sur la sélection (richbar) :
+   * execCommand n'a pas de commande « font-weight » (seul bold/700).
+   * On enveloppe la sélection dans un <span style="font-weight:…"> —
+   * balise ET propriété autorisées par le sanitizer. Le focus et la
+   * plage sauvegardée sont rétablis comme dans exec(). */
+  function applyWeight(weight) {
+    var node = focusEditable();
+    if (!node) return false;
+    node.focus();
+    var sel = window.getSelection();
+    try {
+      if (savedRange && node.contains(savedRange.startContainer)) {
+        sel.removeAllRanges();
+        sel.addRange(savedRange);
+      }
+    } catch (e) {
+      /* agit au caret */
+    }
+    if (!sel || sel.isCollapsed || sel.rangeCount === 0) return false;
+    var w = Math.max(100, Math.min(900, Math.round(Number(weight) || 400) / 100) * 100);
+    var span = document.createElement('span');
+    span.style.fontWeight = String(w);
+    var ok = false;
+    try {
+      var rng = sel.getRangeAt(0);
+      span.appendChild(rng.extractContents());
+      rng.insertNode(span);
+      sel.removeAllRanges();
+      var r2 = document.createRange();
+      r2.selectNodeContents(span);
+      sel.addRange(r2);
+      savedRange = r2.cloneRange();
+      ok = true;
+    } catch (e) {
+      ok = false;
+    }
+    node.dispatchEvent(new Event('input', { bubbles: true }));
+    return ok;
+  }
+
   /* --------------------------------------------------- listes à puces */
 
   /* Convertit un contenu (HTML ou texte) en liste à puces : chaque
@@ -217,6 +257,7 @@
     exec: exec,
     queryState: queryState,
     toBulletList: toBulletList,
-    stripFormatting: stripFormatting
+    stripFormatting: stripFormatting,
+    applyWeight: applyWeight
   };
 })();
