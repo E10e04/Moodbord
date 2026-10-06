@@ -101,6 +101,43 @@
         break;
       }
 
+      case 'gallery': {
+        /* v1.20 — GALERIE : la grille EXACTE du canvas (layout partagé
+         * MB.content.galleryLayout), chaque vignette clippée en rect
+         * arrondi, remplissage « cover » comme à l'écran. */
+        var galItems = Array.isArray(d.items) ? d.items : [];
+        if (galItems.length && MB.content && MB.content.galleryLayout) {
+          var GL = MB.content.galleryLayout(el.w, galItems);
+          var gpad = 10, ggap = 8;
+          var gDefs = '', gImgs = '';
+          for (var gi = 0; gi < GL.cells.length; gi++) {
+            var gc = GL.cells[gi];
+            if (!gc.item || !gc.item.src) continue;
+            var gsrc = gc.item.src;
+            if (gsrc.indexOf('data:') !== 0) {
+              gsrc = (MB.exportState && MB.exportState.resolved &&
+                MB.exportState.resolved[gsrc]) || '';
+            }
+            if (!gsrc) continue;
+            var gx = el.x + gpad + (gc.col - 1) * (GL.cellW + ggap);
+            var gy = el.y + gpad + (gc.row - 1) * (GL.cellH + ggap);
+            var gw = gc.cs * GL.cellW + (gc.cs - 1) * ggap;
+            var gh = gc.rs * GL.cellH + (gc.rs - 1) * ggap;
+            var gcid = 'galc-' + String(el.id).replace(/[^a-zA-Z0-9_-]/g, '') + '-' + gi;
+            gDefs += '<clipPath id="' + gcid + '"><rect x="' + gx + '" y="' + gy +
+              '" width="' + gw + '" height="' + gh + '" rx="6"/></clipPath>';
+            gImgs += '<image x="' + gx + '" y="' + gy + '" width="' + gw + '" height="' + gh +
+              '" preserveAspectRatio="xMidYMid slice" clip-path="url(#' + gcid + ')"' +
+              ' xlink:href="' + esc(gsrc) + '" href="' + esc(gsrc) + '"' + rotAttr() + '/>';
+          }
+          t = gDefs + gImgs;
+        } else {
+          t = '<rect x="' + el.x + '" y="' + el.y + '" width="' + el.w + '" height="' + el.h +
+            '" fill="#2C2C2C" stroke="#3A3A3A"' + rotAttr() + '/>';
+        }
+        break;
+      }
+
       case 'text': {
         var deco = [];
         if (d.underline) deco.push('underline');
@@ -508,33 +545,43 @@
     return rot;
   }
 
-  /* Résout les src relatives (assets démo) en data URLs. */
+  /* Résout les src relatives (assets démo) en data URLs.
+   * v1.20 — y compris les VIGNETTES de galerie (items[].src). */
   function resolveAssets(list) {
     var st = MB.exportState;
     st.resolved = {};
     var jobs = [];
+    function pushJob(src) {
+      jobs.push(
+        fetch(src)
+          .then(function (r) {
+            return r.blob();
+          })
+          .then(function (b) {
+            return new Promise(function (resolve) {
+              var fr = new FileReader();
+              fr.onload = function () {
+                st.resolved[src] = String(fr.result);
+                resolve();
+              };
+              fr.readAsDataURL(b);
+            });
+          })
+          .catch(function () {
+            /* image ignorée */
+          })
+      );
+    }
     list.forEach(function (el) {
       if (el.type === 'image' && el.data.src && el.data.src.indexOf('data:') !== 0) {
-        var src = el.data.src;
-        jobs.push(
-          fetch(src)
-            .then(function (r) {
-              return r.blob();
-            })
-            .then(function (b) {
-              return new Promise(function (resolve) {
-                var fr = new FileReader();
-                fr.onload = function () {
-                  st.resolved[src] = String(fr.result);
-                  resolve();
-                };
-                fr.readAsDataURL(b);
-              });
-            })
-            .catch(function () {
-              /* image ignorée */
-            })
-        );
+        pushJob(el.data.src);
+      }
+      /* v1.20 — galerie : chaque vignette à chemin relatif est
+       * résolue comme une image de canvas. */
+      if (el.type === 'gallery' && Array.isArray(el.data.items)) {
+        el.data.items.forEach(function (it) {
+          if (it && it.src && it.src.indexOf('data:') !== 0) pushJob(it.src);
+        });
       }
     });
     return Promise.all(jobs);

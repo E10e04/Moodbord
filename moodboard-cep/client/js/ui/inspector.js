@@ -54,7 +54,9 @@
       /* v1.12 — l'outil Section est retiré : le mapping survit pour les
        * anciens projets (migrés en colonnes au chargement). */
       checklist: 'insp.checklist', sketch: 'insp.sketch', board: 'insp.board',
-      group: 'type.group', import: 'insp.import', assignees: 'insp.assignees'
+      group: 'type.group', import: 'insp.import', assignees: 'insp.assignees',
+      /* v1.20 — outil Gallerie. */
+      gallery: 'insp.gallery', file: 'insp.file'
     }[type];
     var s = key && MB.i18n ? MB.i18n.t(key) : type;
     return s.charAt(0).toUpperCase() + s.slice(1);
@@ -78,9 +80,11 @@
     var lines = Object.keys(counts).map(function (k) {
       return '<span class="chip">' + U.escapeHtml(k) + ' × ' + counts[k] + '</span>';
     }).join('');
-    s.appendChild(U.el('div', 'insp-row', '<div class="chip-row">' + (lines || '<span class="chip">Vide</span>') + '</div>'));
+    /* v1.20 — les textes du panneau Projet passent par l'i18n (ils
+     * restaient en français quand l'application est en anglais). */
+    s.appendChild(U.el('div', 'insp-row', '<div class="chip-row">' + (lines || '<span class="chip">' + U.escapeHtml(T('insp.empty')) + '</span>') + '</div>'));
     var zoomRow = U.el('div', 'insp-row');
-    zoomRow.appendChild(U.el('span', 'insp-kv', 'Zoom'));
+    zoomRow.appendChild(U.el('span', 'insp-kv', T('insp.zoom')));
     var z = U.el('span', 'insp-kv insp-kv--val', Math.round(st.camera.zoom * 100) + ' %');
     zoomRow.appendChild(z);
     s.appendChild(zoomRow);
@@ -91,29 +95,22 @@
     var hint = U.el(
       'div',
       'insp-hint',
-      'Sélectionnez un objet pour éditer ses propriétés.' +
+      T('insp.selectHint') +
       (MB.storage.isCep()
         ? ''
         : '<br><br><em>' +
-          (MB.storage.isDesktop()
-            ? 'Application autonome — les fonctions Illustrator sont disponibles dans l‘extension CEP.'
-            : 'Aperçu navigateur — les fonctions Illustrator sont disponibles dans le panneau CEP.') +
+          (MB.storage.isDesktop() ? T('insp.hintDesktop') : T('insp.hintBrowser')) +
           '</em>')
     );
     s.appendChild(hint);
     return s;
   }
 
-  /* Libellé lisible d'un élément (liste des masqués). */
+  /* Libellé lisible d'un élément (liste des masqués).
+   * v1.20 — passait par une table française codée en dur : réutilise
+   * typeTitle (clés i18n insp.*) pour suivre la langue active. */
   function elementLabel(e) {
-    var t = {
-      text: 'Texte', note: 'Note', comment: 'Commentaire', image: 'Image',
-      color: 'Couleur', palette: 'Palette', typography: 'Typographie',
-      link: 'Lien', file: 'Fichier', line: 'Ligne', shape: 'Forme',
-      column: 'Colonne', table: 'Tableau',
-      checklist: 'Checklist', sketch: 'Croquis', board: 'Planche',
-      group: 'Groupe', import: 'Carte d’import'
-    }[e.type] || e.type;
+    var t = typeTitle(e.type);
     var d = e.data || {};
     var extra = d.title || d.name || d.text || (e.type === 'board' && d.doc && d.doc.name) || '';
     extra = String(extra).replace(/\s+/g, ' ').trim().slice(0, 26);
@@ -132,7 +129,7 @@
       var row = U.el('div', 'hidden-row');
       var label = U.el('span', 'hidden-label', U.escapeHtml(elementLabel(e)));
       row.appendChild(label);
-      var eye = C.iconButton('eye', 'Réactiver cet élément', function () {
+      var eye = C.iconButton('eye', T('insp.revealOne'), function () {
         MB.app.revealElement(e.id);
       });
       eye.classList.add('hidden-eye');
@@ -141,7 +138,7 @@
     });
     s.appendChild(list);
     var rowAll = U.el('div', 'btn-row');
-    rowAll.appendChild(C.textButton('Tout révéler', function () {
+    rowAll.appendChild(C.textButton(T('insp.revealAll'), function () {
       MB.app.revealAll();
     }));
     s.appendChild(rowAll);

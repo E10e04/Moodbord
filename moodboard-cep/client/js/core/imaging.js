@@ -22,6 +22,11 @@
 
   var MB = (window.MB = window.MB || {});
 
+  /* v1.20 — toasts traduits (ils restaient en français en anglais). */
+  function T(k, vars) {
+    return MB.i18n ? MB.i18n.t(k, vars) : k;
+  }
+
   function isImageEl(el) {
     return !!el && el.type === 'image' && !!el.data && !!el.data.src;
   }
@@ -100,7 +105,7 @@
           return navigator.clipboard
             .write([new ClipboardItem({ 'image/png': blob })])
             .then(function () {
-              MB.ui.toast('Image copiée dans le presse-papiers', 'success');
+              MB.ui.toast(T('toast.imageCopied'), 'success');
               return true;
             });
         }
@@ -114,10 +119,7 @@
         } catch (e) {
           /* noop */
         }
-        MB.ui.toast(
-          'Copie système impossible ici — image copiée dans l’application (⌘V).',
-          'info'
-        );
+        MB.ui.toast(T('toast.imageCopyFallback'), 'info');
         return false;
       });
   }
@@ -151,7 +153,7 @@
             URL.revokeObjectURL(url);
             a.remove();
           }, 400);
-          MB.ui.toast('Image téléchargée : ' + finalName, 'success');
+          MB.ui.toast(T('toast.imageDownloaded', { n: finalName }), 'success');
           return true;
         }
 
@@ -162,7 +164,7 @@
             if (!target) return false; // annulé
             var w = MB.storage.writeFileAny(target, b64, 'Base64');
             if (w && w.err === 0) {
-              MB.ui.toast('Image enregistrée : ' + target, 'success');
+              MB.ui.toast(T('toast.imageSaved', { p: target }), 'success');
               return true;
             }
             MB.ui.toast('Écriture impossible (' + (w && w.err) + ')', 'error');
@@ -170,7 +172,7 @@
           });
       })
       .catch(function () {
-        MB.ui.toast('Cette image ne peut pas être enregistrée.', 'error');
+        MB.ui.toast(T('toast.imageCantSave'), 'error');
         return false;
       });
   }
@@ -234,7 +236,7 @@
       el._sized = true;
       MB.store.addElements([el], { label: 'Coller une image' });
       MB.store.setSelection([el.id]);
-      MB.ui.toast('Image collée', 'success');
+      MB.ui.toast(T('toast.imagePasted'), 'success');
       return el;
     });
   }

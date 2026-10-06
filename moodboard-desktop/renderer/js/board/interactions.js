@@ -20,6 +20,11 @@
 
   var Store, Camera, Board;
 
+  /* v1.20 — toasts traduits. */
+  function T(k, vars) {
+    return MB.i18n ? MB.i18n.t(k, vars) : k;
+  }
+
   var gesture = null;
   var spaceDown = false;
   var badgeEl = null;
@@ -31,18 +36,28 @@
   var CLICK_CREATE = {
     text: 1, note: 1, color: 1, palette: 1, typography: 1,
     link: 1, checklist: 1, comment: 1, table: 1, image: 1, import: 1,
-    board: 1
+    board: 1, gallery: 1
   };
   var RECT_CREATE = { column: 1, shape: 1 };
 
+  /* v1.20 — les noms de types passent par l'i18n (clés type.*) :
+   * toasts et libellés d'historique suivent la langue active.
+   * TYPE_NAMES reste en repli si une clé manque. */
   var TYPE_NAMES = {
     text: 'texte', note: 'note', comment: 'commentaire', image: 'image',
     color: 'couleur', palette: 'palette', typography: 'typographie',
     link: 'lien', file: 'fichier', line: 'ligne', shape: 'forme',
     column: 'colonne', table: 'tableau',
     checklist: 'checklist', sketch: 'croquis', board: 'planche',
-    group: 'groupe', import: 'carte d’import', assignees: 'assignées'
+    group: 'groupe', import: 'carte d’import', assignees: 'assignées',
+    gallery: 'gallerie'
   };
+
+  function typeName(t) {
+    var k = 'type.' + t;
+    var s = MB.i18n && MB.i18n.t(k);
+    return (s && s !== k) ? s : (TYPE_NAMES[t] || t);
+  }
 
   function wrapEl() {
     return Board.wrapEl();
@@ -1901,7 +1916,7 @@
         Store.mutate('Déverrouiller', function () {
           Store.updateElement(target.id, { locked: false }, { transaction: true });
         });
-        MB.ui.toast(typeName(target.type) + ' déverrouillé', 'success');
+        MB.ui.toast(T('toast.unlocked', { t: typeName(target.type) }), 'success');
       }
       return;
     }
@@ -1914,6 +1929,51 @@
     }
     if (act === 'image-pick' && el) {
       pickImageForCard(el);
+      return;
+    }
+
+    /* v1.20 — GALERIE : ajout d'images (bouton + ou zone vide). */
+    if (act === 'gal-add' && el) {
+      pickGalleryImages(el);
+      return;
+    }
+
+    /* v1.20 — GALERIE : CLIC sur une vignette → elle se soulève
+     * au-dessus des autres (les autres s'assombrissent et reculent),
+     * comme la démo Bencho/Raul. Re-clic = remise en place. Les
+     * classes sont posées SANS re-rendu pour que la transition CSS
+     * s'anime ; l'état vit dans el._liftId (transitoire, non
+     * persisté), le re-rendu le restitue tel quel. */
+    if (act === 'gal-lift' && el) {
+      var liftId = actNode.getAttribute('data-item');
+      var liveGal = Store.el(el.id);
+      if (!liveGal) return;
+      var galHost = actNode.closest('.mb-el');
+      liveGal._liftId = liveGal._liftId === liftId ? null : liftId;
+      if (galHost) galHost.style.zIndex = liveGal._liftId ? '60' : '';
+      if (galHost) {
+        Array.prototype.forEach.call(galHost.querySelectorAll('.mb-gal-tile'), function (tile) {
+          var tid = tile.getAttribute('data-item');
+          tile.classList.toggle('is-lift', liveGal._liftId === tid);
+          tile.classList.toggle('is-dim', !!liveGal._liftId && liveGal._liftId !== tid);
+        });
+      }
+      return;
+    }
+
+    /* v1.20 — GALERIE : croix de suppression d'une vignette (au
+     * survol), geste transactionnel annulable. */
+    if (act === 'gal-del' && el) {
+      var galDelId = actNode.getAttribute('data-item');
+      var liveDel = Store.el(el.id);
+      if (!liveDel) return;
+      var galItems = (Array.isArray(liveDel.data.items) ? liveDel.data.items : [])
+        .filter(function (it) { return it.id !== galDelId; });
+      var gdh = (MB.content && MB.content.galleryLayout)
+        ? MB.content.galleryLayout(liveDel.w, galItems).h : liveDel.h;
+      Store.mutate('Retirer une image', function () {
+        Store.updateElement(liveDel.id, { h: gdh, data: { items: galItems } }, { transaction: true });
+      });
       return;
     }
 
@@ -2017,6 +2077,52 @@
     }
   }
 
+  /* v1.20 — GALERIE : sélecteur MULTI-FICHIERS (le bouton + de la
+   * carte). Chaque image est mesurée (dimensions naturelles) pour le
+   * bento, puis l'ensemble rejoint la galerie en UNE transaction. */
+  function pickGalleryImages(el) {
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.multiple = true;
+    input.onchange = function () {
+      if (!input.files || !input.files.length) return;
+      var files = Array.prototype.slice.call(input.files);
+      var loaded = [];
+      var chain = Promise.resolve();
+      files.forEach(function (f) {
+        chain = chain
+          .then(function () {
+            return readAsDataURL(f);
+          })
+          .then(function (dataUrl) {
+            return preloadImage(dataUrl).then(function (info) {
+              loaded.push({ id: U.uid(), src: dataUrl, w: info.w, h: info.h });
+            });
+          })
+          .catch(function () {
+            /* image illisible : ignorée, les autres passent */
+          });
+      });
+      chain.then(function () {
+        if (!loaded.length) {
+          MB.ui.toast(T('gal.badImage'), 'error');
+          return;
+        }
+        var live = Store.el(el.id);
+        if (!live) return;
+        var items = (Array.isArray(live.data.items) ? live.data.items : []).concat(loaded);
+        var gh = (MB.content && MB.content.galleryLayout)
+          ? MB.content.galleryLayout(live.w, items).h : live.h;
+        Store.mutate('Ajouter des images', function () {
+          Store.updateElement(live.id, { h: gh, data: { items: items } }, { transaction: true });
+        });
+        MB.ui.toast(T('gal.added', { n: loaded.length }), 'success');
+      });
+    };
+    input.click();
+  }
+
   /* v1.10 — remplit une carte image EN ATTENTE : ouvre le sélecteur
    * et applique l’image choisie (dimensions, remplissage) à la carte. */
   function pickImageForCard(el) {
@@ -2046,7 +2152,7 @@
           });
         })
         .catch(function () {
-          MB.ui.toast('Image illisible — choisissez un fichier image.', 'error');
+          MB.ui.toast(T('toast.imageUnreadable'), 'error');
         });
     };
     input.click();
@@ -2054,7 +2160,7 @@
 
   function copyText(text) {
     var done = function () {
-      MB.ui.toast('Copié : ' + text, 'success');
+      MB.ui.toast(T('toast.copied', { v: text }), 'success');
     };
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -2162,6 +2268,23 @@
     }
     if (st.ui.editingId) {
       commitEditing();
+      return true;
+    }
+    /* v1.20 — GALERIE : Échap remet la vignette soulevée en place. */
+    var lifted = null;
+    Store.s().elements.forEach(function (e2) {
+      if (e2._liftId) lifted = e2;
+    });
+    if (lifted) {
+      lifted._liftId = null;
+      var liftView = Board.viewOf(lifted.id);
+      if (liftView && liftView.node) {
+        liftView.node.style.zIndex = '';
+        Array.prototype.forEach.call(liftView.node.querySelectorAll('.mb-gal-tile'), function (tile) {
+          tile.classList.remove('is-lift');
+          tile.classList.remove('is-dim');
+        });
+      }
       return true;
     }
     if (st.ui.activeGroupId) {

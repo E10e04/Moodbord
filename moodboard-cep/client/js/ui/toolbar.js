@@ -33,6 +33,9 @@
       { id: 'comment', icon: 'comment', key: 'M', tKey: 'tool.comment' },
       { sep: true },
       { id: 'image', icon: 'image', key: 'I', tKey: 'tool.image' },
+      /* v1.20 — GALERIE : grille photo (Bencho/Raul) — pair = grille
+       * régulière, impair = bento automatique ; bouton + sur la carte. */
+      { id: 'gallery', icon: 'gallery', key: 'G', tKey: 'tool.gallery' },
       { id: 'link', icon: 'link', key: 'L', tKey: 'tool.link' },
       { sep: true },
       { id: 'line', icon: 'line', key: 'P', tKey: 'tool.line' },

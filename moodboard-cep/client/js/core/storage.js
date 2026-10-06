@@ -30,6 +30,11 @@
   var MB = (window.MB = window.MB || {});
   var U = MB.util;
 
+  /* v1.20 — messages visibles traduits (restaient en français sinon). */
+  function T(k, vars) {
+    return MB.i18n ? MB.i18n.t(k, vars) : k;
+  }
+
   var MODE = 'web';
   var cs = null;
   /* v1.7 — deux dossiers distincts :
@@ -319,7 +324,7 @@
     for (var i = 0; i < doc.elements.length; i++) {
       var e = doc.elements[i];
       if (!e || !e.id || !e.type) {
-        return { error: 'Élément invalide à la position ' + i + '.' };
+        return { error: T('storage.badElement', { n: i }) };
       }
     }
     return { doc: doc };
@@ -511,7 +516,7 @@
         MB.store.setUI({ saveState: 'unsaved' });
         if (MB.ui) {
           MB.ui.toast(
-            'Espace local saturé — utilisez Fichier ▸ Enregistrer sous… pour exporter le projet.',
+            T('storage.quotaFull'),
             'error'
           );
         }
@@ -923,7 +928,7 @@
     if (!isAbsPath(newDir)) return { error: 'Chemin invalide.' };
     if (samePath(newDir, dataDir)) return { ok: true, dir: newDir, unchanged: true };
     ensureDir(newDir);
-    if (!probeFs(newDir)) return { error: 'Ce dossier n‘est pas accessible en écriture.' };
+    if (!probeFs(newDir)) return { error: T('storage.dirReadOnly') };
     var oldDir = dataDir;
     var moved = [];
     /* v1.8 — la migration emporte AUSSI les slots d'autosave par
@@ -1200,12 +1205,12 @@
     var w = writeText(target, payload);
     if (w.error) {
       MB.ui.toast(
-        'Échec de l‘enregistrement (' + w.error + ') — utilisez Fichier ▸ Enregistrer sous…',
+        T('storage.saveFailed', { e: w.error }),
         'error'
       );
       return;
     }
-    afterSaved(target, 'Enregistré · ' + basename(target));
+    afterSaved(target, T('storage.savedAs', { n: basename(target) }));
   }
 
   /* Suite commune à un enregistrement réussi (saveToPath / saveAs). */
@@ -1223,7 +1228,7 @@
         if (dataUrl) setRecentThumb(target, dataUrl);
       });
     }
-    MB.ui.toast(message || 'Projet enregistré', 'success');
+    MB.ui.toast(message || T('toast.projectSaved'), 'success');
   }
 
   function saveAs(onResult) {
@@ -1254,11 +1259,11 @@
       var payload = JSON.stringify(serialize());
       var w = writeText(target, payload);
       if (w.error) {
-        MB.ui.toast('Échec de l‘enregistrement : ' + w.error, 'error');
+        MB.ui.toast(T('storage.saveFailed2', { e: w.error }), 'error');
         if (typeof onResult === 'function') onResult(false);
         return;
       }
-      afterSaved(target, 'Projet enregistré');
+      afterSaved(target, T('toast.projectSaved'));
       if (typeof onResult === 'function') onResult(true);
     }
 
@@ -1279,7 +1284,7 @@
     } else {
       downloadFile(safeName() + '.moodboard', JSON.stringify(serialize()));
       markSaved();
-      MB.ui.toast('Projet exporté (.moodboard)', 'success');
+      MB.ui.toast(T('toast.projectExported'), 'success');
       if (typeof onResult === 'function') onResult(true);
     }
   }
@@ -1336,7 +1341,7 @@
           Array.isArray(slotParsed.doc.elements) && slotParsed.doc.elements.length
         ) {
           openFile(slotParsed.doc, p);
-          MB.ui.toast('Version non enregistrée restaurée (autosave plus récent que le fichier).', 'info');
+          MB.ui.toast(T('storage.restoredAutosave'), 'info');
           return true;
         }
       }

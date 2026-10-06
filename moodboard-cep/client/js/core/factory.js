@@ -8,6 +8,13 @@
   var MB = (window.MB = window.MB || {});
   var U = MB.util;
 
+  /* v1.20 — les CONTENUS SEMÉS à la création (titres, textes d'accueil,
+   * tâches d'exemple…) suivent la langue active au lieu d'être figés
+   * en français. */
+  function T(k, vars) {
+    return MB.i18n ? MB.i18n.t(k, vars) : k;
+  }
+
   function base(type, point, extra) {
     var ex = extra || {};
     var el = {
@@ -41,9 +48,9 @@
         case 'text': {
           var t = base('text', p, Object.assign({ w: 280, h: 64 }, extra));
           t.data = {
-            text: 'Texte',
+            text: T('seed.text'),
             /* v1.17 — TITRE en haut de la carte, positionnable. */
-            title: (extra && extra.title !== undefined) ? extra.title : 'Titre',
+            title: (extra && extra.title !== undefined) ? extra.title : T('seed.title'),
             titleAlign: (extra && extra.titleAlign) || 'center',
             fontFamily: (extra && extra.fontFamily) || (MB.fonts ? MB.fonts.default() : 'Georgia'),
             fontSize: 26,
@@ -64,9 +71,9 @@
         case 'note': {
           var n = base('note', p, Object.assign({ w: 220, h: 180 }, extra));
           n.data = {
-            text: 'Double-cliquez pour écrire…',
+            text: T('seed.noteBody'),
             /* v1.17 — TITRE en haut de la carte, positionnable. */
-            title: (extra && extra.title !== undefined) ? extra.title : 'Titre',
+            title: (extra && extra.title !== undefined) ? extra.title : T('seed.title'),
             titleAlign: (extra && extra.titleAlign) || 'center',
             color: '#F7D46A',
             fontSize: 15,
@@ -79,8 +86,8 @@
         case 'comment': {
           var c = base('comment', p, Object.assign({ w: 220, h: 110 }, extra));
           c.data = {
-            text: 'Un commentaire…',
-            author: 'Vous',
+            text: T('seed.comment'),
+            author: T('seed.you'),
             color: '#4C8DFF',
             fontFamily: (extra && extra.fontFamily) || (MB.fonts ? MB.fonts.default() : 'Georgia'),
             fontSize: 13
@@ -108,12 +115,27 @@
           return im;
         }
 
+        case 'gallery': {
+          /* v1.20 — GALERIE d'images (grille photo style Bencho/Raul) :
+           * posée vide (appel au bouton « + »), hauteur pilotée par le
+           * layout (fonction pure partagée avec le rendu et l'export). */
+          var gal = base('gallery', p, Object.assign({ w: 520, h: 200 }, extra));
+          gal.data = {
+            items: (extra && Array.isArray(extra.items)) ? extra.items.slice() : [],
+            bg: (extra && extra.bg) || 'transparent'
+          };
+          if (gal.data.items.length && MB.content && MB.content.galleryLayout) {
+            gal.h = MB.content.galleryLayout(gal.w, gal.data.items).h;
+          }
+          return gal;
+        }
+
         case 'color': {
           var col = base('color', p, Object.assign({ w: 132, h: 168 }, extra));
           var hex = (extra && extra.hex) || '#7A522E';
           col.data = {
             hex: U.normalizeHex(hex) || '#7A522E',
-            name: (extra && extra.name) || 'Couleur'
+            name: (extra && extra.name) || T('seed.color')
           };
           return col;
         }
@@ -139,7 +161,7 @@
             h: (MB.ui && MB.ui.paletteCard ? MB.ui.paletteCard.heightOf(colors.length) : 66 + colors.length * 48)
           }, extra));
           pl.data = {
-            name: (extra && extra.name) || 'Palette',
+            name: (extra && extra.name) || T('seed.palette'),
             colors: colors,
             picked: pickedDef,
             open: (extra && extra.open !== undefined) ? extra.open : true
@@ -164,7 +186,7 @@
           var ty = base('typography', p, Object.assign({ w: 236, h: 252 }, extra));
           ty.data = {
             fontFamily: (extra && extra.fontFamily) || (MB.fonts ? MB.fonts.default() : 'Georgia'),
-            sampleText: 'Portez ce vieux whisky au juge blond qui fume',
+            sampleText: T('seed.pangram'),
             sizes: [40, 28, 18, 13]
           };
           return ty;
@@ -255,7 +277,7 @@
           co.data = {
             /* v1.11 — le titre passé à la création est enfin honoré
              * (il l'était pour la typographie, pas pour les conteneurs). */
-            title: (extra && extra.title) || 'Colonne',
+            title: (extra && extra.title) || T('seed.column'),
             /* v1.10 — mini-canvas vertical : corps + en-tête séparés. */
             color: (extra && extra.color) || '#2A2A2A',
             headColor: (extra && extra.headColor) || '',
@@ -277,7 +299,7 @@
           for (var r = 0; r < rows; r++) {
             var row = [];
             for (var c2 = 0; c2 < colsN; c2++) {
-              row.push(r === 0 && extra && extra.header !== false ? 'En-tête' : '');
+              row.push(r === 0 && extra && extra.header !== false ? T('seed.header') : '');
             }
             cells.push(row);
           }
@@ -302,12 +324,12 @@
 
         case 'checklist': {
           var items = (extra && extra.items) || [
-            { id: U.uid(), text: 'Première tâche', done: false },
-            { id: U.uid(), text: 'Deuxième tâche', done: false }
+            { id: U.uid(), text: T('seed.task1'), done: false },
+            { id: U.uid(), text: T('seed.task2'), done: false }
           ];
           var ck = base('checklist', p, Object.assign({ w: 260, h: 60 + items.length * 38 }, extra));
           ck.data = {
-            title: (extra && extra.title) || 'Checklist',
+            title: (extra && extra.title) || T('seed.checklist'),
             items: items,
             /* v1.10 — couleur de la carte modifiable. */
             color: (extra && extra.color) || '#252525',
@@ -333,7 +355,7 @@
            * milieu) + barre du bas (compteur + flèche) : carte haute. */
           var bd = base('board', p, Object.assign({ w: 264, h: 168 }, extra));
           bd.data = {
-            title: (extra && extra.title) || 'Planche',
+            title: (extra && extra.title) || T('seed.board'),
             elCount: 0,
             thumb: null,
             titleFont: (extra && extra.titleFont) || '',
@@ -350,7 +372,7 @@
            * un .moodboard importé devient une planche liée nommée). */
           var im = base('import', p, Object.assign({ w: 250, h: 190 }, extra));
           im.data = {
-            title: (extra && extra.title) || 'Importer des médias'
+            title: (extra && extra.title) || T('seed.import'),
           };
           return im;
         }

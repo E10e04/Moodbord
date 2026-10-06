@@ -18,6 +18,11 @@
   var MB = (window.MB = window.MB || {});
   var U = MB.util;
 
+  /* v1.20 — toast traduit. */
+  function T(k, vars) {
+    return MB.i18n ? MB.i18n.t(k, vars) : k;
+  }
+
   var FALLBACK = [
     'Arial', 'Arial Black', 'Arial Narrow', 'Bookman Old Style', 'Calibri',
     'Cambria', 'Candara', 'Comic Sans MS', 'Consolas', 'Constantia',
@@ -232,7 +237,7 @@
     saveDefault();
     emitChange();
     if (MB.ui && MB.ui.toast) {
-      MB.ui.toast('Police par défaut : ' + f, 'success');
+      MB.ui.toast(T('toast.defaultFont', { f: f }), 'success');
     }
   }
 

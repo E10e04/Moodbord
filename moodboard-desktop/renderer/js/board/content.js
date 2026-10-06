@@ -652,6 +652,167 @@
     return MB.ui.assignees ? MB.ui.assignees.render(el) : '';
   }
 
+  /* ---------------------------------------------------------- GALERIE */
+
+  /* v1.20 — OUTIL GALERIE (grille photo style Bencho/Raul) :
+ *  - NOMBRE PAIR d'images → grille régulière 4 colonnes, tuiles au
+ *    rapport 4:5 (l'exemple) ; les 2 dernières, quand n%4 = 2,
+ *    s'élargissent (2 colonnes chacune) pour boucler la rangée ;
+ *  - NOMBRE IMPAIR → bento automatique : la plus GRANDE image (aire)
+ *    prend le bloc 2×2, les paysages restants prennent les tranches
+ *    2×1, le reste remplit les tuiles simples — la lecture reste
+ *    toujours plein-cadre, aucune case vide.
+ *  - CLIC sur une vignette → elle s'agrandit au-dessus des autres
+ *    (les autres s'assombrissent et reculent), comme la démo ;
+ *    re-clic ou Échap la remet en place.
+ *  - Bouton « + » au coin supérieur droit : ajout d'images (multi).
+ * Le layout est une fonction PURE (utilisée par le rendu canvas, la
+ * hauteur auto, l'usine et l'export SVG). */
+  var GAL_PAD = 10;
+  var GAL_GAP = 8;
+  var GAL_COLS = 4;
+
+  function galleryLayout(w, items) {
+    var inner = Math.max(120, w || 520) - GAL_PAD * 2;
+    var list = (items || []).filter(function (it) { return it && it.src; });
+    var n = list.length;
+    var cellW = (inner - (GAL_COLS - 1) * GAL_GAP) / GAL_COLS;
+    if (!n) {
+      return { cols: GAL_COLS, cellW: cellW, cellH: 0, h: 200, cells: [], empty: true };
+    }
+    var slots = [];
+    if (n % 2 === 0) {
+      var tail = n % 4 === 2 ? 2 : 0;
+      for (var i = 0; i < n; i++) {
+        slots.push(i >= n - tail ? { cs: 2, rs: 1 } : { cs: 1, rs: 1 });
+      }
+    } else {
+      var q = Math.floor(n / 5);
+      var r = n - q * 5;
+      for (var b = 0; b < q; b++) {
+        slots.push(
+          { cs: 2, rs: 2 }, { cs: 1, rs: 1 }, { cs: 1, rs: 1 },
+          { cs: 1, rs: 1 }, { cs: 1, rs: 1 }
+        );
+      }
+      if (r === 4) slots.push({ cs: 2, rs: 2 }, { cs: 2, rs: 1 }, { cs: 1, rs: 1 }, { cs: 1, rs: 1 });
+      else if (r === 3) slots.push({ cs: 2, rs: 1 }, { cs: 1, rs: 1 }, { cs: 1, rs: 1 });
+      else if (r === 2) slots.push({ cs: 2, rs: 1 }, { cs: 2, rs: 1 });
+      else if (r === 1) slots.push({ cs: 4, rs: 1 });
+    }
+
+    /* Affectation bento : la plus grande aire → 2×2, paysage suivant
+     * → tranche 2×1, le reste garde l'ordre d'ajout. */
+    var assigned = new Array(slots.length);
+    if (n % 2 === 1) {
+      var byArea = list.map(function (it, i2) {
+        return { i: i2, a: (it.w || 1) * (it.h || 1) };
+      }).sort(function (x, y) { return y.a - x.a; });
+      var featCount = slots.filter(function (s) { return s.cs === 2 && s.rs === 2; }).length;
+      var wideCount = slots.filter(function (s) { return s.cs === 2 && s.rs === 1; }).length;
+      var feats = byArea.slice(0, featCount).map(function (o) { return o.i; });
+      var rest = byArea.slice(featCount);
+      var wides = [];
+      for (var w2 = 0; w2 < rest.length && wides.length < wideCount; w2++) {
+        var it2 = list[rest[w2].i];
+        if ((it2.w || 1) >= (it2.h || 1)) { wides.push(rest[w2].i); rest.splice(w2, 1); w2--; }
+      }
+      while (wides.length < wideCount && rest.length) wides.push(rest.shift().i);
+      var smalls = rest.map(function (o) { return o.i; }).sort(function (a, b2) { return a - b2; });
+      var fi = 0, wi = 0, si = 0;
+      slots.forEach(function (s, i3) {
+        if (s.cs === 2 && s.rs === 2) assigned[i3] = feats[fi++];
+        else if (s.cs === 2 && s.rs === 1) assigned[i3] = (wi < wides.length ? wides[wi++] : smalls[si++]);
+        else assigned[i3] = smalls[si++];
+      });
+    } else {
+      for (var i4 = 0; i4 < slots.length; i4++) assigned[i4] = i4;
+    }
+
+    /* Placement : grille d'occupation — chaque slot prend la PREMIÈRE
+     * position libre qui l'accueille (balayage ligne par ligne) :
+     * aucune tuile ne recouvre le bloc 2×2 du bento, aucune case vide
+     * au milieu (les cases sous une tuile large sont consommées). */
+    var cells = [];
+    var occupied = {};
+    var maxRow = 1;
+    function free(r, c, cs, rs) {
+      for (var dr = 0; dr < rs; dr++) {
+        for (var dc = 0; dc < cs; dc++) {
+          if (occupied[(r + dr) + ':' + (c + dc)]) return false;
+        }
+      }
+      return true;
+    }
+    for (var i5 = 0; i5 < slots.length; i5++) {
+      var s2 = slots[i5];
+      var pr = 1, pc = 1;
+      while (!free(pr, pc, s2.cs, s2.rs)) {
+        pc++;
+        if (pc + s2.cs - 1 > GAL_COLS) { pr++; pc = 1; }
+        if (pr > 200) break; /* garde-fou (jamais atteint) */
+      }
+      for (var dr2 = 0; dr2 < s2.rs; dr2++) {
+        for (var dc2 = 0; dc2 < s2.cs; dc2++) {
+          occupied[(pr + dr2) + ':' + (pc + dc2)] = 1;
+        }
+      }
+      if (pr + s2.rs - 1 > maxRow) maxRow = pr + s2.rs - 1;
+      cells.push({ item: list[assigned[i5]], col: pc, row: pr, cs: s2.cs, rs: s2.rs });
+    }
+    var cellH = cellW * 1.25;
+    if (n === 1) cellH = inner * 0.75; /* une seule image : bandeau 4:3 */
+    var h = Math.round(GAL_PAD * 2 + maxRow * cellH + (maxRow - 1) * GAL_GAP);
+    return { cols: GAL_COLS, cellW: cellW, cellH: cellH, h: h, cells: cells, empty: false };
+  }
+
+  function renderGallery(el) {
+    var d = el.data;
+    var items = Array.isArray(d.items) ? d.items : [];
+    function T(k) { return MB.i18n ? MB.i18n.t(k) : k; }
+    var addBtn =
+      '<button class="mb-gallery-add" type="button" data-act="gal-add"' +
+      ' title="' + esc(T('gal.add')) + '" aria-label="' + esc(T('gal.add')) + '">+</button>';
+    if (!items.length) {
+      return (
+        '<div class="mb-gallery is-empty">' +
+        '<div class="mb-gallery-cta" data-act="gal-add" role="button" tabindex="0"' +
+        ' aria-label="' + esc(T('gal.add')) + '">' +
+        '<span class="mb-gallery-cta-plus">+</span>' +
+        '<span class="mb-gallery-cta-label">' + esc(T('gal.add')) + '</span>' +
+        '<span class="mb-gallery-cta-hint">' + esc(T('gal.emptyHint')) + '</span>' +
+        '</div>' +
+        addBtn +
+        '</div>'
+      );
+    }
+    var L = galleryLayout(el.w, items);
+    var lift = el._liftId;
+    var tiles = '';
+    for (var i = 0; i < L.cells.length; i++) {
+      var c = L.cells[i];
+      if (!c.item) continue;
+      var cls = 'mb-gal-tile';
+      if (lift === c.item.id) cls += ' is-lift';
+      else if (lift) cls += ' is-dim';
+      tiles +=
+        '<div class="' + cls + '" data-act="gal-lift" data-item="' + esc(c.item.id) + '"' +
+        ' style="grid-column:' + c.col + ' / span ' + c.cs + ';grid-row:' + c.row + ' / span ' + c.rs + '">' +
+        '<img src="' + esc(c.item.src) + '" alt="" draggable="false" loading="lazy"/>' +
+        '<button class="mb-gal-del" type="button" data-act="gal-del" data-item="' + esc(c.item.id) + '"' +
+        ' title="' + esc(T('gal.remove')) + '" aria-label="' + esc(T('gal.remove')) + '">&times;</button>' +
+        '</div>';
+    }
+    return (
+      '<div class="mb-gallery">' +
+      '<div class="mb-gallery-grid" style="grid-template-columns:repeat(' + L.cols + ',1fr);grid-auto-rows:' + Math.round(L.cellH) + 'px;gap:' + GAL_GAP + 'px">' +
+      tiles +
+      '</div>' +
+      addBtn +
+      '</div>'
+    );
+  }
+
   /* ---------------------------------------------------------- dispatch */
 
   var RENDERERS = {
@@ -673,7 +834,8 @@
     board: renderBoard,
     group: renderGroup,
     import: renderImport,
-    assignees: renderAssignees
+    assignees: renderAssignees,
+    gallery: renderGallery
   };
 
   /* Autodimensionnement après montage. */
@@ -692,6 +854,19 @@
             MB.linkPreview.applyToElement(live);
           }
         }, 250);
+      }
+    }
+
+    /* v1.20 — GALERIE : hauteur DÉTERMINISTE venue du layout partagé
+     * (la mesure scrollHeight ne suffit pas : la carte peut être plus
+     * haute que la grille et ne rétrécirait jamais). Vide → la taille
+     * posée reste. */
+    if (el.type === 'gallery' && MB.content.galleryLayout) {
+      var gl = MB.content.galleryLayout(el.w, el.data.items);
+      if (!gl.empty && Math.abs(gl.h - el.h) > 2) {
+        el.h = gl.h;
+        view.node.style.height = el.h + 'px';
+        MB.board.refreshOverlay();
       }
     }
 
@@ -737,7 +912,9 @@
       /* v1.17 — TABLEAU à hauteur vivante : un texte long qui passe sur
        * plusieurs lignes dans une cellule fait grandir la carte au lieu
        * d'être coupé (même mécanique que notes/checklist). */
-      table: true
+      table: true,
+      /* v1.20 — GALERIE : la hauteur suit la grille (rapport 4:5). */
+      gallery: true
     };
     if (autoTypes[el.type]) {
       /* BUG CORRIGÉ (v1.1.3) : à la CRÉATION, afterMount est appelé
@@ -780,7 +957,8 @@
       note: el.data.autoH !== false,
       checklist: el.data.autoH !== false,
       comment: el.data.autoH !== false,
-      table: true /* v1.17 — le tableau suit son contenu */
+      table: true, /* v1.17 — le tableau suit son contenu */
+      gallery: true /* v1.20 — la galerie suit sa grille */
     };
     if (!autoTypes[el.type]) return;
     var body = view.node.firstElementChild;
@@ -804,6 +982,8 @@
     polygonPoints: polygonPoints,
     /* v1.19 — taille effective du titre (dédiée ou dérivée), pour
      * l'inspecteur (affichage du stepper) et les exports. */
-    titleFontSizeOf: titleFontSizeOf
+    titleFontSizeOf: titleFontSizeOf,
+    /* v1.20 — layout GALERIE (fonction pure) : rendu, usine, export. */
+    galleryLayout: galleryLayout
   };
 })();

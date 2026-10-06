@@ -8,6 +8,12 @@
   var MB = (window.MB = window.MB || {});
   var U = MB.util;
 
+  /* v1.20 — traduction : les libellés des contrôles suivent la langue
+   * active (ils restaient en français sinon). */
+  function T(k, vars) {
+    return MB.i18n ? MB.i18n.t(k, vars) : k;
+  }
+
   /* Applique un patch aux éléments sélectionnés avec une transaction. */
   function applyTo(els, label, patch) {
     MB.store.mutate(label, function () {
@@ -214,11 +220,11 @@
         if (!shown) {
           html = '<div class="font-empty">' + (favOnly
             ? (MB.fonts.hasAnyFavorite()
-              ? 'Aucun favori ne correspond à la recherche.'
-              : 'Aucune police en favori — cliquez le ♥ d‘une police pour l‘épingler.')
-            : 'Aucune police trouvée.') + '</div>';
+              ? T('ctrl.noFavMatch')
+              : T('ctrl.noFav'))
+            : T('ctrl.noMatch')) + '</div>';
         } else if (fonts.length > FONT_LIST_MAX && shown === FONT_LIST_MAX) {
-          html += '<div class="font-empty">Affichage limité à ' + FONT_LIST_MAX + ' polices — affinez la recherche.</div>';
+          html += '<div class="font-empty">' + T('ctrl.listCapped', { n: FONT_LIST_MAX }) + '</div>';
         }
         list.innerHTML = html;
 
@@ -268,13 +274,13 @@
         btn.classList.toggle('is-active', favOnly);
         btn.classList.toggle('is-empty', !n);
         btn.setAttribute('aria-pressed', favOnly ? 'true' : 'false');
-        btn.title = favOnly ? 'Afficher toutes les polices' : 'N‘afficher que les polices favorites (' + n + ')';
+        btn.title = favOnly ? T('ctrl.showAll') : T('ctrl.favOnly', { n: n });
       }
 
       var sourceLabel =
-        MB.fonts.source() === 'system' ? 'Polices de l\u2019ordinateur'
-        : MB.fonts.source() === 'host' ? 'Polices Illustrator'
-        : 'Polices web intégrées';
+        MB.fonts.source() === 'system' ? T('ctrl.sysFonts')
+        : MB.fonts.source() === 'host' ? T('ctrl.hostFonts')
+        : T('ctrl.webFonts');
       var html =
         '<div class="font-pop">' +
         '<div class="font-tools">' +
@@ -458,9 +464,9 @@
   }
 
   function opacityControl(get, set) {
-    var b = iconButton('eye', 'Opacité', function () {
+    var b = iconButton('eye', T('ctrl.opacity'), function () {
       MB.ui.popover(b,
-        '<div class="pop-block"><label class="field-label">Opacité</label>' +
+        '<div class="pop-block"><label class="field-label">' + T('ctrl.opacity') + '</label>' +
         '<input type="range" min="10" max="100" step="5" value="' + Math.round(get() * 100) + '" id="pop-opacity"></div>', {
         bind: function (p) {
           var r = p.querySelector('#pop-opacity');

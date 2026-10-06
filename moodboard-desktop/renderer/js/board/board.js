@@ -11,6 +11,11 @@
   var MB = (window.MB = window.MB || {});
   var U = MB.util;
 
+  /* v1.20 — infobulles traduites. */
+  function T(k, vars) {
+    return MB.i18n ? MB.i18n.t(k, vars) : k;
+  }
+
   var world;
   var wrap;
   var board;
@@ -157,8 +162,8 @@
         unlock.type = 'button';
         unlock.setAttribute('data-act', 'unlock');
         unlock.setAttribute('data-id', e.id);
-        unlock.title = 'Déverrouiller';
-        unlock.setAttribute('aria-label', 'Déverrouiller cet élément');
+        unlock.title = T('el.unlock');
+        unlock.setAttribute('aria-label', T('el.unlock'));
         box.appendChild(unlock);
       }
       overlay.appendChild(box);

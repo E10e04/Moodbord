@@ -145,13 +145,13 @@
     if (!chip) return;
     if (pending) {
       chip.classList.add('is-pending');
-      chip.textContent = 'v' + currentVersion() + ' · maj dispo';
-      chip.setAttribute('title', 'Moodboard ' + (latest ? latest.tag : '?') + ' est disponible — cliquez pour mettre à jour');
+      chip.textContent = 'v' + currentVersion() + ' · ' + T('updater.pending');
+      chip.setAttribute('title', T('updater.available', { v: (latest ? latest.tag : '?') }));
     } else {
       chip.classList.remove('is-pending');
       chip.textContent =
         'v' + currentVersion() + (MB.desktop && MB.desktop.active ? ' · Desktop' : '');
-      chip.setAttribute('title', 'Version installée — cliquez pour vérifier les mises à jour');
+      chip.setAttribute('title', T('updater.installed'));
     }
   }
 
