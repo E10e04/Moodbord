@@ -654,116 +654,114 @@
 
   /* ---------------------------------------------------------- GALERIE */
 
-  /* v1.20 — OUTIL GALERIE (grille photo style Bencho/Raul) :
- *  - NOMBRE PAIR d'images → grille régulière 4 colonnes, tuiles au
- *    rapport 4:5 (l'exemple) ; les 2 dernières, quand n%4 = 2,
- *    s'élargissent (2 colonnes chacune) pour boucler la rangée ;
- *  - NOMBRE IMPAIR → bento automatique : la plus GRANDE image (aire)
- *    prend le bloc 2×2, les paysages restants prennent les tranches
- *    2×1, le reste remplit les tuiles simples — la lecture reste
- *    toujours plein-cadre, aucune case vide.
- *  - CLIC sur une vignette → elle s'agrandit au-dessus des autres
- *    (les autres s'assombrissent et reculent), comme la démo ;
- *    re-clic ou Échap la remet en place.
- *  - Bouton « + » au coin supérieur droit : ajout d'images (multi).
- * Le layout est une fonction PURE (utilisée par le rendu canvas, la
- * hauteur auto, l'usine et l'export SVG). */
+  /* v1.20.1 — OUTIL GALERIE, disposition en RANGÉES JUSTIFIÉES :
+   * chaque image CONSERVE SON FORMAT d'origine (rapport largeur/hauteur
+   * naturel mesuré à l'ajout — RIEN n'est recadré, la source reste
+   * pleine résolution) et les rangées remplissent exactement la carte,
+   * du bord gauche au bord droit, comme un mur photo (Flickr/Google
+   * Photos). AUCUN chevauchement possible : x/y sont calculés par
+   * accumulation, deux tuiles ne partagent jamais un pixel, et la
+   * hauteur de la carte est TOUJOURS la hauteur exacte de la grille
+   * (au montage, à l'ajout, à la suppression ET au redimensionnement —
+   * les vignettes ne débordent donc jamais sur les cartes voisines).
+   *  - les images PORTRAIT élèvent leur rangée, les PAYSAGES
+   *    l'élargissent : la disposition tient compte de la taille de
+   *    chaque image ;
+   *  - la DERNIÈRE rangée (incomplète) ne s'étire jamais ;
+   *  - CLIC sur une vignette → elle se soulève au-dessus des autres
+   *    (les autres s'assombrissent et reculent), comme la démo ;
+   *    re-clic sur l'image, CLIC AILLEURS ou Échap la remet en place ;
+   *  - Bouton « + » au coin supérieur droit : ajout d'images (multi).
+   * Le layout est une fonction PURE (utilisée par le rendu canvas, la
+   * hauteur auto, le redimensionnement et l'export SVG). */
   var GAL_PAD = 10;
   var GAL_GAP = 8;
-  var GAL_COLS = 4;
+
+  /* Rapport largeur/hauteur de mise en page (dimensions naturelles
+   * mesurées au moment de l'ajout). Borné pour éviter les rangées
+   * dégénérées (panoramas extrêmes, miniatures 1px) ; le recadrage
+   * résiduel au-delà des bornes reste sous les 2 % et invisible. */
+  function galAspect(it) {
+    var w = +it.w || 0;
+    var h = +it.h || 0;
+    if (w <= 0 || h <= 0) return 1;
+    return Math.min(5, Math.max(0.2, w / h));
+  }
 
   function galleryLayout(w, items) {
-    var inner = Math.max(120, w || 520) - GAL_PAD * 2;
+    var inner = Math.max(120, (w || 520) - GAL_PAD * 2);
     var list = (items || []).filter(function (it) { return it && it.src; });
-    var n = list.length;
-    var cellW = (inner - (GAL_COLS - 1) * GAL_GAP) / GAL_COLS;
-    if (!n) {
-      return { cols: GAL_COLS, cellW: cellW, cellH: 0, h: 200, cells: [], empty: true };
+    if (!list.length) {
+      return { h: 200, gridH: 0, cells: [], empty: true };
     }
-    var slots = [];
-    if (n % 2 === 0) {
-      var tail = n % 4 === 2 ? 2 : 0;
-      for (var i = 0; i < n; i++) {
-        slots.push(i >= n - tail ? { cs: 2, rs: 1 } : { cs: 1, rs: 1 });
-      }
-    } else {
-      var q = Math.floor(n / 5);
-      var r = n - q * 5;
-      for (var b = 0; b < q; b++) {
-        slots.push(
-          { cs: 2, rs: 2 }, { cs: 1, rs: 1 }, { cs: 1, rs: 1 },
-          { cs: 1, rs: 1 }, { cs: 1, rs: 1 }
-        );
-      }
-      if (r === 4) slots.push({ cs: 2, rs: 2 }, { cs: 2, rs: 1 }, { cs: 1, rs: 1 }, { cs: 1, rs: 1 });
-      else if (r === 3) slots.push({ cs: 2, rs: 1 }, { cs: 1, rs: 1 }, { cs: 1, rs: 1 });
-      else if (r === 2) slots.push({ cs: 2, rs: 1 }, { cs: 2, rs: 1 });
-      else if (r === 1) slots.push({ cs: 4, rs: 1 });
-    }
-
-    /* Affectation bento : la plus grande aire → 2×2, paysage suivant
-     * → tranche 2×1, le reste garde l'ordre d'ajout. */
-    var assigned = new Array(slots.length);
-    if (n % 2 === 1) {
-      var byArea = list.map(function (it, i2) {
-        return { i: i2, a: (it.w || 1) * (it.h || 1) };
-      }).sort(function (x, y) { return y.a - x.a; });
-      var featCount = slots.filter(function (s) { return s.cs === 2 && s.rs === 2; }).length;
-      var wideCount = slots.filter(function (s) { return s.cs === 2 && s.rs === 1; }).length;
-      var feats = byArea.slice(0, featCount).map(function (o) { return o.i; });
-      var rest = byArea.slice(featCount);
-      var wides = [];
-      for (var w2 = 0; w2 < rest.length && wides.length < wideCount; w2++) {
-        var it2 = list[rest[w2].i];
-        if ((it2.w || 1) >= (it2.h || 1)) { wides.push(rest[w2].i); rest.splice(w2, 1); w2--; }
-      }
-      while (wides.length < wideCount && rest.length) wides.push(rest.shift().i);
-      var smalls = rest.map(function (o) { return o.i; }).sort(function (a, b2) { return a - b2; });
-      var fi = 0, wi = 0, si = 0;
-      slots.forEach(function (s, i3) {
-        if (s.cs === 2 && s.rs === 2) assigned[i3] = feats[fi++];
-        else if (s.cs === 2 && s.rs === 1) assigned[i3] = (wi < wides.length ? wides[wi++] : smalls[si++]);
-        else assigned[i3] = smalls[si++];
-      });
-    } else {
-      for (var i4 = 0; i4 < slots.length; i4++) assigned[i4] = i4;
-    }
-
-    /* Placement : grille d'occupation — chaque slot prend la PREMIÈRE
-     * position libre qui l'accueille (balayage ligne par ligne) :
-     * aucune tuile ne recouvre le bloc 2×2 du bento, aucune case vide
-     * au milieu (les cases sous une tuile large sont consommées). */
+    /* Hauteur de rangée cible : ~3 à 4 images par rangée, bornée pour
+     * rester lisible sur les cartes étroites comme sur les larges. */
+    var baseH = Math.max(84, Math.min(180, inner / 3.4));
     var cells = [];
-    var occupied = {};
-    var maxRow = 1;
-    function free(r, c, cs, rs) {
-      for (var dr = 0; dr < rs; dr++) {
-        for (var dc = 0; dc < cs; dc++) {
-          if (occupied[(r + dr) + ':' + (c + dc)]) return false;
+    var rowIdx = []; /* indices (dans list) des images de la rangée en cours */
+    var arSum = 0;   /* somme des rapports de la rangée en cours */
+    var y = 0;
+
+    /* Clôture la rangée en cours : la hauteur commune est celle qui
+     * fait TENIR EXACTEMENT la somme des largeurs dans la carte —
+     * c'est ce qui justifie les deux bords sans jamais recadrer ni
+     * faire se toucher deux tuiles (chaque largeur dérive du même
+     * rowH × rapport de l'image). */
+    function flushRow(isLast) {
+      if (!rowIdx.length) return;
+      var gaps = (rowIdx.length - 1) * GAL_GAP;
+      var rowH = (inner - gaps) / arSum;
+      var justify = true;
+      if (isLast) {
+        /* Dernière rangée : jamais d'étirement artificiel (hauteur de
+         * base ; image UNIQUE de la carte = bandeau généreux). Quand
+         * le plafond la rabote, la rangée n'est plus justifiée : les
+         * tuiles gardent leur rapport EXACT, alignées à gauche. */
+        var cap = list.length === 1 ? inner * 0.75 : baseH;
+        if (rowH > cap) { rowH = cap; justify = false; }
+      }
+      rowH = Math.max(48, Math.round(rowH));
+      /* Largeurs naturelles (rowH × rapport de chaque image). */
+      var widths = rowIdx.map(function (ix) {
+        return Math.max(24, Math.round(rowH * galAspect(list[ix])));
+      });
+      if (justify) {
+        /* Rangée justifiée : l'écart d'arrondi (±1px) est absorbé par
+         * la dernière tuile — la rangée finit PILE au bord droit. */
+        var sumAll = widths.reduce(function (a, b) { return a + b; }, 0);
+        var last = inner - (sumAll - widths[widths.length - 1]) - gaps;
+        widths[widths.length - 1] = Math.max(24, last);
+      } else if (widths.length === 1) {
+        /* Image seule non justifiée : centrée dans la carte. */
+        var x0 = Math.max(0, Math.round((inner - widths[0]) / 2));
+        for (var c0 = 0; c0 < rowIdx.length; c0++) {
+          cells.push({ item: list[rowIdx[c0]], x: x0, y: y, w: widths[c0], h: rowH });
         }
+        y += rowH + GAL_GAP;
+        rowIdx = [];
+        arSum = 0;
+        return;
       }
-      return true;
+      var x = 0;
+      for (var k = 0; k < rowIdx.length; k++) {
+        cells.push({ item: list[rowIdx[k]], x: x, y: y, w: widths[k], h: rowH });
+        x += widths[k] + GAL_GAP;
+      }
+      y += rowH + GAL_GAP;
+      rowIdx = [];
+      arSum = 0;
     }
-    for (var i5 = 0; i5 < slots.length; i5++) {
-      var s2 = slots[i5];
-      var pr = 1, pc = 1;
-      while (!free(pr, pc, s2.cs, s2.rs)) {
-        pc++;
-        if (pc + s2.cs - 1 > GAL_COLS) { pr++; pc = 1; }
-        if (pr > 200) break; /* garde-fou (jamais atteint) */
-      }
-      for (var dr2 = 0; dr2 < s2.rs; dr2++) {
-        for (var dc2 = 0; dc2 < s2.cs; dc2++) {
-          occupied[(pr + dr2) + ':' + (pc + dc2)] = 1;
-        }
-      }
-      if (pr + s2.rs - 1 > maxRow) maxRow = pr + s2.rs - 1;
-      cells.push({ item: list[assigned[i5]], col: pc, row: pr, cs: s2.cs, rs: s2.rs });
+
+    for (var i = 0; i < list.length; i++) {
+      rowIdx.push(i);
+      arSum += galAspect(list[i]);
+      /* Une rangée est pleine dès que, à hauteur de base, elle
+       * déborde de la carte : on la clôture et on la justifie. */
+      if (arSum * baseH + (rowIdx.length - 1) * GAL_GAP >= inner) flushRow(false);
     }
-    var cellH = cellW * 1.25;
-    if (n === 1) cellH = inner * 0.75; /* une seule image : bandeau 4:3 */
-    var h = Math.round(GAL_PAD * 2 + maxRow * cellH + (maxRow - 1) * GAL_GAP);
-    return { cols: GAL_COLS, cellW: cellW, cellH: cellH, h: h, cells: cells, empty: false };
+    flushRow(true);
+    var gridH = Math.max(0, y - GAL_GAP);
+    return { h: Math.round(GAL_PAD * 2 + gridH), gridH: Math.round(gridH), cells: cells, empty: false };
   }
 
   function renderGallery(el) {
@@ -795,9 +793,14 @@
       var cls = 'mb-gal-tile';
       if (lift === c.item.id) cls += ' is-lift';
       else if (lift) cls += ' is-dim';
+      /* v1.20.1 — tuile positionnée en absolu SUR les mesures du
+       * layout (x/y/w/h calculés pour l'image) : la tuile prend
+       * EXACTEMENT le rapport de son image — aucun recadrage, aucun
+       * chevauchement, la grille remplit la carte bord à bord. */
       tiles +=
         '<div class="' + cls + '" data-act="gal-lift" data-item="' + esc(c.item.id) + '"' +
-        ' style="grid-column:' + c.col + ' / span ' + c.cs + ';grid-row:' + c.row + ' / span ' + c.rs + '">' +
+        ' style="left:' + Math.round(c.x) + 'px;top:' + Math.round(c.y) + 'px;' +
+        'width:' + Math.round(c.w) + 'px;height:' + Math.round(c.h) + 'px">' +
         '<img src="' + esc(c.item.src) + '" alt="" draggable="false" loading="lazy"/>' +
         '<button class="mb-gal-del" type="button" data-act="gal-del" data-item="' + esc(c.item.id) + '"' +
         ' title="' + esc(T('gal.remove')) + '" aria-label="' + esc(T('gal.remove')) + '">&times;</button>' +
@@ -805,7 +808,7 @@
     }
     return (
       '<div class="mb-gallery">' +
-      '<div class="mb-gallery-grid" style="grid-template-columns:repeat(' + L.cols + ',1fr);grid-auto-rows:' + Math.round(L.cellH) + 'px;gap:' + GAL_GAP + 'px">' +
+      '<div class="mb-gallery-grid" style="height:' + Math.round(L.gridH) + 'px">' +
       tiles +
       '</div>' +
       addBtn +

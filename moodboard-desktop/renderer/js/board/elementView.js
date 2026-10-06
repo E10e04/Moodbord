@@ -35,7 +35,14 @@
         else node.classList.remove('is-locked');
 
         // lignes et croquis : la géométrie vit dans data → re-rendu complet
-        if (view.rev !== x._rev || x.type === 'line' || x.type === 'sketch') {
+        // v1.20.1 — GALERIE : les tuiles sont posées EN ABSOLU sur les
+        // mesures du layout (x/y calculés pour la largeur de la carte) :
+        // un changement de largeur SANS re-rendu laisserait les tuiles
+        // au vieux plan (carte élargie, grille restée étroite). On
+        // re-rend dès que la largeur diffère du dernier rendu — le
+        // geste de redimensionnement réorganise les rangées en direct.
+        if (view.rev !== x._rev || x.type === 'line' || x.type === 'sketch' ||
+            (x.type === 'gallery' && view._galW !== undefined && view._galW !== x.w)) {
           view.renderContent(x);
         }
       },
@@ -56,6 +63,9 @@
         var cropMode = MB.store.s().ui.cropId === x.id;
         node.innerHTML = MB.content.render(x);
         view.rev = x._rev;
+        /* v1.20.1 — GALERIE : largeur du dernier rendu (le re-rendu
+         * conditionnel de update() s'y réfère). */
+        view._galW = x.type === 'gallery' ? x.w : undefined;
         if (wasEditing) {
           // l'édition en cours est restaurée sur le nouveau DOM
           var field = wasEditing.getAttribute('data-field');

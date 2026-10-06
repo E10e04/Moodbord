@@ -32,6 +32,10 @@
   var editingCell = null;
   var editingOriginal = null;
   var editingOriginalHtml = null;
+  /* v1.20.1 — GALERIE : remet la vignette soulevée en place (fonction
+   * de nettoyage posée quand une vignette est soulevée — dé-zoom au
+   * clic ailleurs, re-clic, Échap ; null si rien n'est soulevé). */
+  var galLiftCleanup = null;
 
   var CLICK_CREATE = {
     text: 1, note: 1, color: 1, palette: 1, typography: 1,
@@ -1243,6 +1247,14 @@
         el.y = g.anchor.y + off.y - newH / 2;
         el.w = newW;
         el.h = newH;
+        /* v1.20.1 — GALERIE : la hauteur suit la grille justifiée EN
+         * DIRECT pendant le geste — élargir/rétrécir la carte
+         * réorganise les rangées à chaque image, la grille ne déborde
+         * jamais du cadre et ne recouvre donc jamais les voisines. */
+        if (el.type === 'gallery' && MB.content && MB.content.galleryLayout) {
+          var galFit = MB.content.galleryLayout(el.w, el.data && el.data.items);
+          if (!galFit.empty) el.h = galFit.h;
+        }
         Store.emit('element', { ids: [el.id] });
         /* v1.12 — COLONNE : les cartes suivent EN DIRECT — le layout
          * interne reprend leur largeur et les ré-empile à chaque image
@@ -1940,22 +1952,62 @@
 
     /* v1.20 — GALERIE : CLIC sur une vignette → elle se soulève
      * au-dessus des autres (les autres s'assombrissent et reculent),
-     * comme la démo Bencho/Raul. Re-clic = remise en place. Les
-     * classes sont posées SANS re-rendu pour que la transition CSS
-     * s'anime ; l'état vit dans el._liftId (transitoire, non
-     * persisté), le re-rendu le restitue tel quel. */
+     * comme la démo Bencho/Raul. v1.20.1 — DE-ZOOM : re-clic sur
+     * l'image, CLIC AILLEURS sur le canevas ou Échap la remettent en
+     * place. Les classes sont posées SANS re-rendu pour que la
+     * transition CSS s'anime ; l'état vit dans el._liftId (transitoire,
+     * non persisté), le re-rendu le restitue tel quel. */
     if (act === 'gal-lift' && el) {
       var liftId = actNode.getAttribute('data-item');
       var liveGal = Store.el(el.id);
       if (!liveGal) return;
       var galHost = actNode.closest('.mb-el');
-      liveGal._liftId = liveGal._liftId === liftId ? null : liftId;
-      if (galHost) galHost.style.zIndex = liveGal._liftId ? '60' : '';
-      if (galHost) {
+      /* Une seule vignette soulevée à la fois : nettoie l'éventuel
+       * soulèvement précédent (et son écouteur de clic ailleurs) —
+       * l'état d'avant nettoyage décide du basculement (sinon le
+       * re-clic sur la vignette soulevée la RE-soulèverait, le
+       * nettoyage ayant déjà remis _liftId à null). */
+      var wasLifted = liveGal._liftId;
+      if (galLiftCleanup) { galLiftCleanup(); galLiftCleanup = null; }
+      liveGal._liftId = wasLifted === liftId ? null : liftId;
+      if (liveGal._liftId && galHost) {
+        galHost.style.zIndex = '60';
         Array.prototype.forEach.call(galHost.querySelectorAll('.mb-gal-tile'), function (tile) {
           var tid = tile.getAttribute('data-item');
           tile.classList.toggle('is-lift', liveGal._liftId === tid);
           tile.classList.toggle('is-dim', !!liveGal._liftId && liveGal._liftId !== tid);
+        });
+        /* v1.20.1 — clic AILLEURS = dé-zoom : un pointerdown capturé
+         * HORS de la carte remet la vignette en place. Un clic SUR la
+         * carte est ignoré ici : le handler gal-lift le gère (re-clic
+         * = dé-zoom, autre vignette = changement de vignette soulevée,
+         * croix/bouton + = leur propre action). */
+        var galHostRef = galHost;
+        var galElId = el.id;
+        var onDocPointerDown = function (eD) {
+          if (galHostRef.isConnected && galHostRef.contains(eD.target)) return;
+          if (galLiftCleanup) { galLiftCleanup(); galLiftCleanup = null; }
+        };
+        galLiftCleanup = function () {
+          document.removeEventListener('pointerdown', onDocPointerDown, true);
+          galLiftCleanup = null;
+          var liveNow = Store.el(galElId);
+          if (liveNow) liveNow._liftId = null;
+          if (galHostRef.isConnected) {
+            galHostRef.style.zIndex = '';
+            Array.prototype.forEach.call(galHostRef.querySelectorAll('.mb-gal-tile'), function (tile) {
+              tile.classList.remove('is-lift');
+              tile.classList.remove('is-dim');
+            });
+          }
+        };
+        document.addEventListener('pointerdown', onDocPointerDown, true);
+      } else if (galHost) {
+        /* re-clic sur la vignette soulevée : remise en place. */
+        galHost.style.zIndex = '';
+        Array.prototype.forEach.call(galHost.querySelectorAll('.mb-gal-tile'), function (tile) {
+          tile.classList.remove('is-lift');
+          tile.classList.remove('is-dim');
         });
       }
       return;
@@ -2270,7 +2322,11 @@
       commitEditing();
       return true;
     }
-    /* v1.20 — GALERIE : Échap remet la vignette soulevée en place. */
+    /* v1.20 — GALERIE : Échap remet la vignette soulevée en place.
+     * v1.20.1 — passe par le nettoyage partagé (retire aussi
+     * l'écouteur « clic ailleurs ») ; le balayage qui suit reste en
+     * repli pour un soulèvement posé avant l'init du module. */
+    if (galLiftCleanup) { galLiftCleanup(); return true; }
     var lifted = null;
     Store.s().elements.forEach(function (e2) {
       if (e2._liftId) lifted = e2;

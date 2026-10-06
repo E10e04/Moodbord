@@ -2838,11 +2838,13 @@ body.mb-desktop-darwin .pv-head { padding-left: 84px; }
 .weight-item.is-current .weight-item-num { color: var(--accent, #F97316); }
 
 /* =========================================================================
- * v1.20 — GALERIE (grille photo style Bencho/Raul)
- * Pair → grille régulière 4 colonnes (tuiles 4:5) ; impair → bento
- * (la plus grande image prend le bloc 2×2). Clic sur une vignette :
- * elle se soulève au-dessus des autres, les autres s'assombrissent
- * et reculent — re-clic ou Échap la remet en place.
+ * v1.20.1 — GALERIE (mur photo en RANGÉES JUSTIFIÉES)
+ * Chaque tuile prend EXACTEMENT le rapport de son image (aucun
+ * recadrage) et les positions x/y viennent du layout (accumulation) :
+ * deux tuiles ne se chevauchent jamais et la grille remplit la carte
+ * bord à bord. Clic sur une vignette : elle se soulève au-dessus des
+ * autres, les autres s'assombrissent et reculent — re-clic, clic
+ * ailleurs ou Échap la remet en place.
  * ========================================================================= */
 .mb-gallery {
   position: relative;
@@ -2850,12 +2852,14 @@ body.mb-desktop-darwin .pv-head { padding-left: 84px; }
   padding: 10px;
   box-sizing: border-box;
 }
+/* v1.20.1 — conteneur HAUTEUR EXPLICITE (posée par le rendu depuis le
+ * layout) ; les tuiles y sont posées en absolu. */
 .mb-gallery-grid {
-  display: grid;
+  position: relative;
   width: 100%;
 }
 .mb-gal-tile {
-  position: relative;
+  position: absolute; /* x/y/w/h posés en style depuis galleryLayout */
   border-radius: 6px;
   overflow: hidden;
   background: #1C1C1C;
@@ -2867,6 +2871,8 @@ body.mb-desktop-darwin .pv-head { padding-left: 84px; }
     box-shadow 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
   will-change: transform, filter;
 }
+/* La tuile AU RAPPORT de l'image : cover n'y rogne qu'un écart
+ * d'arrondi (±1px) — le format d'origine est préservé à l'écran. */
 .mb-gal-tile img {
   position: absolute; inset: 0;
   width: 100%; height: 100%;

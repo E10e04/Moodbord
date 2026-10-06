@@ -102,13 +102,14 @@
       }
 
       case 'gallery': {
-        /* v1.20 — GALERIE : la grille EXACTE du canvas (layout partagé
-         * MB.content.galleryLayout), chaque vignette clippée en rect
-         * arrondi, remplissage « cover » comme à l'écran. */
+        /* v1.20.1 — GALERIE en rangées justifiées : la grille EXACTE du
+         * canvas (layout partagé MB.content.galleryLayout, cellules
+         * x/y/w/h au rapport de chaque image — aucun recadrage),
+         * chaque vignette clippée en rect arrondi. */
         var galItems = Array.isArray(d.items) ? d.items : [];
         if (galItems.length && MB.content && MB.content.galleryLayout) {
           var GL = MB.content.galleryLayout(el.w, galItems);
-          var gpad = 10, ggap = 8;
+          var gpad = 10;
           var gDefs = '', gImgs = '';
           for (var gi = 0; gi < GL.cells.length; gi++) {
             var gc = GL.cells[gi];
@@ -119,10 +120,10 @@
                 MB.exportState.resolved[gsrc]) || '';
             }
             if (!gsrc) continue;
-            var gx = el.x + gpad + (gc.col - 1) * (GL.cellW + ggap);
-            var gy = el.y + gpad + (gc.row - 1) * (GL.cellH + ggap);
-            var gw = gc.cs * GL.cellW + (gc.cs - 1) * ggap;
-            var gh = gc.rs * GL.cellH + (gc.rs - 1) * ggap;
+            var gx = el.x + gpad + gc.x;
+            var gy = el.y + gpad + gc.y;
+            var gw = gc.w;
+            var gh = gc.h;
             var gcid = 'galc-' + String(el.id).replace(/[^a-zA-Z0-9_-]/g, '') + '-' + gi;
             gDefs += '<clipPath id="' + gcid + '"><rect x="' + gx + '" y="' + gy +
               '" width="' + gw + '" height="' + gh + '" rx="6"/></clipPath>';
