@@ -1120,6 +1120,44 @@ button:focus-visible, input:focus-visible, [contenteditable]:focus-visible {
   min-width: 190px;
   animation: pop-in 0.1s ease;
 }
+
+/* v1.20.2 — les items de popover portés par des <button> ne doivent JAMAIS
+ * garder le style natif du navigateur : en thème sombre, le fond clair
+ * « buttonface » (≈ #EFEFEF) sous la couleur d'encre claire (--text) rend
+ * le texte illisible tant que le survol ne pose pas son propre fond (c'est
+ * le bug du menu zoom). La variante button.ctx-pop-item l'emporte sur la
+ * règle générique ci-dessus (0,1,1 > 0,1,0) sans toucher aux autres boutons
+ * des popovers (swatch/shape-tile/pv-pal posent déjà leur propre fond). */
+button.ctx-pop-item {
+  background: none;
+  border: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  width: 100%;
+}
+
+/* v1.20.2 — variante « menu » du popover (zoom…) : padding resserré comme
+ * les menus .menu/.ctxmenu au lieu du padding 10px des popovers de
+ * contenu, largeur calée sur la plus longue ligne + raccourcis. */
+.ctx-pop--menu { padding: 5px; min-width: 218px; }
+
+/* Items du menu zoom : marque de coche à taille fixe (les libellés
+ * restent alignés que le niveau soit courant ou non), libellé à gauche,
+ * raccourci à droite dans le style .menu-kbd des menus principaux. */
+.zoom-item { padding: 7px 8px; gap: 8px; }
+.zoom-item:hover { background: var(--elev); }
+.zoom-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.zoom-item-mark {
+  width: 16px; height: 16px; flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--accent);
+}
+.zoom-item-mark svg { display: block; }
+.zoom-item-label { flex: 1; }
+.zoom-item .menu-kbd { flex: none; }
+.zoom-item.is-current .zoom-item-label { font-weight: 600; }
+
 .swatch-grid { display: grid; grid-template-columns: repeat(5, 26px); gap: 6px; margin-bottom: 8px; }
 .swatch {
   width: 26px; height: 26px; border-radius: 6px; border: none; cursor: pointer;

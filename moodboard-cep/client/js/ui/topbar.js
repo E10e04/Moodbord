@@ -427,14 +427,42 @@
     render();
   }
 
+  /* v1.20.2 — MENU ZOOM REDESSINÉ : le popover héritait du style NATIF
+   * des <button> (fond clair « buttonface » du navigateur) sous un texte
+   * blanc — illisible sans survol. Désormais :
+   *  - les items portent le style des menus de l'application (fond sombre
+   *    du popover, hover var(--elev)) via la classe .zoom-item ;
+   *  - une COCHE (accent) marque le niveau courant (50/100/200 % —
+   *    tolérance 0,6 %, les niveaux intermédiaires ne cochent rien) ;
+   *  - les raccourcis réels sont affichés à droite (⇧1 ajuster, ⇧2
+   *    sélection) avec un séparateur entre niveaux fixes et actions ;
+   *  - les libellés passent par l'i18n (menu.fit / menu.zoomSel — ils
+   *    étaient restés en français codé en dur). */
   function zoomMenu(anchor) {
+    var z = MB.store.s().camera.zoom;
+    var near = function (v) { return Math.abs(z - v) < 0.006; };
+    function item(val, label, kbd) {
+      var isFit = val === 'fit' || val === 'sel';
+      var cur = !isFit && near(parseInt(val, 10) / 100);
+      return '' +
+        '<button type="button" class="ctx-pop-item zoom-item' + (cur ? ' is-current' : '') + '" data-z="' + val + '"' +
+        ' role="menuitem"' + (cur ? ' aria-current="true"' : '') + '>' +
+        '<span class="zoom-item-mark" aria-hidden="true">' + (cur ? MB.icons.get('check', 13) : '') + '</span>' +
+        '<span class="zoom-item-label">' + label + '</span>' +
+        (kbd ? '<span class="menu-kbd">' + kbd + '</span>' : '') +
+        '</button>';
+    }
     MB.ui.popover(anchor, '' +
-      '<button class="ctx-pop-item" data-z="50">50 %</button>' +
-      '<button class="ctx-pop-item" data-z="100">100 %</button>' +
-      '<button class="ctx-pop-item" data-z="200">200 %</button>' +
-      '<button class="ctx-pop-item" data-z="fit">Ajuster à l’écran</button>' +
-      '<button class="ctx-pop-item" data-z="sel">Zoom sur la sélection</button>', {
+      item('50', '50 %') +
+      item('100', '100 %') +
+      item('200', '200 %') +
+      '<div class="ctxmenu-sep" role="separator"></div>' +
+      item('fit', T('menu.fit'), '⇧1') +
+      item('sel', T('menu.zoomSel'), '⇧2'), {
+      cls: 'ctx-pop--menu',
       bind: function (p) {
+        p.setAttribute('role', 'menu');
+        p.setAttribute('aria-label', 'Zoom');
         p.querySelectorAll('[data-z]').forEach(function (b) {
           b.addEventListener('click', function () {
             MB.ui.closePopover();

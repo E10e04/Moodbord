@@ -42,10 +42,14 @@
     }
   }
 
+  /* v1.20.2 — opts.cls : classe(s) supplémentaire(s) posée(s) À LA
+   * CRÉATION (avant la mesure de position) — les variantes de style
+   * (.ctx-pop--menu…) doivent être comptées dans offsetWidth/Height,
+   * sinon le popover est mal positionné. */
   function popover(anchor, html, opts) {
     closePopover();
     var host = document.getElementById('layer-popovers');
-    var p = U.el('div', 'ctx-pop');
+    var p = U.el('div', 'ctx-pop' + (opts && opts.cls ? ' ' + opts.cls : ''));
     p.innerHTML = html;
     host.appendChild(p);
     popoverEl = p;
