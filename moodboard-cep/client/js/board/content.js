@@ -791,7 +791,11 @@
       var c = L.cells[i];
       if (!c.item) continue;
       var cls = 'mb-gal-tile';
-      if (lift === c.item.id) cls += ' is-lift';
+      /* v1.20.3 — garde id des deux côtés : sans elle, des items SANS id
+       * (import programmatique) voyaient undefined === undefined vrai et
+       * TOUTES les tuiles se soulevaient (scale 2.05) d'un coup. */
+      var isLift = !!lift && !!c.item.id && lift === c.item.id;
+      if (isLift) cls += ' is-lift';
       else if (lift) cls += ' is-dim';
       /* v1.20.1 — tuile positionnée en absolu SUR les mesures du
        * layout (x/y/w/h calculés pour l'image) : la tuile prend

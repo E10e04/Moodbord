@@ -5,7 +5,7 @@
 > organise, on zoome sur le détail, on exporte.
 
 Moodbord rassemble moodboards de marque, références, palettes, typographies
-et annotations dans un espace libre : **17 types d'éléments**, zoom et
+et annotations dans un espace libre : **18 types d'éléments**, zoom et
 déplacement fluides, annulation illimitée et sauvegarde automatique.
 
 <p align="center">
@@ -80,9 +80,9 @@ version est en tête de liste.
 
 - **Canevas infini** — zoom focalisé sur le curseur, déplacement (Espace +
   glisser, bouton du milieu, outil Main), ajuster à l'écran `⇧1`.
-- **17 types d'éléments** — images, textes, notes, couleurs, palettes,
+- **18 types d'éléments** — images, textes, notes, couleurs, palettes,
   typographie, liens, flèches, formes, sections, colonnes, tableaux,
-  checklists, croquis…
+  checklists, croquis, galeries photo…
 - **Bibliothèque latérale** — vos médias, couleurs, palettes et polices ;
   tout est éditable, import par glisser-déposer multi-fichiers.
 - **Outil Preview** — applique l'identité du moodboard (couleurs et polices)
