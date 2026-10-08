@@ -473,6 +473,14 @@
     Store.setUI({ editingId: el.id });
     editingOriginal = field === 'name' ? el.data.name : el.data[field];
     if (rich) {
+      /* v1.20.4 — LECTEUR MARKDOWN des notes : l'affichage montre le
+       * RENDU du markdown ; l'édition repart toujours du markdown BRUT
+       * stocké (data.html / data.text), jamais du rendu affiché —
+       * sinon le premier commit « cuirait » le rendu dans data.html
+       * et les marqueurs (#, **, -…) disparaîtraient de la source. */
+      if (el.type === 'note' && field === 'text') {
+        node.innerHTML = MB.content.rawBody(el.data);
+      }
       editingOriginalHtml = MB.rich ? MB.rich.sanitize(node.innerHTML) : null;
     } else {
       editingOriginalHtml = null;
@@ -2237,8 +2245,19 @@
     }
   }
 
+  /* v1.20.4 — DÉFILEMENT DIRECTIONNEL DU CANVAS : ⇧+molette défile à
+   * l'HORIZONTALE, Alt+molette défile à la VERTICALE ; la molette seule
+   * reste le zoom focalisé sur le curseur (Ctrl+molette = pincement du
+   * trackpad). Certains moteurs transposent le deltaY en deltaX quand
+   * Shift est maintenu : on récupère l'un ou l'autre. Les deltas en
+   * « lignes » (Firefox) sont convertis en pixels. */
   function onWheel(e) {
     e.preventDefault();
+    var d = e.deltaY;
+    if (!d && e.deltaX) d = e.deltaX;
+    if (e.deltaMode === 1) d *= 16;
+    if (e.shiftKey && d) { Camera.panBy(-d, 0); return; }
+    if (e.altKey && d) { Camera.panBy(0, -d); return; }
     var factor = Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0014));
     Camera.zoomAt(e.clientX, e.clientY, factor);
   }

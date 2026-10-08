@@ -43,6 +43,30 @@
     return out;
   }
 
+  /* v1.20.4 — LECTEUR MARKDOWN des notes : l'export SVG/PNG reçoit la
+   * version TEXTE du markdown — les marqueurs (#, **, `, ~~) ne
+   * doivent pas fuiter dans les fichiers exportés. Les puces deviennent
+   * •, les numéros sont conservés, les cases à cocher deviennent ☑/☐,
+   * les liens gardent leur cible entre parenthèses. */
+  function mdPlain(text) {
+    return String(text === undefined || text === null ? '' : text).split('\n').map(function (line) {
+      var l = line;
+      if (/^\s*(#{1,6})\s+/.test(l)) l = l.replace(/^\s*#{1,6}\s+/, '');
+      else if (/^\s*[-*+]\s+/.test(l)) l = l.replace(/^\s*[-*+]\s+/, '• ');
+      else if (/^\s*(\d{1,9})[.)]\s+/.test(l)) l = l.replace(/^\s*(\d{1,9})[.)]\s+/, '$1. ');
+      else if (/^\s*>\s?/.test(l)) l = l.replace(/^\s*>\s?/, '');
+      else if (/^\s*(?:-{3,}|\*{3,}|_{3,})\s*$/.test(l)) l = '';
+      l = l.replace(/^\s*\[( |x|X)\]\s+/, function (mm, c) { return /x/i.test(c) ? '☑ ' : '☐ '; });
+      l = l.replace(/\*\*([^*]+)\*\*/g, '$1')
+        .replace(/__([^_]+)__/g, '$1')
+        .replace(/\*([^*\n]+)\*/g, '$1')
+        .replace(/`([^`]+)`/g, '$1')
+        .replace(/~~([^~\n]+)~~/g, '$1')
+        .replace(/\[([^\]\n]+)\]\(([^)\s]+)\)/g, '$1 ($2)');
+      return l;
+    }).join('\n');
+  }
+
   /* v1.18.1 — rect aux coins arrondis D'UN SEUL CÔTÉ (l'astuce des
    * deux rects de même fill déjà utilisée pour les en-têtes de
    * colonnes, sans <path> fragile) : side 'top' = coins supérieurs
@@ -222,7 +246,7 @@
           '" rx="4" fill="' + d.color + '"' + rotAttr() + '/>' +
           noteBandSvg +
           noteTitleSvg +
-          multiLineText(el.x + 14, el.y + 24 + noteDy, d.text, 'font-family="' + esc(noteFont) + '" font-size="' + d.fontSize +
+          multiLineText(el.x + 14, el.y + 24 + noteDy, mdPlain(d.text), 'font-family="' + esc(noteFont) + '" font-size="' + d.fontSize +
             (d.fontWeight ? '" font-weight="' + Number(d.fontWeight) : '') + '" fill="' + ink + '"', d.fontSize * 1.4);
         break;
       }

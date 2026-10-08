@@ -17,6 +17,240 @@
     return esc(s).replace(/\n/g, '<br>');
   }
 
+  /* ================================================= MARKDOWN (v1.20.4)
+   * LECTEUR MARKDOWN INTÉGRÉ des notes : le corps affiché REND le
+   * markdown (titres #, gras **…**, italique *…* / _…_, code `…`,
+   * barré ~~…~~, listes - / 1., citations >, filets ---, cases à
+   * cocher [ ] / [x], liens [texte](url)) au lieu de montrer les
+   * marqueurs bruts.
+   * Règles de sécurité :
+   *  - seuls les NŒUDS TEXTE sont analysés — le HTML riche existant
+   *    (gras via la barre de mise en forme, listes de l'éditeur)
+   *    reste intact, jamais réécrit ;
+   *  - tout est construit par createElement/textContent : aucune
+   *    chaîne HTML n'est réinjectée, rien n'est exécutable ;
+   *  - les liens ne partent que sur http(s)/mailto/ancre/relatif.
+   * Le markdown BRUT reste la source : l'édition (double-clic) repart
+   * de MB.content.rawBody — voir interactions.js startEditing. */
+
+  var MD_INLINE_TOKEN = /(\*\*([\s\S]+?)\*\*)|(__([\s\S]+?)__)|(\*([^*\n]+?)\*)|(`([^`]+?)`)|(~~([^~\n]+?)~~)|(\[([^\]\n]+?)\]\(([^)\s]+?)\))/g;
+
+  function mdSafeUrl(url) {
+    var u = String(url === undefined || url === null ? '' : url).trim();
+    return /^(https?:\/\/|mailto:|#|\.\/|\/)/i.test(u) ? u : null;
+  }
+
+  /* Transforme le TEXTE d'un nœud en fragment enrichi (gras, italique,
+   * code, barré, lien). Les segments restants passent par une seconde
+   * passe _italique_ aux frontières de mots (snake_case épargné). */
+  function mdInlineFragment(v) {
+    var frag = document.createDocumentFragment();
+    var last = 0;
+    var m;
+    function emit(tag, cls, txt) {
+      var n = document.createElement(tag);
+      if (cls) n.className = cls;
+      n.textContent = txt;
+      frag.appendChild(n);
+    }
+    function plain(txt) {
+      if (!txt) return;
+      var re = /(^|[^\w])_([^_\n]+?)_(?![\w])/g;
+      var l2 = 0;
+      var m2;
+      while ((m2 = re.exec(txt))) {
+        var pre = txt.slice(l2, m2.index) + (m2[1] || '');
+        if (pre) frag.appendChild(document.createTextNode(pre));
+        emit('I', null, m2[2]);
+        l2 = m2.index + m2[0].length;
+      }
+      if (l2 < txt.length) frag.appendChild(document.createTextNode(txt.slice(l2)));
+    }
+    MD_INLINE_TOKEN.lastIndex = 0;
+    while ((m = MD_INLINE_TOKEN.exec(v))) {
+      if (m.index > last) plain(v.slice(last, m.index));
+      if (m[1]) emit('B', null, m[2]);
+      else if (m[3]) emit('B', null, m[4]);
+      else if (m[5]) emit('I', null, m[6]);
+      else if (m[7]) emit('CODE', 'mb-md-code', m[8]);
+      else if (m[9]) emit('S', null, m[10]);
+      else if (m[11]) {
+        var url = mdSafeUrl(m[13]);
+        if (url) {
+          var a = document.createElement('A');
+          a.className = 'mb-md-link';
+          a.href = url;
+          a.setAttribute('data-act', 'open');
+          a.setAttribute('data-url', url);
+          a.setAttribute('target', '_blank');
+          a.setAttribute('rel', 'noopener noreferrer');
+          a.textContent = m[12];
+          frag.appendChild(a);
+        } else {
+          plain(m[11]);
+        }
+      }
+      last = m.index + m[0].length;
+    }
+    if (last < v.length) plain(v.slice(last));
+    return frag;
+  }
+
+  var MD_SKIP_TAGS = { CODE: true, SCRIPT: true, STYLE: true, PRE: true };
+
+  /* Passe INLINE : remplace les nœuds texte porteurs de marqueurs par
+   * le fragment enrichi (les balises déjà rendues ne sont pas touchées). */
+  function mdEnhanceInline(root) {
+    var walker = root.ownerDocument.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false);
+    var texts = [];
+    var t;
+    while ((t = walker.nextNode())) {
+      var p = t.parentNode;
+      if (p && p.nodeType === 1 &&
+          (MD_SKIP_TAGS[p.tagName] || (p.classList && p.classList.contains('mb-md-code')))) continue;
+      texts.push(t);
+    }
+    texts.forEach(function (tx) {
+      var v = tx.nodeValue;
+      if (!v) return;
+      MD_INLINE_TOKEN.lastIndex = 0;
+      if (!MD_INLINE_TOKEN.test(v)) return;
+      MD_INLINE_TOKEN.lastIndex = 0;
+      tx.parentNode.replaceChild(mdInlineFragment(v), tx);
+    });
+  }
+
+  /* Découpe le HTML de la note en LIGNES : les <div>/<p> délimitent des
+   * lignes (sans doubles sauts aux jointures), les <br> sont des sauts
+   * DURS, les listes de l'éditeur riche restent des blocs entiers. Un
+   * saut final unique ne crée pas de ligne vide (comportement HTML :
+   * « a<br> » = une ligne) ; deux sauts = une ligne vide réelle. */
+  function mdCollectLines(host) {
+    var toks = [];
+    function lastIsBreak() {
+      return toks.length && toks[toks.length - 1].t === 'br';
+    }
+    function breakIfContent() {
+      if (toks.length && !lastIsBreak()) toks.push({ t: 'br' });
+    }
+    function walk(node) {
+      var kids = Array.prototype.slice.call(node.childNodes);
+      for (var i = 0; i < kids.length; i++) {
+        var ch = kids[i];
+        if (ch.nodeType === 3) {
+          toks.push({ t: 'node', n: ch });
+        } else if (ch.nodeType === 1) {
+          var tag = ch.tagName;
+          if (tag === 'BR') {
+            toks.push({ t: 'br' });
+          } else if (tag === 'DIV' || tag === 'P') {
+            breakIfContent();
+            walk(ch);
+            breakIfContent();
+          } else if (tag === 'UL' || tag === 'OL') {
+            breakIfContent();
+            toks.push({ t: 'node', n: ch });
+            breakIfContent();
+          } else {
+            toks.push({ t: 'node', n: ch }); /* inline gardé entier */
+          }
+        }
+      }
+    }
+    walk(host);
+    if (toks.length && toks[toks.length - 1].t === 'br') toks.pop();
+    var lines = [];
+    var cur = [];
+    for (var i = 0; i < toks.length; i++) {
+      if (toks[i].t === 'br') { lines.push(cur); cur = []; }
+      else cur.push(toks[i]);
+    }
+    lines.push(cur);
+    return lines;
+  }
+
+  /* Passe BLOC : applique les motifs de ligne du markdown quand la
+   * ligne commence par du TEXTE BRUT (une ligne commençant par une
+   * balise riche, p. ex. un gras posé à la souris, garde son texte).
+   * Le marqueur est retiré du nœud source, la ligne porte une classe
+   * de style (.mb-md-*). */
+  function mdApplyBlocks(host, lines) {
+    var out = document.createDocumentFragment();
+    for (var i = 0; i < lines.length; i++) {
+      var toks = lines[i];
+      var line = document.createElement('div');
+      var firstText = null;
+      for (var j = 0; j < toks.length; j++) {
+        var tk = toks[j];
+        if (tk.n) {
+          line.appendChild(tk.n);
+          if (tk.n.nodeType === 3 && firstText === null) firstText = tk.n;
+        }
+      }
+      var text = line.textContent || '';
+      var cls = '';
+      var bullet = null;
+      var m;
+      if (/^\s*(?:-{3,}|\*{3,}|_{3,})\s*$/.test(text)) {
+        cls = 'mb-md-hr';
+      } else if (firstText && (m = text.match(/^\s*(#{1,6})\s+/))) {
+        cls = 'mb-md-h' + m[1].length;
+        firstText.nodeValue = firstText.nodeValue.replace(/^\s*(#{1,6})\s+/, '');
+      } else if (firstText && /^\s*[-*+]\s+/.test(text)) {
+        cls = 'mb-md-li';
+        /* v1.20.4b — tâche GFM « - [ ] » / « - [x] » : la case remplace
+         * la puce (comme sur GitHub), le marqueur ne fuit pas. */
+        var mt = firstText.nodeValue.match(/^\s*[-*+]\s+\[( |x|X)\]\s*/);
+        bullet = document.createElement('span');
+        if (mt) {
+          bullet.className = 'mb-md-cbx' + (mt[1] === ' ' ? '' : ' is-on');
+          bullet.textContent = mt[1] === ' ' ? '☐' : '☑';
+          firstText.nodeValue = firstText.nodeValue.replace(/^\s*[-*+]\s+\[( |x|X)\]\s*/, '');
+        } else {
+          bullet.className = 'mb-md-bullet';
+          bullet.textContent = '•';
+          firstText.nodeValue = firstText.nodeValue.replace(/^\s*[-*+]\s+/, '');
+        }
+      } else if (firstText && (m = text.match(/^\s*(\d{1,9})[.)]\s+/))) {
+        cls = 'mb-md-li';
+        bullet = document.createElement('span');
+        bullet.className = 'mb-md-bullet';
+        bullet.textContent = m[1] + '.';
+        firstText.nodeValue = firstText.nodeValue.replace(/^\s*(\d{1,9})[.)]\s+/, '');
+      } else if (firstText && (m = text.match(/^\s*\[( |x|X)\]\s+/))) {
+        cls = 'mb-md-li';
+        bullet = document.createElement('span');
+        bullet.className = 'mb-md-cbx' + (m[1] === ' ' ? '' : ' is-on');
+        bullet.textContent = m[1] === ' ' ? '☐' : '☑';
+        firstText.nodeValue = firstText.nodeValue.replace(/^\s*\[( |x|X)\]\s+/, '');
+      } else if (firstText && /^\s*>\s?/.test(text)) {
+        cls = 'mb-md-quote';
+        firstText.nodeValue = firstText.nodeValue.replace(/^\s*>\s?/, '');
+      }
+      if (cls) line.className = cls;
+      if (bullet) line.insertBefore(bullet, line.firstChild);
+      if (!line.childNodes.length && cls !== 'mb-md-hr') {
+        line.appendChild(document.createElement('br'));
+      }
+      out.appendChild(line);
+    }
+    while (host.firstChild) host.removeChild(host.firstChild);
+    host.appendChild(out);
+  }
+
+  function mdRender(html) {
+    var host = document.createElement('div');
+    host.innerHTML = html || '';
+    mdApplyBlocks(host, mdCollectLines(host));
+    mdEnhanceInline(host);
+    return host.innerHTML;
+  }
+
+  /* Corps de note AFFICHÉ : rendu markdown du contenu stocké. */
+  function mdBody(d) {
+    return mdRender(richOrPlain(d));
+  }
+
   /* ------------------------------------------------------------ TEXT */
 
   function textStyle(d) {
@@ -143,7 +377,7 @@
       return (
         '<div class="mb-note-body mb-editable mb-rich" data-field="text" style="background:' + d.color +
         ';color:' + ink + ';font-size:' + d.fontSize + 'px' + font +
-        '">' + richOrPlain(d) + '</div>'
+        '">' + mdBody(d) + '</div>'
       );
     }
     /* v1.17 — avec titre : le PAPIER (fond + ombre) monte sur la pile,
@@ -153,7 +387,7 @@
       '<div class="mb-note-stack" style="background:' + d.color + '">' +
       renderCardTitle(d, 'color:' + ink + ';', 3) +
       '<div class="mb-note-body mb-editable mb-rich" data-field="text" style="color:' + ink +
-      ';font-size:' + d.fontSize + 'px' + font + '">' + richOrPlain(d) + '</div>' +
+      ';font-size:' + d.fontSize + 'px' + font + '">' + mdBody(d) + '</div>' +
       '</div>'
     );
   }
@@ -991,6 +1225,12 @@
      * l'inspecteur (affichage du stepper) et les exports. */
     titleFontSizeOf: titleFontSizeOf,
     /* v1.20 — layout GALERIE (fonction pure) : rendu, usine, export. */
-    galleryLayout: galleryLayout
+    galleryLayout: galleryLayout,
+    /* v1.20.4 — lecteur MARKDOWN des notes : rendu affiché + source
+     * BRUTE pour l'édition (le double-clic doit rouvrir le markdown,
+     * jamais son rendu — sinon le premier commit « cuirait » les
+     * styles dans data.html et les marqueurs disparaîtraient). */
+    mdRender: mdRender,
+    rawBody: function (d) { return richOrPlain(d); }
   };
 })();
