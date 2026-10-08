@@ -86,7 +86,8 @@
       var ps = empty.querySelectorAll('p');
       if (strong) strong.textContent = t('empty.title');
       if (ps[1]) ps[1].innerHTML = t('empty.body');
-      if (ps[2]) ps[2].textContent = t('empty.kbd');
+      /* v1.20.5 — la ligne des gestes (« Espace + glisser · Molette… »)
+       * est retirée du canvas vide : le hint reste minimal. */
     }
     var toolRail = document.getElementById('toolrail');
     if (toolRail) toolRail.setAttribute('aria-label', MB.i18n.lang() === 'en' ? 'Creation tools' : 'Outils de création');

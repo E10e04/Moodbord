@@ -463,7 +463,8 @@ button:focus-visible, input:focus-visible, [contenteditable]:focus-visible {
   pointer-events: none;
 }
 #empty-hint strong { color: var(--text-dim); font-size: 16px; }
-.empty-kbd { margin-top: 14px; font-size: 11.5px; color: #555; }
+/* v1.20.5 — la ligne des gestes (.empty-kbd) est retirée : le canvas
+ * vide n'affiche plus que le logo, le titre et l'invitation. */
 .empty-icon {
   /* v1.17 — LE LOGO de Moodbord remplace l'icône abstraite du canvas
    * vide (rond dégradé) : image assets/logo.png, ombre portée douce.

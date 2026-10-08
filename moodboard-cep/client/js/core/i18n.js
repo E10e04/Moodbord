@@ -269,7 +269,6 @@
     /* ---- canvas vide ---- */
     'empty.title': 'Cette table est vide.',
     'empty.body': 'Glissez des images depuis le Finder, choisissez un outil à gauche,<br>ou faites un clic droit pour créer un élément.',
-    'empty.kbd': 'Espace + glisser pour se déplacer · Molette pour zoomer · ⇧/Alt + molette pour défiler',
 
     /* ---- préférences ---- */
     'prefs.title': 'Préférences',
@@ -713,7 +712,6 @@
 
     'empty.title': 'This board is empty.',
     'empty.body': 'Drag images from the Finder, pick a tool on the left,<br>or right-click to create an element.',
-    'empty.kbd': 'Space + drag to pan · Scroll to zoom · Shift/Alt + scroll to pan',
 
     'prefs.title': 'Preferences',
     'prefs.lang': 'Interface language',
